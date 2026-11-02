@@ -1,0 +1,57 @@
+{
+  "title": "Bible facts: weights, measures, money and the calendar",
+  "source": "Public-domain reference data compiled from standard biblical reference works (Easton's Bible Dictionary, 1897; Smith's Bible Dictionary, 1884; and the International Standard Bible Encyclopedia, 1915). Values are the usual approximations used in study Bibles and are given as ranges where authorities differ. Nothing here is invented: every unit named is attested in Scripture.",
+  "license": "Public Domain (facts and measurements are not copyrightable; the wording is this project's own)",
+  "weights": [
+    {"name": "Gerah", "hebrew": "gerah", "value": "1/20 of a shekel", "grams": 0.57, "scripture": "Ex 30:13; Lev 27:25; Num 3:47; Num 18:16; Ezek 45:12", "note": "The smallest unit of weight in the system; a bean."},
+    {"name": "Beka", "hebrew": "beqa", "value": "1/2 shekel (10 gerahs)", "grams": 5.7, "scripture": "Gen 24:22; Ex 38:26", "note": "The weight of the ring Rebekah received."},
+    {"name": "Shekel", "hebrew": "sheqel", "value": "20 gerahs", "grams": 11.4, "scripture": "Ex 30:13; Lev 27:25; Num 3:47; Num 18:16; Ezek 45:12", "note": "The basic unit of weight and of money. The 'shekel of the sanctuary' was the standard."},
+    {"name": "Mina (maneh)", "hebrew": "maneh", "value": "50 shekels (60 in Babylonian usage)", "grams": 570, "scripture": "1 Kgs 10:17; Ezek 45:12; Ezra 2:69", "note": "Also a unit of money (50 shekels of silver)."},
+    {"name": "Talent", "hebrew": "kikkar", "value": "60 minas = 3,000 shekels", "grams": 34200, "scripture": "Ex 25:39; Ex 38:24; 1 Kgs 9:14; 1 Kgs 10:10; Matt 18:24; Matt 25:15", "note": "The largest unit. A talent of gold was roughly a year's wages for a labourer multiplied many times over."}
+  ],
+  "measures_dry": [
+    {"name": "Omer", "hebrew": "omer", "value": "1/10 of an ephah", "litres": 2.2, "scripture": "Ex 16:16; Ex 16:36; Lev 23:10", "note": "The daily manna ration."},
+    {"name": "Seah (satton)", "hebrew": "seah", "value": "1/3 of an ephah", "litres": 7.3, "scripture": "Gen 18:6; 1 Sam 25:18; 2 Kgs 7:1", "note": "The measure Sarah used for the flour."},
+    {"name": "Ephah", "hebrew": "ephah", "value": "10 omers", "litres": 22, "scripture": "Ex 16:36; Lev 5:11; Lev 6:20; Num 5:15; Ruth 2:17; 1 Sam 1:24; Isa 5:10; Ezek 45:11", "note": "The standard dry measure; a person's daily bread ration was about an omer."},
+    {"name": "Homer (cor)", "hebrew": "homer / kor", "value": "10 ephahs", "litres": 220, "scripture": "Lev 27:16; Num 11:32; Isa 5:10; Ezek 45:11; Hos 3:2", "note": "A donkey-load; the largest dry measure."}
+  ],
+  "measures_liquid": [
+    {"name": "Log", "hebrew": "log", "value": "1/12 of a hin", "litres": 0.3, "scripture": "Lev 14:10; Lev 14:12; Lev 14:15; Lev 14:21; Lev 14:24", "note": "The smallest liquid measure; the leper's offering."},
+    {"name": "Hin", "hebrew": "hin", "value": "12 logs", "litres": 3.6, "scripture": "Ex 29:40; Ex 30:24; Num 15:4; Num 28:5; Ezek 4:11; Ezek 45:24", "note": "A standard liquid measure; the drink offering."},
+    {"name": "Bath", "hebrew": "bath", "value": "6 hins", "litres": 22, "scripture": "1 Kgs 7:26; 1 Kgs 7:38; 2 Chr 2:10; 2 Chr 4:5; Isa 5:10; Ezek 45:11", "note": "The largest liquid measure; about the same as an ephah of dry measure."}
+  ],
+  "money": [
+    {"name": "Lepton (mite)", "greek": "lepton", "value": "1/128 of a denarius", "scripture": "Mark 12:42; Luke 12:59; Luke 21:2", "note": "The widow's mite; the smallest coin."},
+    {"name": "Quadrans (farthing)", "latin": "quadrans", "value": "2 lepta = 1/64 of a denarius", "scripture": "Matt 5:26; Mark 12:42", "note": "A Roman coin."},
+    {"name": "Assarion", "greek": "assarion", "value": "4 quadrantes = 1/16 of a denarius", "scripture": "Matt 10:29; Luke 12:6", "note": "Two sparrows sold for an assarion."},
+    {"name": "Denarius (penny)", "latin": "denarius", "value": "a day's wage for a labourer", "scripture": "Matt 18:28; Matt 20:2; Matt 20:9; Matt 20:10; Matt 20:13; Mark 6:37; Luke 7:41; Luke 10:35; John 6:7; Rev 6:6", "note": "The standard silver coin of the Roman period; a day's pay."},
+    {"name": "Drachma", "greek": "drachme", "value": "about a denarius", "scripture": "Luke 15:8", "note": "Greek silver coin; the lost coin."},
+    {"name": "Stater (shekel)", "greek": "stater", "value": "4 drachmas = 4 denarii", "scripture": "Matt 17:27", "note": "The coin found in the fish's mouth; temple tax for two."},
+    {"name": "Mina", "greek": "mna", "value": "100 drachmas = ~100 denarii", "scripture": "Luke 19:13; Luke 19:16; Luke 19:18; Luke 19:20; Luke 19:24; Luke 19:25", "note": "A unit of money in the parable of the pounds."},
+    {"name": "Talent (of silver)", "greek": "talanton", "value": "60 minas = ~6,000 denarii", "scripture": "Matt 18:24; Matt 25:15; Matt 25:20; Matt 25:22; Matt 25:24; Matt 25:25; Matt 25:28", "note": "The enormous debt in the parable of the unforgiving servant."}
+  ],
+  "calendar_months": [
+    {"name": "Nisan (Abib)", "position": 1, "gregorian": "March-April", "scripture": "Ex 12:2; Ex 13:4; Ex 23:15; Ex 34:18; Deut 16:1", "note": "First month; Passover."},
+    {"name": "Iyar (Ziv)", "position": 2, "gregorian": "April-May", "scripture": "1 Kgs 6:1; 1 Kgs 6:37", "note": "Second month."},
+    {"name": "Sivan", "position": 3, "gregorian": "May-June", "scripture": "Esth 8:9", "note": "Third month; Pentecost (Shavuot)."},
+    {"name": "Tammuz", "position": 4, "gregorian": "June-July", "scripture": "Zech 8:19", "note": "Fourth month."},
+    {"name": "Av (Ab)", "position": 5, "gregorian": "July-August", "scripture": "Num 33:38; Zech 7:3; Zech 7:5; Zech 8:19", "note": "Fifth month."},
+    {"name": "Elul", "position": 6, "gregorian": "August-September", "scripture": "Neh 6:15", "note": "Sixth month."},
+    {"name": "Tishri (Ethanim)", "position": 7, "gregorian": "September-October", "scripture": "1 Kgs 8:2; Ezek 40:1", "note": "Seventh month; Rosh Hashanah, Yom Kippur, Sukkot."},
+    {"name": "Marcheshvan (Bul)", "position": 8, "gregorian": "October-November", "scripture": "1 Kgs 6:38", "note": "Eighth month."},
+    {"name": "Kislev (Chislev)", "position": 9, "gregorian": "November-December", "scripture": "Neh 1:1; Zech 7:1", "note": "Ninth month; Hanukkah."},
+    {"name": "Tevet", "position": 10, "gregorian": "December-January", "scripture": "Esth 2:16", "note": "Tenth month."},
+    {"name": "Shevat", "position": 11, "gregorian": "January-February", "scripture": "Zech 1:7", "note": "Eleventh month."},
+    {"name": "Adar", "position": 12, "gregorian": "February-March", "scripture": "Ezra 6:15; Esth 3:7; Esth 3:13; Esth 8:12; Esth 9:1", "note": "Twelfth month; Purim. A leap month (Adar II) is added in leap years."}
+  ],
+  "festivals": [
+    {"name": "Passover (Pesach)", "month": "Nisan 14-21", "scripture": "Ex 12:1-28; Lev 23:5; Num 28:16; Deut 16:1; Josh 5:10", "note": "Deliverance from Egypt; the lamb."},
+    {"name": "Unleavened Bread", "month": "Nisan 15-21", "scripture": "Ex 12:15; Lev 23:6; Deut 16:3", "note": "Seven days without leaven."},
+    {"name": "Firstfruits (Bikkurim)", "month": "Nisan 16", "scripture": "Lev 23:10; Num 28:26", "note": "Waving the sheaf; resurrection Sunday."},
+    {"name": "Pentecost (Shavuot)", "month": "Sivan 6", "scripture": "Lev 23:15; Num 28:26; Deut 16:9; Acts 2:1", "note": "Feast of Weeks; the giving of the Law / the Spirit."},
+    {"name": "Trumpets (Rosh Hashanah)", "month": "Tishri 1", "scripture": "Lev 23:24; Num 29:1", "note": "Day of blowing trumpets."},
+    {"name": "Day of Atonement (Yom Kippur)", "month": "Tishri 10", "scripture": "Lev 16:1-34; Lev 23:27; Num 29:7", "note": "The high priest enters the Most Holy Place."},
+    {"name": "Tabernacles (Sukkot)", "month": "Tishri 15-22", "scripture": "Lev 23:34; Num 29:12; Deut 16:13; John 7:2", "note": "Feast of Booths; dwelling in tents."},
+    {"name": "Purim", "month": "Adar 14", "scripture": "Esth 9:18; Esth 9:21", "note": "Deliverance in Persia."}
+  ]
+}

@@ -1,0 +1,911 @@
+{
+ "repo": "open-bibles",
+ "name": "Open Bibles",
+ "vendor": "seven1m",
+ "home": "https://github.com/seven1m/open-bibles",
+ "schema": {
+  "version": 1,
+  "generated": "2026-09-27",
+  "note": "Transcribed from the repository README's own licence table. The nine Zefania-XML files are not offered: that format is not read by this app yet."
+ },
+ "license_note": "Public Domain and CC BY 4.0, plus two CC BY-SA 4.0 texts that the licence gate permits with attribution. Zefania files omitted.",
+ "items": [
+  {
+   "id": "sqi-albanian",
+   "title": "Albanian Bible",
+   "lang": "sqi",
+   "lang_name": "Albanian",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Albanian Bible. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/sqi-albanian.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/sqi-albanian.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "bul-bulgarian",
+   "title": "Bulgarian Bible",
+   "lang": "bul",
+   "lang_name": "Bulgarian",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Bulgarian Bible. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/bul-bulgarian.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/bul-bulgarian.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "chi-cuv",
+   "title": "Chinese Union Version",
+   "lang": "chi",
+   "lang_name": "Chinese (Traditional)",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Chinese Union Version. USFX from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "usfx",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/chi-cuv.usfx.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/chi-cuv.usfx.xml",
+   "format": "usfx",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "chi-cuv-simp",
+   "title": "Chinese Union Version (Simplified)",
+   "lang": "chi",
+   "lang_name": "Chinese (Simplified)",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Chinese Union Version (Simplified). USFX from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "usfx",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/chi-cuv-simp.usfx.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/chi-cuv-simp.usfx.xml",
+   "format": "usfx",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "chr-cherokee",
+   "title": "Cherokee New Testament",
+   "lang": "chr",
+   "lang_name": "Cherokee",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Cherokee New Testament. USFX from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "usfx",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/chr-cherokee.usfx.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/chr-cherokee.usfx.xml",
+   "format": "usfx",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "hrv-croatian",
+   "title": "Croatian Bible",
+   "lang": "hrv",
+   "lang_name": "Croatian",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Croatian Bible. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/hrv-croatian.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/hrv-croatian.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "dan-danish",
+   "title": "Danish Bible",
+   "lang": "dan",
+   "lang_name": "Danish",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Danish Bible. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/dan-danish.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/dan-danish.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "eng-bbe",
+   "title": "Bible in Basic English",
+   "lang": "eng",
+   "lang_name": "English",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Bible in Basic English. USFX from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "usfx",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/eng-bbe.usfx.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/eng-bbe.usfx.xml",
+   "format": "usfx",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "eng-bsb",
+   "title": "Berean Standard Bible",
+   "lang": "eng",
+   "lang_name": "English",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Berean Standard Bible. USFX from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "usfx",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/eng-bsb.usfx.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/eng-bsb.usfx.xml",
+   "format": "usfx",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "eng-gb-oeb",
+   "title": "Open English Bible, Commonwealth Edition",
+   "lang": "eng",
+   "lang_name": "English (UK)",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Open English Bible, Commonwealth Edition. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/eng-gb-oeb.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/eng-gb-oeb.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "eng-gb-webbe",
+   "title": "World English Bible, British Edition",
+   "lang": "eng",
+   "lang_name": "English (UK)",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "World English Bible, British Edition. USFX from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "usfx",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/eng-gb-webbe.usfx.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/eng-gb-webbe.usfx.xml",
+   "format": "usfx",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "eng-kjv",
+   "title": "King James Version",
+   "lang": "eng",
+   "lang_name": "English",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "King James Version. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/eng-kjv.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/eng-kjv.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "eng-us-oeb",
+   "title": "Open English Bible, US Edition",
+   "lang": "eng",
+   "lang_name": "English (US)",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Open English Bible, US Edition. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/eng-us-oeb.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/eng-us-oeb.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "eng-web",
+   "title": "World English Bible",
+   "lang": "eng",
+   "lang_name": "English",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "World English Bible. USFX from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "usfx",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/eng-web.usfx.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/eng-web.usfx.xml",
+   "format": "usfx",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "fin-biblia",
+   "title": "Finnish Bible",
+   "lang": "fin",
+   "lang_name": "Finnish",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Finnish Bible. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/fin-biblia.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/fin-biblia.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "fra-ostervald",
+   "title": "French Ostervald 1996",
+   "lang": "fra",
+   "lang_name": "French",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "French Ostervald 1996. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/fra-ostervald.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/fra-ostervald.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "deu-luther1912",
+   "title": "Luther Bible 1912",
+   "lang": "deu",
+   "lang_name": "German",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Luther Bible 1912. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/deu-luther1912.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/deu-luther1912.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "heb-leningrad",
+   "title": "Hebrew Leningrad Codex",
+   "lang": "heb",
+   "lang_name": "Hebrew",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Hebrew Leningrad Codex. USFX from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "usfx",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/heb-leningrad.usfx.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/heb-leningrad.usfx.xml",
+   "format": "usfx",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "hun-karoli",
+   "title": "Hungarian Karoli Bible",
+   "lang": "hun",
+   "lang_name": "Hungarian",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Hungarian Karoli Bible. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/hun-karoli.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/hun-karoli.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "ita-riveduta",
+   "title": "Italian Riveduta Bible 1927",
+   "lang": "ita",
+   "lang_name": "Italian",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Italian Riveduta Bible 1927. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/ita-riveduta.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/ita-riveduta.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "jpn-kougo",
+   "title": "Japanese Kougo (Colloquial)",
+   "lang": "jpn",
+   "lang_name": "Japanese",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Japanese Kougo (Colloquial). OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/jpn-kougo.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/jpn-kougo.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "kor-korean",
+   "title": "Korean Bible",
+   "lang": "kor",
+   "lang_name": "Korean",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Korean Bible. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/kor-korean.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/kor-korean.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "lat-clementine",
+   "title": "Clementine Latin Vulgate",
+   "lang": "lat",
+   "lang_name": "Latin",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Clementine Latin Vulgate. USFX from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "usfx",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/lat-clementine.usfx.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/lat-clementine.usfx.xml",
+   "format": "usfx",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "lav-latvian",
+   "title": "Latvian Bible",
+   "lang": "lav",
+   "lang_name": "Latvian",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Latvian Bible. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/lav-latvian.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/lav-latvian.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "mri-maori",
+   "title": "Maori Bible",
+   "lang": "mri",
+   "lang_name": "Maori",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Maori Bible. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/mri-maori.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/mri-maori.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "nor-norwegian",
+   "title": "Norwegian Bible",
+   "lang": "nor",
+   "lang_name": "Norwegian",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Norwegian Bible. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/nor-norwegian.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/nor-norwegian.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "pol-gdanska",
+   "title": "Polish Gdanska Bible",
+   "lang": "pol",
+   "lang_name": "Polish",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Polish Gdanska Bible. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/pol-gdanska.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/pol-gdanska.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "por-almeida",
+   "title": "Joao Ferreira de Almeida",
+   "lang": "por",
+   "lang_name": "Portuguese",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Joao Ferreira de Almeida. USFX from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "usfx",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/por-almeida.usfx.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/por-almeida.usfx.xml",
+   "format": "usfx",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "ron-rccv",
+   "title": "Protestant Romanian Corrected Cornilescu",
+   "lang": "ron",
+   "lang_name": "Romanian",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Protestant Romanian Corrected Cornilescu. USFX from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "usfx",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/ron-rccv.usfx.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/ron-rccv.usfx.xml",
+   "format": "usfx",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "spa-bes",
+   "title": "La Biblia en Espanol Sencillo",
+   "lang": "spa",
+   "lang_name": "Spanish",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "CC-BY-4.0",
+   "rights": "La Biblia en Espanol Sencillo (c) 2018 AudioBiblia.org / Irma Flores, CC BY 4.0.",
+   "description": "La Biblia en Espanol Sencillo. USFX from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "usfx",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/spa-bes.usfx.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/spa-bes.usfx.xml",
+   "format": "usfx",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "spa-pddpt",
+   "title": "Palabra de Dios para ti",
+   "lang": "spa",
+   "lang_name": "Spanish",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "CC-BY-SA-4.0",
+   "rights": "Shared under Creative Commons Attribution-ShareAlike 4.0; share alike and name the changes.",
+   "description": "Palabra de Dios para ti. USFX from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "usfx",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/spa-pddpt.usfx.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/spa-pddpt.usfx.xml",
+   "format": "usfx",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "spa-rv1909",
+   "title": "Reina Valera 1909",
+   "lang": "spa",
+   "lang_name": "Spanish",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Reina Valera 1909. USFX from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "usfx",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/spa-rv1909.usfx.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/spa-rv1909.usfx.xml",
+   "format": "usfx",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "spa-vbl",
+   "title": "Version Biblia Libre",
+   "lang": "spa",
+   "lang_name": "Spanish",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "CC-BY-SA-4.0",
+   "rights": "Shared under Creative Commons Attribution-ShareAlike 4.0; share alike and name the changes.",
+   "description": "Version Biblia Libre. USFX from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "usfx",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/spa-vbl.usfx.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/spa-vbl.usfx.xml",
+   "format": "usfx",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "swe-swedish",
+   "title": "Swedish Bible",
+   "lang": "swe",
+   "lang_name": "Swedish",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Swedish Bible. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/swe-swedish.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/swe-swedish.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "swa-swahili",
+   "title": "Swahili Bible",
+   "lang": "swa",
+   "lang_name": "Swahili",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Swahili Bible. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/swa-swahili.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/swa-swahili.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "tgl-tagalog",
+   "title": "Tagalog Bible (Ang Dating Biblia)",
+   "lang": "tgl",
+   "lang_name": "Tagalog",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Tagalog Bible (Ang Dating Biblia). OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/tgl-tagalog.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/tgl-tagalog.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "tha-thai",
+   "title": "Thai Bible",
+   "lang": "tha",
+   "lang_name": "Thai",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Thai Bible. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/tha-thai.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/tha-thai.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "tur-turkish",
+   "title": "Turkish Bible",
+   "lang": "tur",
+   "lang_name": "Turkish",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Turkish Bible. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/tur-turkish.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/tur-turkish.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  },
+  {
+   "id": "vie-cadman",
+   "title": "Vietnamese Cadman Bible 1934",
+   "lang": "vie",
+   "lang_name": "Vietnamese",
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "type": "Bible",
+   "license": "Public Domain",
+   "rights": "Public domain.",
+   "description": "Vietnamese Cadman Bible 1934. OSIS from seven1m/open-bibles.",
+   "downloads": [
+    {
+     "format": "osis",
+     "url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/vie-cadman.osis.xml"
+    }
+   ],
+   "download_url": "https://raw.githubusercontent.com/seven1m/open-bibles/master/vie-cadman.osis.xml",
+   "format": "osis",
+   "page_url": "https://github.com/seven1m/open-bibles"
+  }
+ ]
+}

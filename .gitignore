@@ -1,0 +1,69 @@
+# Everything the app downloads at run time, and the library it builds.
+#
+# This is the important one.  data/ holds the local database and one copy of
+# every installed module -- 3 GB of Bible texts, commentaries, lexica, maps and
+# photographs, each under its own licence and none of them part of this
+# project.  Committing or zipping this directory redistributes material the
+# project does not own, which is exactly what the MIT licence on the software
+# does not cover.  Clone the repository and install from the Store instead.
+/data/
+
+# Local module downloads, wherever a custom data directory points.
+/modules/
+
+# Credentials, wherever GBIBLE_HOME points.  `/data/` above covers the default
+# location; this covers a custom one.  It is here because a file holding
+# somebody else's API keys must never be committable even by accident -- the
+# same reason the database is excluded, and for a stronger reason, since these
+# are not this project's data at all.
+api-credentials.json
+sync-credentials.json
+**/api-credentials.json
+**/sync-credentials.json
+
+# The Store's catalogues are committed deliberately (gbible/store/data/*.json):
+# they are metadata -- title, author, licence, URL -- not any of the works.
+# See tools/selftest.py, "Nothing redistributable is committed".
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+.venv-test/
+venv/
+
+# Editors and OS cruft
+.DS_Store
+*.swp
+*~
+.idea/
+.vscode/
+
+# Local scratch
+*.db
+*.db-wal
+*.db-shm
+*.log
+
+# Built AppImages
+*.AppImage
+
+# Download cache for the catalogue builders (tools/build_ccel_fathers.py and
+# friends).  A build re-downloads only what is missing, so keeping these between
+# runs is worth a few hundred megabytes; committing them is not.
+.cache/
+
+# Stray local files.  `Untitled.jpg` and `Icon.jpg` are 727x736
+# screenshots at the repository root that nothing in the codebase
+# reads, and `.gradio/` holds a self-signed certificate from a
+# Gradio setup this project does not use.  None of them is deleted
+# here -- they are simply not part of the project.
+Untitled.jpg
+Icon.jpg
+.gradio/
+
+# OS noise
+Thumbs.db

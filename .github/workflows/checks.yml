@@ -1,0 +1,49 @@
+name: checks
+
+# The self-test is the gate.  It runs against a real library, because most
+# of what it checks -- the grounding, the guides, the retrieval, the
+# citations, the exports -- cannot be exercised against an empty one.  The
+# seed tool installs one module of every kind for exactly that reason.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # The app runtime needs no packages or build step. Development-only
+          # browser test dependencies are installed in their own step below.
+          python-version: '3.12'
+
+      - name: Check it compiles and imports
+        # Before anything is installed, so that a broken import or a syntax
+        # error is reported as one, and not as a hundred skips.
+        run: |
+          python3 -m compileall -q gbible tools run.py
+          python3 -c "import gbible.server.app; print('imports ok')"
+
+      - name: Check database migrations
+        run: python3 tools/test_migrations.py
+
+      - name: Install browser test dependencies
+        run: |
+          python3 -m pip install -r requirements-test.txt
+          python3 -m playwright install --with-deps chromium
+
+      - name: Install a library to test against
+        # One module of every kind, so the checks that need material have
+        # some.  The seed tool installs fourteen and says so.
+        run: python3 tools/seed.py
+
+      - name: Check it against real material
+        run: python3 run.py --check
+
+      - name: Check the real browser flow
+        run: python3 tools/browser_smoke.py

@@ -1,0 +1,626 @@
+{
+ "repository": "openscriptures",
+ "generated": 1790510488,
+ "source": "https://github.com/openscriptures",
+ "license": "CC-BY-4.0",
+ "count": 2,
+ "items": [
+  {
+   "id": "morphhb",
+   "title": "Open Scriptures Hebrew Bible",
+   "subtitle": "Westminster Leningrad Codex, morphology-tagged USFM-lexical (WLC) XML",
+   "lang": "hbo",
+   "lang_name": "Biblical Hebrew",
+   "license": "CC-BY-4.0",
+   "license_url": "https://creativecommons.org/licenses/by/4.0/",
+   "attribution": "Open Scriptures Hebrew Bible, Open Scriptures (CC BY 4.0)",
+   "category": "OriginalLanguage",
+   "subjects": [
+    "Hebrew",
+    "Textual Imaging"
+   ],
+   "book_count": 39,
+   "books": [
+    "Gen",
+    "Exod",
+    "Lev",
+    "Num",
+    "Deut",
+    "Josh",
+    "Judg",
+    "Ruth",
+    "1Sam",
+    "2Sam",
+    "1Kgs",
+    "2Kgs",
+    "1Chr",
+    "2Chr",
+    "Ezra",
+    "Neh",
+    "Esth",
+    "Job",
+    "Ps",
+    "Prov",
+    "Eccl",
+    "Song",
+    "Isa",
+    "Jer",
+    "Lam",
+    "Ezek",
+    "Dan",
+    "Hos",
+    "Joel",
+    "Amos",
+    "Obad",
+    "Jonah",
+    "Mic",
+    "Nah",
+    "Hab",
+    "Zeph",
+    "Hag",
+    "Zech",
+    "Mal"
+   ],
+   "files": [
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Gen.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Exod.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Lev.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Num.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Deut.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Josh.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Judg.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Ruth.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/1Sam.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/2Sam.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/1Kgs.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/2Kgs.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/1Chr.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/2Chr.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Ezra.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Neh.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Esth.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Job.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Ps.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Prov.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Eccl.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Song.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Isa.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Jer.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Lam.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Ezek.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Dan.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Hos.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Joel.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Amos.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Obad.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Jonah.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Mic.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Nah.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Hab.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Zeph.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Hag.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Zech.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Mal.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/parsing/Oshm.xml",
+    "https://raw.githubusercontent.com/openscriptures/morphhb/master/WlcWordList/Words.csv"
+   ],
+   "book_files": [
+    {
+     "book": "Gen",
+     "name": "Genesis",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Gen.xml",
+     "size_bytes": 336087
+    },
+    {
+     "book": "Exod",
+     "name": "Exodus",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Exod.xml",
+     "size_bytes": 269002
+    },
+    {
+     "book": "Lev",
+     "name": "Leviticus",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Lev.xml",
+     "size_bytes": 181449
+    },
+    {
+     "book": "Num",
+     "name": "Numbers",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Num.xml",
+     "size_bytes": 250215
+    },
+    {
+     "book": "Deut",
+     "name": "Deuteronomy",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Deut.xml",
+     "size_bytes": 242858
+    },
+    {
+     "book": "Josh",
+     "name": "Joshua",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Josh.xml",
+     "size_bytes": 163432
+    },
+    {
+     "book": "Judg",
+     "name": "Judges",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Judg.xml",
+     "size_bytes": 166835
+    },
+    {
+     "book": "Ruth",
+     "name": "Ruth",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Ruth.xml",
+     "size_bytes": 26905
+    },
+    {
+     "book": "1Sam",
+     "name": "1 Samuel",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/1Sam.xml",
+     "size_bytes": 224283
+    },
+    {
+     "book": "2Sam",
+     "name": "2 Samuel",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/2Sam.xml",
+     "size_bytes": 188263
+    },
+    {
+     "book": "1Kgs",
+     "name": "1 Kings",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/1Kgs.xml",
+     "size_bytes": 214137
+    },
+    {
+     "book": "2Kgs",
+     "name": "2 Kings",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/2Kgs.xml",
+     "size_bytes": 201921
+    },
+    {
+     "book": "1Chr",
+     "name": "1 Chronicles",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/1Chr.xml",
+     "size_bytes": 181767
+    },
+    {
+     "book": "2Chr",
+     "name": "2 Chronicles",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/2Chr.xml",
+     "size_bytes": 229286
+    },
+    {
+     "book": "Ezra",
+     "name": "Ezra",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Ezra.xml",
+     "size_bytes": 69301
+    },
+    {
+     "book": "Neh",
+     "name": "Nehemiah",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Neh.xml",
+     "size_bytes": 96344
+    },
+    {
+     "book": "Esth",
+     "name": "Esther",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Esth.xml",
+     "size_bytes": 53945
+    },
+    {
+     "book": "Job",
+     "name": "Job",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Job.xml",
+     "size_bytes": 158265
+    },
+    {
+     "book": "Ps",
+     "name": "Psalms",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Ps.xml",
+     "size_bytes": 366527
+    },
+    {
+     "book": "Prov",
+     "name": "Proverbs",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Prov.xml",
+     "size_bytes": 130527
+    },
+    {
+     "book": "Eccl",
+     "name": "Ecclesiastes",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Eccl.xml",
+     "size_bytes": 54498
+    },
+    {
+     "book": "Song",
+     "name": "Song of Songs",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Song.xml",
+     "size_bytes": 28208
+    },
+    {
+     "book": "Isa",
+     "name": "Isaiah",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Isa.xml",
+     "size_bytes": 311007
+    },
+    {
+     "book": "Jer",
+     "name": "Jeremiah",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Jer.xml",
+     "size_bytes": 373693
+    },
+    {
+     "book": "Lam",
+     "name": "Lamentations",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Lam.xml",
+     "size_bytes": 33617
+    },
+    {
+     "book": "Ezek",
+     "name": "Ezekiel",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Ezek.xml",
+     "size_bytes": 312387
+    },
+    {
+     "book": "Dan",
+     "name": "Daniel",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Dan.xml",
+     "size_bytes": 107212
+    },
+    {
+     "book": "Hos",
+     "name": "Hosea",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Hos.xml",
+     "size_bytes": 47576
+    },
+    {
+     "book": "Joel",
+     "name": "Joel",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Joel.xml",
+     "size_bytes": 21708
+    },
+    {
+     "book": "Amos",
+     "name": "Amos",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Amos.xml",
+     "size_bytes": 39493
+    },
+    {
+     "book": "Obad",
+     "name": "Obadiah",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Obad.xml",
+     "size_bytes": 9693
+    },
+    {
+     "book": "Jonah",
+     "name": "Jonah",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Jonah.xml",
+     "size_bytes": 16185
+    },
+    {
+     "book": "Mic",
+     "name": "Micah",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Mic.xml",
+     "size_bytes": 30530
+    },
+    {
+     "book": "Nah",
+     "name": "Nahum",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Nah.xml",
+     "size_bytes": 15367
+    },
+    {
+     "book": "Hab",
+     "name": "Habakkuk",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Hab.xml",
+     "size_bytes": 17370
+    },
+    {
+     "book": "Zeph",
+     "name": "Zephaniah",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Zeph.xml",
+     "size_bytes": 18232
+    },
+    {
+     "book": "Hag",
+     "name": "Haggai",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Hag.xml",
+     "size_bytes": 14011
+    },
+    {
+     "book": "Zech",
+     "name": "Zechariah",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Zech.xml",
+     "size_bytes": 57746
+    },
+    {
+     "book": "Mal",
+     "name": "Malachi",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/Mal.xml",
+     "size_bytes": 19746
+    }
+   ],
+   "auxiliary_files": [
+    {
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/parsing/Oshm.xml",
+     "status": 200,
+     "size_bytes": 27681
+    },
+    {
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/WlcWordList/Words.csv",
+     "status": 200,
+     "size_bytes": 297543
+    }
+   ],
+   "downloads": [
+    {
+     "format": "xml",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/wlc/<Book>.xml",
+     "note": "one file per book; 39 books"
+    },
+    {
+     "format": "xml",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/parsing/Oshm.xml",
+     "note": "Hebrew morphology code table"
+    },
+    {
+     "format": "csv",
+     "url": "https://raw.githubusercontent.com/openscriptures/morphhb/master/WlcWordList/Words.csv",
+     "note": "WLC word list"
+    }
+   ],
+   "repo": "https://github.com/openscriptures/morphhb",
+   "page_url": "https://github.com/openscriptures/morphhb",
+   "total_size_bytes": 5279628
+  },
+  {
+   "id": "sblgnt",
+   "title": "SBL Greek New Testament",
+   "subtitle": "The Greek New Testament: SBLGNT (Society of Biblical Literature and Logos Bible Software), plain text with morphology",
+   "lang": "grc",
+   "lang_name": "Ancient Greek",
+   "license": "CC-BY-4.0",
+   "license_url": "https://creativecommons.org/licenses/by/4.0/",
+   "attribution": "SBL Greek New Testament, Logos Bible Software / Society of Biblical Literature (CC BY 4.0)",
+   "category": "OriginalLanguage",
+   "subjects": [
+    "Greek",
+    "Textual Imaging"
+   ],
+   "book_count": 27,
+   "books": [
+    "Matt",
+    "Mark",
+    "Luke",
+    "John",
+    "Acts",
+    "Rom",
+    "1Cor",
+    "2Cor",
+    "Gal",
+    "Eph",
+    "Phil",
+    "Col",
+    "1Thess",
+    "2Thess",
+    "1Tim",
+    "2Tim",
+    "Titus",
+    "Phlm",
+    "Heb",
+    "Jas",
+    "1Pet",
+    "2Pet",
+    "1John",
+    "2John",
+    "3John",
+    "Jude",
+    "Rev"
+   ],
+   "files": [
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Matt.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Mark.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Luke.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/John.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Acts.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Rom.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/1Cor.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/2Cor.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Gal.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Eph.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Phil.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Col.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/1Thess.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/2Thess.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/1Tim.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/2Tim.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Titus.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Phlm.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Heb.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Jas.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/1Pet.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/2Pet.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/1John.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/2John.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/3John.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Jude.txt",
+    "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Rev.txt"
+   ],
+   "book_files": [
+    {
+     "book": "Matt",
+     "name": "Matthew",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Matt.txt",
+     "size_bytes": 59287
+    },
+    {
+     "book": "Mark",
+     "name": "Mark",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Mark.txt",
+     "size_bytes": 38706
+    },
+    {
+     "book": "Luke",
+     "name": "Luke",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Luke.txt",
+     "size_bytes": 66878
+    },
+    {
+     "book": "John",
+     "name": "John",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/John.txt",
+     "size_bytes": 46106
+    },
+    {
+     "book": "Acts",
+     "name": "Acts",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Acts.txt",
+     "size_bytes": 65317
+    },
+    {
+     "book": "Rom",
+     "name": "Romans",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Rom.txt",
+     "size_bytes": 23862
+    },
+    {
+     "book": "1Cor",
+     "name": "1 Corinthians",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/1Cor.txt",
+     "size_bytes": 23379
+    },
+    {
+     "book": "2Cor",
+     "name": "2 Corinthians",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/2Cor.txt",
+     "size_bytes": 15889
+    },
+    {
+     "book": "Gal",
+     "name": "Galatians",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Gal.txt",
+     "size_bytes": 8685
+    },
+    {
+     "book": "Eph",
+     "name": "Ephesians",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Eph.txt",
+     "size_bytes": 8787
+    },
+    {
+     "book": "Phil",
+     "name": "Philippians",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Phil.txt",
+     "size_bytes": 6426
+    },
+    {
+     "book": "Col",
+     "name": "Colossians",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Col.txt",
+     "size_bytes": 6191
+    },
+    {
+     "book": "1Thess",
+     "name": "1 Thessalonians",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/1Thess.txt",
+     "size_bytes": 5585
+    },
+    {
+     "book": "2Thess",
+     "name": "2 Thessalonians",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/2Thess.txt",
+     "size_bytes": 3343
+    },
+    {
+     "book": "1Tim",
+     "name": "1 Timothy",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/1Tim.txt",
+     "size_bytes": 7202
+    },
+    {
+     "book": "2Tim",
+     "name": "2 Timothy",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/2Tim.txt",
+     "size_bytes": 5667
+    },
+    {
+     "book": "Titus",
+     "name": "Titus",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Titus.txt",
+     "size_bytes": 3337
+    },
+    {
+     "book": "Phlm",
+     "name": "Philemon",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Phlm.txt",
+     "size_bytes": 1646
+    },
+    {
+     "book": "Heb",
+     "name": "Hebrews",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Heb.txt",
+     "size_bytes": 18893
+    },
+    {
+     "book": "Jas",
+     "name": "James",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Jas.txt",
+     "size_bytes": 7324
+    },
+    {
+     "book": "1Pet",
+     "name": "1 Peter",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/1Pet.txt",
+     "size_bytes": 7322
+    },
+    {
+     "book": "2Pet",
+     "name": "2 Peter",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/2Pet.txt",
+     "size_bytes": 5013
+    },
+    {
+     "book": "1John",
+     "name": "1 John",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/1John.txt",
+     "size_bytes": 5945
+    },
+    {
+     "book": "2John",
+     "name": "2 John",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/2John.txt",
+     "size_bytes": 1192
+    },
+    {
+     "book": "3John",
+     "name": "3 John",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/3John.txt",
+     "size_bytes": 1231
+    },
+    {
+     "book": "Jude",
+     "name": "Jude",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Jude.txt",
+     "size_bytes": 2437
+    },
+    {
+     "book": "Rev",
+     "name": "Revelation",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/Rev.txt",
+     "size_bytes": 28059
+    }
+   ],
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://raw.githubusercontent.com/logosBible/SBLGNT/master/data/sblgnt/text/<Book>.txt",
+     "note": "one file per book; 27 books"
+    }
+   ],
+   "repo": "https://github.com/logosBible/SBLGNT",
+   "page_url": "https://github.com/logosBible/SBLGNT",
+   "total_size_bytes": 473709
+  }
+ ],
+ "skipped": []
+}

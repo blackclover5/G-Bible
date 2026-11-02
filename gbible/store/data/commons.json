@@ -1,0 +1,687 @@
+{
+ "repository": "wikimedia",
+ "generated": 1790510228,
+ "source": "https://commons.wikimedia.org",
+ "api": "https://commons.wikimedia.org/w/api.php",
+ "count": 19,
+ "items": [
+  {
+   "id": "paul-journey-1",
+   "title": "Paul the Apostle, first missionary journey.svg",
+   "commons_file": "File:Paul_the_Apostle,_first_missionary_journey.svg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/b/b4/Paul_the_Apostle%2C_first_missionary_journey.svg",
+   "requested_url": "https://upload.wikimedia.org/wikipedia/commons/b/b4/Paul_the_Apostle%2C_first_missionary_journey.svg",
+   "mime": "image/svg+xml",
+   "width": 513,
+   "height": 425,
+   "size_bytes": 444185,
+   "license": "Public Domain",
+   "license_source": "Public domain",
+   "license_text": "pd",
+   "attribution": "Roberto Reggi (sulla base di Yohanan Aharoni, Michael Abi-Yonah, Atlante della Bibbia, 1987, mappa 245.); Derivative work of RomanEmpire 117.svg",
+   "artist": "Roberto Reggi (sulla base di Yohanan Aharoni, Michael Abi-Yonah, Atlante della Bibbia, 1987, mappa 245.)",
+   "credit": "Derivative work of RomanEmpire 117.svg",
+   "category": "Map",
+   "subjects": [
+    "Biblical History",
+    "Ministry / Leadership",
+    "Biblical Places"
+   ],
+   "description": "Map of St Paul's first missionary journey (Acts 13-14).",
+   "expected_license": "PD",
+   "downloads": [
+    {
+     "format": "image",
+     "url": "https://upload.wikimedia.org/wikipedia/commons/b/b4/Paul_the_Apostle%2C_first_missionary_journey.svg",
+     "size_bytes": 444185
+    }
+   ],
+   "page_url": "https://commons.wikimedia.org/wiki/File:Paul_the_Apostle%2C_first_missionary_journey.svg",
+   "license_check": "ok",
+   "url_status": 200
+  },
+  {
+   "id": "paul-journey-2",
+   "title": "Paul the Apostle, second missionary journey.svg",
+   "commons_file": "File:Paul_the_Apostle,_second_missionary_journey.svg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/4/4b/Paul_the_Apostle%2C_second_missionary_journey.svg",
+   "requested_url": "https://upload.wikimedia.org/wikipedia/commons/4/4b/Paul_the_Apostle%2C_second_missionary_journey.svg",
+   "mime": "image/svg+xml",
+   "width": 673,
+   "height": 524,
+   "size_bytes": 167369,
+   "license": "Public Domain",
+   "license_source": "Public domain",
+   "license_text": "pd",
+   "attribution": "Roberto Reggi (sulla base di Yohanan Aharoni, Michael Abi-Yonah, Atlante della Bibbia, 1987, mappa 246.); Derivative work of RomanEmpire 117.svg",
+   "artist": "Roberto Reggi (sulla base di Yohanan Aharoni, Michael Abi-Yonah, Atlante della Bibbia, 1987, mappa 246.)",
+   "credit": "Derivative work of RomanEmpire 117.svg",
+   "category": "Map",
+   "subjects": [
+    "Biblical History",
+    "Ministry / Leadership",
+    "Biblical Places"
+   ],
+   "description": "Map of St Paul's second missionary journey (Acts 15-18).",
+   "expected_license": "PD",
+   "downloads": [
+    {
+     "format": "image",
+     "url": "https://upload.wikimedia.org/wikipedia/commons/4/4b/Paul_the_Apostle%2C_second_missionary_journey.svg",
+     "size_bytes": 167369
+    }
+   ],
+   "page_url": "https://commons.wikimedia.org/wiki/File:Paul_the_Apostle%2C_second_missionary_journey.svg",
+   "license_check": "ok",
+   "url_status": 200
+  },
+  {
+   "id": "paul-journey-3",
+   "title": "Paul the Apostle, third missionary journey.svg",
+   "commons_file": "File:Paul_the_Apostle,_third_missionary_journey.svg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/e/e5/Paul_the_Apostle%2C_third_missionary_journey.svg",
+   "requested_url": "https://upload.wikimedia.org/wikipedia/commons/e/e5/Paul_the_Apostle%2C_third_missionary_journey.svg",
+   "mime": "image/svg+xml",
+   "width": 679,
+   "height": 524,
+   "size_bytes": 524712,
+   "license": "Public Domain",
+   "license_source": "Public domain",
+   "license_text": "pd",
+   "attribution": "Roberto Reggi (sulla base di Yohanan Aharoni, Michael Abi-Yonah, Atlante della Bibbia, 1987, mappa 247.); Derivative work of RomanEmpire 117.svg",
+   "artist": "Roberto Reggi (sulla base di Yohanan Aharoni, Michael Abi-Yonah, Atlante della Bibbia, 1987, mappa 247.)",
+   "credit": "Derivative work of RomanEmpire 117.svg",
+   "category": "Map",
+   "subjects": [
+    "Biblical History",
+    "Ministry / Leadership",
+    "Biblical Places"
+   ],
+   "description": "Map of St Paul's third missionary journey (Acts 18-21).",
+   "expected_license": "PD",
+   "downloads": [
+    {
+     "format": "image",
+     "url": "https://upload.wikimedia.org/wikipedia/commons/e/e5/Paul_the_Apostle%2C_third_missionary_journey.svg",
+     "size_bytes": 524712
+    }
+   ],
+   "page_url": "https://commons.wikimedia.org/wiki/File:Paul_the_Apostle%2C_third_missionary_journey.svg",
+   "license_check": "ok",
+   "url_status": 200
+  },
+  {
+   "id": "paul-journey-4-rome",
+   "title": "Paul the Apostle, fourth missionary journey (Rome).svg",
+   "commons_file": "File:Paul_the_Apostle,_fourth_missionary_journey_(Rome).svg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/a/ae/Paul_the_Apostle%2C_fourth_missionary_journey_%28Rome%29.svg",
+   "requested_url": "https://upload.wikimedia.org/wikipedia/commons/a/ae/Paul_the_Apostle%2C_fourth_missionary_journey_%28Rome%29.svg",
+   "mime": "image/svg+xml",
+   "width": 998,
+   "height": 524,
+   "size_bytes": 151116,
+   "license": "Public Domain",
+   "license_source": "Public domain",
+   "license_text": "pd",
+   "attribution": "Roberto Reggi (sulla base di Yohanan Aharoni, Michael Abi-Yonah, Atlante della Bibbia, 1987, mappa 248.); Derivative work of RomanEmpire 117.svg",
+   "artist": "Roberto Reggi (sulla base di Yohanan Aharoni, Michael Abi-Yonah, Atlante della Bibbia, 1987, mappa 248.)",
+   "credit": "Derivative work of RomanEmpire 117.svg",
+   "category": "Map",
+   "subjects": [
+    "Biblical History",
+    "Ministry / Leadership",
+    "Biblical Places"
+   ],
+   "description": "Map of St Paul's fourth missionary journey, to Rome (Acts 21-28).",
+   "expected_license": "PD",
+   "downloads": [
+    {
+     "format": "image",
+     "url": "https://upload.wikimedia.org/wikipedia/commons/a/ae/Paul_the_Apostle%2C_fourth_missionary_journey_%28Rome%29.svg",
+     "size_bytes": 151116
+    }
+   ],
+   "page_url": "https://commons.wikimedia.org/wiki/File:Paul_the_Apostle%2C_fourth_missionary_journey_%28Rome%29.svg",
+   "license_check": "ok",
+   "url_status": 200
+  },
+  {
+   "id": "ortelius-exodus-1624",
+   "title": "1624 map of the Exodus route by Abraham Ortelius.jpg",
+   "commons_file": "File:1624_map_of_the_Exodus_route_by_Abraham_Ortelius.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/9/98/1624_map_of_the_Exodus_route_by_Abraham_Ortelius.jpg",
+   "requested_url": "https://upload.wikimedia.org/wikipedia/commons/9/98/1624_map_of_the_Exodus_route_by_Abraham_Ortelius.jpg",
+   "mime": "image/jpeg",
+   "width": 1436,
+   "height": 1090,
+   "size_bytes": 488714,
+   "license": "Public Domain",
+   "license_source": "Public domain",
+   "license_text": "pd",
+   "attribution": "Abraham Ortelius; https://www.raremaps.com/gallery/detail/65287/lumen-historiarum-per-orrientem-ortelius",
+   "artist": "Abraham Ortelius",
+   "credit": "https://www.raremaps.com/gallery/detail/65287/lumen-historiarum-per-orrientem-ortelius",
+   "category": "Map",
+   "subjects": [
+    "Geography",
+    "Biblical History",
+    "Biblical Places"
+   ],
+   "description": "Abraham Ortelius' 1624 map of the route of the Exodus.",
+   "expected_license": "PD",
+   "downloads": [
+    {
+     "format": "image",
+     "url": "https://upload.wikimedia.org/wikipedia/commons/9/98/1624_map_of_the_Exodus_route_by_Abraham_Ortelius.jpg",
+     "size_bytes": 488714
+    }
+   ],
+   "page_url": "https://commons.wikimedia.org/wiki/File:1624_map_of_the_Exodus_route_by_Abraham_Ortelius.jpg",
+   "license_check": "ok",
+   "url_status": 200
+  },
+  {
+   "id": "ortelius-israel",
+   "title": "Map of Israel by Abraham Ortelius.jpeg",
+   "commons_file": "File:Map_of_Israel_by_Abraham_Ortelius.jpeg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/3/33/Map_of_Israel_by_Abraham_Ortelius.jpeg",
+   "requested_url": "https://upload.wikimedia.org/wikipedia/commons/3/33/Map_of_Israel_by_Abraham_Ortelius.jpeg",
+   "mime": "image/jpeg",
+   "width": 2393,
+   "height": 1879,
+   "size_bytes": 1919998,
+   "license": "Public Domain",
+   "license_source": "Public domain",
+   "license_text": "pd",
+   "attribution": "Abraham Ortelius; http://luna.folger.edu/luna/servlet/s/3y58r0",
+   "artist": "Abraham Ortelius",
+   "credit": "http://luna.folger.edu/luna/servlet/s/3y58r0",
+   "category": "Map",
+   "subjects": [
+    "Geography",
+    "Biblical History",
+    "Biblical Places"
+   ],
+   "description": "Abraham Ortelius' map of the land of Israel.",
+   "expected_license": "PD",
+   "downloads": [
+    {
+     "format": "image",
+     "url": "https://upload.wikimedia.org/wikipedia/commons/3/33/Map_of_Israel_by_Abraham_Ortelius.jpeg",
+     "size_bytes": 1919998
+    }
+   ],
+   "page_url": "https://commons.wikimedia.org/wiki/File:Map_of_Israel_by_Abraham_Ortelius.jpeg",
+   "license_check": "ok",
+   "url_status": 200
+  },
+  {
+   "id": "anville-israel-1794",
+   "title": "1794 Anville Map of Israel, Palestine or the Holy Land in Ancient Times.jpg",
+   "commons_file": "File:1794_Anville_Map_of_Israel,_Palestine_or_the_Holy_Land_in_Ancient_Times.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/0/0f/1794_Anville_Map_of_Israel%2C_Palestine_or_the_Holy_Land_in_Ancient_Times.jpg",
+   "requested_url": "https://upload.wikimedia.org/wikipedia/commons/0/0f/1794_Anville_Map_of_Israel%2C_Palestine_or_the_Holy_Land_in_Ancient_Times.jpg",
+   "mime": "image/jpeg",
+   "width": 2957,
+   "height": 2627,
+   "size_bytes": 1823278,
+   "license": "Public Domain",
+   "license_source": "Public domain",
+   "license_text": "pd",
+   "attribution": "Jean Baptiste Bourguignon d'Anville; This file was provided to Wikimedia Commons by Geographicus Rare Antique Maps , a specialist dealer in rare maps and other cartography of the 15th, 16th, 17th, 18th and 19th centuries, as part of a cooperation project .",
+   "artist": "Jean Baptiste Bourguignon d'Anville",
+   "credit": "This file was provided to Wikimedia Commons by Geographicus Rare Antique Maps , a specialist dealer in rare maps and other cartography of the 15th, 16th, 17th, 18th and 19th centuries, as part of a cooperation project .",
+   "category": "Map",
+   "subjects": [
+    "Geography",
+    "Archaeology",
+    "Biblical Places"
+   ],
+   "description": "Jean-Baptiste d'Anville's 1794 map of Israel, Palestine or the Holy Land in ancient times.",
+   "expected_license": "PD",
+   "downloads": [
+    {
+     "format": "image",
+     "url": "https://upload.wikimedia.org/wikipedia/commons/0/0f/1794_Anville_Map_of_Israel%2C_Palestine_or_the_Holy_Land_in_Ancient_Times.jpg",
+     "size_bytes": 1823278
+    }
+   ],
+   "page_url": "https://commons.wikimedia.org/wiki/File:1794_Anville_Map_of_Israel%2C_Palestine_or_the_Holy_Land_in_Ancient_Times.jpg",
+   "license_check": "ok",
+   "url_status": 200
+  },
+  {
+   "id": "palestine-under-herod",
+   "title": "Palestine under Herod the Great (Smith, 1915).jpg",
+   "commons_file": "File:Palestine_under_Herod_the_Great_(Smith,_1915).jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/f/f0/Palestine_under_Herod_the_Great_%28Smith%2C_1915%29.jpg",
+   "requested_url": "https://upload.wikimedia.org/wikipedia/commons/f/f0/Palestine_under_Herod_the_Great_%28Smith%2C_1915%29.jpg",
+   "mime": "image/jpeg",
+   "width": 1153,
+   "height": 1847,
+   "size_bytes": 1860134,
+   "license": "Public Domain",
+   "license_source": "Public domain",
+   "license_text": "pd",
+   "attribution": "George Adam Smith; Atlas of the Historical Geography of the Holy Land",
+   "artist": "George Adam Smith",
+   "credit": "Atlas of the Historical Geography of the Holy Land",
+   "category": "Map",
+   "subjects": [
+    "Geography",
+    "Biblical History",
+    "Archaeology"
+   ],
+   "description": "Map of Palestine in the reign of Herod the Great (Smith, 1915).",
+   "expected_license": "PD",
+   "downloads": [
+    {
+     "format": "image",
+     "url": "https://upload.wikimedia.org/wikipedia/commons/f/f0/Palestine_under_Herod_the_Great_%28Smith%2C_1915%29.jpg",
+     "size_bytes": 1860134
+    }
+   ],
+   "page_url": "https://commons.wikimedia.org/wiki/File:Palestine_under_Herod_the_Great_%28Smith%2C_1915%29.jpg",
+   "license_check": "ok",
+   "url_status": 200
+  },
+  {
+   "id": "paul-travels-1873",
+   "title": "1873 map of the travels of Apostle Paul.jpg",
+   "commons_file": "File:1873_map_of_the_travels_of_Apostle_Paul.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/a/ab/1873_map_of_the_travels_of_Apostle_Paul.jpg",
+   "requested_url": "https://upload.wikimedia.org/wikipedia/commons/a/ab/1873_map_of_the_travels_of_Apostle_Paul.jpg",
+   "mime": "image/jpeg",
+   "width": 2371,
+   "height": 1741,
+   "size_bytes": 1088839,
+   "license": "Public Domain",
+   "license_source": "Public domain",
+   "license_text": "pd",
+   "attribution": "Norman B. Leventhal Map Center at the BPL; https://www.flickr.com/photos/normanbleventhalmapcenter/10139457793/",
+   "artist": "Norman B. Leventhal Map Center at the BPL",
+   "credit": "https://www.flickr.com/photos/normanbleventhalmapcenter/10139457793/",
+   "category": "Map",
+   "subjects": [
+    "Biblical History",
+    "Ministry / Leadership",
+    "Geography"
+   ],
+   "description": "1873 map of the travels of the Apostle Paul.",
+   "expected_license": "PD",
+   "downloads": [
+    {
+     "format": "image",
+     "url": "https://upload.wikimedia.org/wikipedia/commons/a/ab/1873_map_of_the_travels_of_Apostle_Paul.jpg",
+     "size_bytes": 1088839
+    }
+   ],
+   "page_url": "https://commons.wikimedia.org/wiki/File:1873_map_of_the_travels_of_Apostle_Paul.jpg",
+   "license_check": "ok",
+   "url_status": 200
+  },
+  {
+   "id": "hammonds-pictorial-map",
+   "title": "Hammond’s Pictorial Map of the Holy Land.jpg",
+   "commons_file": "File:Hammond’s_Pictorial_Map_of_the_Holy_Land.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/9/95/Hammond%E2%80%99s_Pictorial_Map_of_the_Holy_Land.jpg",
+   "requested_url": "https://upload.wikimedia.org/wikipedia/commons/9/95/Hammond%E2%80%99s_Pictorial_Map_of_the_Holy_Land.jpg",
+   "mime": "image/jpeg",
+   "width": 6336,
+   "height": 8712,
+   "size_bytes": 3985728,
+   "license": "Public Domain",
+   "license_source": "Public domain",
+   "license_text": "pd",
+   "attribution": "Hammond & Co.; curtiswrightmaps.com",
+   "artist": "Hammond & Co.",
+   "credit": "curtiswrightmaps.com",
+   "category": "Map",
+   "subjects": [
+    "Geography",
+    "Biblical Places",
+    "Biblical History"
+   ],
+   "description": "Hammond's pictorial map of the Holy Land.",
+   "expected_license": "PD",
+   "downloads": [
+    {
+     "format": "image",
+     "url": "https://upload.wikimedia.org/wikipedia/commons/9/95/Hammond%E2%80%99s_Pictorial_Map_of_the_Holy_Land.jpg",
+     "size_bytes": 3985728
+    }
+   ],
+   "page_url": "https://commons.wikimedia.org/wiki/File:Hammond%E2%80%99s_Pictorial_Map_of_the_Holy_Land.jpg",
+   "license_check": "ok",
+   "url_status": 200
+  },
+  {
+   "id": "twelve-tribes-map",
+   "title": "12 Tribes of Israel Map-ar.svg",
+   "commons_file": "File:12_Tribes_of_Israel_Map-ar.svg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/7/76/12_Tribes_of_Israel_Map-ar.svg",
+   "requested_url": "https://upload.wikimedia.org/wikipedia/commons/7/76/12_Tribes_of_Israel_Map-ar.svg",
+   "mime": "image/svg+xml",
+   "width": 2168,
+   "height": 3300,
+   "size_bytes": 1236472,
+   "license": "Public Domain",
+   "license_source": "Public domain",
+   "license_text": "pd",
+   "attribution": "Michel Bakni; This file was derived from: 12 Tribes of Israel Map.svg",
+   "artist": "Michel Bakni",
+   "credit": "This file was derived from: 12 Tribes of Israel Map.svg",
+   "category": "Map",
+   "subjects": [
+    "Geography",
+    "Biblical History",
+    "Biblical Places"
+   ],
+   "description": "Map of the twelve tribes of Israel (Arabic-labelled SVG).",
+   "expected_license": "PD",
+   "downloads": [
+    {
+     "format": "image",
+     "url": "https://upload.wikimedia.org/wikipedia/commons/7/76/12_Tribes_of_Israel_Map-ar.svg",
+     "size_bytes": 1236472
+    }
+   ],
+   "page_url": "https://commons.wikimedia.org/wiki/File:12_Tribes_of_Israel_Map-ar.svg",
+   "license_check": "ok",
+   "url_status": 200
+  },
+  {
+   "id": "herod-temple-plan",
+   "title": "EB1911 Temple - Plan of Herod's Temple and Courts.jpg",
+   "commons_file": "File:EB1911_Temple_-_Plan_of_Herod's_Temple_and_Courts.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/d/d6/EB1911_Temple_-_Plan_of_Herod%27s_Temple_and_Courts.jpg",
+   "requested_url": "https://upload.wikimedia.org/wikipedia/commons/d/d6/EB1911_Temple_-_Plan_of_Herod%27s_Temple_and_Courts.jpg",
+   "mime": "image/jpeg",
+   "width": 854,
+   "height": 1015,
+   "size_bytes": 283277,
+   "license": "Public Domain",
+   "license_source": "Public domain",
+   "license_text": "pd",
+   "attribution": "From the Dictionary of the Bible (1909); “Temple,” Encyclopædia Britannica (11th ed.), v. 26, 1911, p. 605, fig. 2.",
+   "artist": "From the Dictionary of the Bible (1909)",
+   "credit": "“Temple,” Encyclopædia Britannica (11th ed.), v. 26, 1911, p. 605, fig. 2.",
+   "category": "Illustration",
+   "subjects": [
+    "Archaeology",
+    "Biblical Places",
+    "Biblical History"
+   ],
+   "description": "Plan of Herod's Temple and its courts (Encyclopaedia Britannica, 1911).",
+   "expected_license": "PD",
+   "downloads": [
+    {
+     "format": "image",
+     "url": "https://upload.wikimedia.org/wikipedia/commons/d/d6/EB1911_Temple_-_Plan_of_Herod%27s_Temple_and_Courts.jpg",
+     "size_bytes": 283277
+    }
+   ],
+   "page_url": "https://commons.wikimedia.org/wiki/File:EB1911_Temple_-_Plan_of_Herod%27s_Temple_and_Courts.jpg",
+   "license_check": "ok",
+   "url_status": 200
+  },
+  {
+   "id": "tribes-of-israel-torah",
+   "title": "Tribes of Israel, Or Torah.jpg",
+   "commons_file": "File:Tribes_of_Israel,_Or_Torah.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/9/96/Tribes_of_Israel%2C_Or_Torah.jpg",
+   "requested_url": "https://upload.wikimedia.org/wikipedia/commons/9/96/Tribes_of_Israel%2C_Or_Torah.jpg",
+   "mime": "image/jpeg",
+   "width": 1704,
+   "height": 2272,
+   "size_bytes": 1017048,
+   "license": "CC0",
+   "license_source": "CC0",
+   "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+   "license_text": "cc0",
+   "attribution": "Incnis Mrsi; Own work",
+   "artist": "Incnis Mrsi",
+   "credit": "Own work",
+   "category": "Map",
+   "subjects": [
+    "Geography",
+    "Biblical History",
+    "Biblical Places"
+   ],
+   "description": "Tribes of Israel (Torah) distribution diagram.",
+   "expected_license": "CC0",
+   "downloads": [
+    {
+     "format": "image",
+     "url": "https://upload.wikimedia.org/wikipedia/commons/9/96/Tribes_of_Israel%2C_Or_Torah.jpg",
+     "size_bytes": 1017048
+    }
+   ],
+   "page_url": "https://commons.wikimedia.org/wiki/File:Tribes_of_Israel%2C_Or_Torah.jpg",
+   "license_check": "ok",
+   "url_status": 200
+  },
+  {
+   "id": "herodian-temple-model",
+   "title": "Model of the Herodian Temple, 1st century AD.jpg",
+   "commons_file": "File:Model_of_the_Herodian_Temple,_1st_century_AD.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/6/62/Model_of_the_Herodian_Temple%2C_1st_century_AD.jpg",
+   "requested_url": "https://upload.wikimedia.org/wikipedia/commons/6/62/Model_of_the_Herodian_Temple%2C_1st_century_AD.jpg",
+   "mime": "image/jpeg",
+   "width": 4080,
+   "height": 3072,
+   "size_bytes": 2433121,
+   "license": "CC0",
+   "license_source": "CC0",
+   "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+   "license_text": "cc0",
+   "attribution": "SalemOptix; Own work",
+   "artist": "SalemOptix",
+   "credit": "Own work",
+   "category": "Illustration",
+   "subjects": [
+    "Archaeology",
+    "Biblical Places"
+   ],
+   "description": "Model of the Herodian Temple, 1st century AD.",
+   "expected_license": "CC0",
+   "downloads": [
+    {
+     "format": "image",
+     "url": "https://upload.wikimedia.org/wikipedia/commons/6/62/Model_of_the_Herodian_Temple%2C_1st_century_AD.jpg",
+     "size_bytes": 2433121
+    }
+   ],
+   "page_url": "https://commons.wikimedia.org/wiki/File:Model_of_the_Herodian_Temple%2C_1st_century_AD.jpg",
+   "license_check": "ok",
+   "url_status": 200
+  },
+  {
+   "id": "israel-geography-map",
+   "title": "Israel geography map.svg",
+   "commons_file": "File:Israel_geography_map.svg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/c/c6/Israel_geography_map.svg",
+   "requested_url": "https://upload.wikimedia.org/wikipedia/commons/c/c6/Israel_geography_map.svg",
+   "mime": "image/svg+xml",
+   "width": 2996,
+   "height": 2620,
+   "size_bytes": 7460907,
+   "license": "CC0",
+   "license_source": "CC0",
+   "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+   "license_text": "cc0",
+   "attribution": "Wikideas1; Own work made with QGIS and data from https://simplemaps.com/gis/country/il https://www.hydrosheds.org/products/hydrolakes https://www.naturalearthdata.com/downloads/10m-physical-vectors/",
+   "artist": "Wikideas1",
+   "credit": "Own work made with QGIS and data from https://simplemaps.com/gis/country/il https://www.hydrosheds.org/products/hydrolakes https://www.naturalearthdata.com/downloads/10m-physical-vectors/",
+   "category": "Map",
+   "subjects": [
+    "Geography",
+    "Biblical Places",
+    "Archaeology"
+   ],
+   "description": "Geography of modern Israel, showing the biblical sites.",
+   "expected_license": "CC0",
+   "downloads": [
+    {
+     "format": "image",
+     "url": "https://upload.wikimedia.org/wikipedia/commons/c/c6/Israel_geography_map.svg",
+     "size_bytes": 7460907
+    }
+   ],
+   "page_url": "https://commons.wikimedia.org/wiki/File:Israel_geography_map.svg",
+   "license_check": "ok",
+   "url_status": 200
+  },
+  {
+   "id": "holy-sites-of-jesus",
+   "title": "Holy sites of Jesus in Palestine.svg",
+   "commons_file": "File:Holy_sites_of_Jesus_in_Palestine.svg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/9/92/Holy_sites_of_Jesus_in_Palestine.svg",
+   "requested_url": "https://upload.wikimedia.org/wikipedia/commons/9/92/Holy_sites_of_Jesus_in_Palestine.svg",
+   "mime": "image/svg+xml",
+   "width": 1300,
+   "height": 1800,
+   "size_bytes": 77950,
+   "license": "CC0",
+   "license_source": "CC0",
+   "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+   "license_text": "cc0",
+   "attribution": "un.org; File:Map of Israel, neighbours and occupied territories.svg",
+   "artist": "un.org",
+   "credit": "File:Map of Israel, neighbours and occupied territories.svg",
+   "category": "Map",
+   "subjects": [
+    "Geography",
+    "Biblical Places",
+    "Ministry / Leadership"
+   ],
+   "description": "Map of the holy sites of Jesus in Palestine.",
+   "expected_license": "CC0",
+   "downloads": [
+    {
+     "format": "image",
+     "url": "https://upload.wikimedia.org/wikipedia/commons/9/92/Holy_sites_of_Jesus_in_Palestine.svg",
+     "size_bytes": 77950
+    }
+   ],
+   "page_url": "https://commons.wikimedia.org/wiki/File:Holy_sites_of_Jesus_in_Palestine.svg",
+   "license_check": "ok",
+   "url_status": 200
+  },
+  {
+   "id": "palaestina-01",
+   "title": "Palaestina 01.jpg",
+   "commons_file": "File:Palaestina_01.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/7/7e/Palaestina_01.jpg",
+   "requested_url": "https://upload.wikimedia.org/wikipedia/commons/7/7e/Palaestina_01.jpg",
+   "mime": "image/jpeg",
+   "width": 5842,
+   "height": 8035,
+   "size_bytes": 10774155,
+   "license": "CC0",
+   "license_source": "CC0",
+   "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+   "license_text": "cc0",
+   "attribution": "Reichard, Christian Gottlieb et al.; Leibniz-Institut für Länderkunde, Leipzig",
+   "artist": "Reichard, Christian Gottlieb et al.",
+   "credit": "Leibniz-Institut für Länderkunde, Leipzig",
+   "category": "Map",
+   "subjects": [
+    "Geography",
+    "Biblical Places",
+    "Archaeology"
+   ],
+   "description": "Palaestina -- a historical map sheet of the Roman province of Judaea.",
+   "expected_license": "CC0",
+   "downloads": [
+    {
+     "format": "image",
+     "url": "https://upload.wikimedia.org/wikipedia/commons/7/7e/Palaestina_01.jpg",
+     "size_bytes": 10774155
+    }
+   ],
+   "page_url": "https://commons.wikimedia.org/wiki/File:Palaestina_01.jpg",
+   "license_check": "ok",
+   "url_status": 206,
+   "url_status_method": "range-get"
+  },
+  {
+   "id": "exodus-map",
+   "title": "Exodus Map.jpg",
+   "commons_file": "File:Exodus_Map.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/5/5b/Exodus_Map.jpg",
+   "requested_url": "https://upload.wikimedia.org/wikipedia/commons/5/5b/Exodus_Map.jpg",
+   "mime": "image/jpeg",
+   "width": 323,
+   "height": 317,
+   "size_bytes": 31508,
+   "license": "CC-BY-2.5",
+   "license_source": "CC BY 2.5",
+   "license_url": "https://creativecommons.org/licenses/by/2.5",
+   "license_text": "cc-by-2.5",
+   "attribution": "This map has been uploaded by Electionworld from en.wikipedia.org to enable the Wikimedia Atlas of the World . Original uploader to en.wikipedia.org was ThaThinker , known as ThaThinker at en.wikipedia.org. Electionworld is not the creator of this map. Licensing information is below.; Map generated based on image from: http://www.planiglobe.com Routes drawn by ThaThinker This is a retouched picture , which means that it has been digitally altered from its original version. Modifications: Brightness/contrast, clarify, remove some jpg artifacts .",
+   "artist": "This map has been uploaded by Electionworld from en.wikipedia.org to enable the Wikimedia Atlas of the World . Original uploader to en.wikipedia.org was ThaThinker , known as ThaThinker at en.wikipedia.org. Electionworld is not the creator of this map. Licensing information is below.",
+   "credit": "Map generated based on image from: http://www.planiglobe.com Routes drawn by ThaThinker This is a retouched picture , which means that it has been digitally altered from its original version. Modifications: Brightness/contrast, clarify, remove some jpg artifacts .",
+   "category": "Map",
+   "subjects": [
+    "Biblical History",
+    "Geography",
+    "Biblical Places"
+   ],
+   "description": "Map of the Exodus from Egypt.",
+   "expected_license": "CC BY 2.5",
+   "downloads": [
+    {
+     "format": "image",
+     "url": "https://upload.wikimedia.org/wikipedia/commons/5/5b/Exodus_Map.jpg",
+     "size_bytes": 31508
+    }
+   ],
+   "page_url": "https://commons.wikimedia.org/wiki/File:Exodus_Map.jpg",
+   "license_check": "ok",
+   "url_status": 200
+  },
+  {
+   "id": "crusader-states-map",
+   "title": "Map of the Crusader states and castles.png",
+   "commons_file": "File:Map_of_the_Crusader_states_and_castles.png",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/6/69/Map_of_the_Crusader_states_and_castles.png",
+   "requested_url": "https://upload.wikimedia.org/wikipedia/commons/6/69/Map_of_the_Crusader_states_and_castles.png",
+   "mime": "image/png",
+   "width": 2164,
+   "height": 3171,
+   "size_bytes": 3521632,
+   "license": "CC-BY-4.0",
+   "license_source": "CC BY 4.0",
+   "license_url": "https://creativecommons.org/licenses/by/4.0",
+   "license_text": "cc-by-4.0",
+   "attribution": "MapKlimantas; Own work",
+   "artist": "MapKlimantas",
+   "credit": "Own work",
+   "category": "Map",
+   "subjects": [
+    "Archaeology",
+    "Geography",
+    "Ancient History"
+   ],
+   "description": "Map of the Crusader states and castles in the Holy Land.",
+   "expected_license": "CC BY 4.0",
+   "downloads": [
+    {
+     "format": "image",
+     "url": "https://upload.wikimedia.org/wikipedia/commons/6/69/Map_of_the_Crusader_states_and_castles.png",
+     "size_bytes": 3521632
+    }
+   ],
+   "page_url": "https://commons.wikimedia.org/wiki/File:Map_of_the_Crusader_states_and_castles.png",
+   "license_check": "ok",
+   "url_status": 206,
+   "url_status_method": "range-get"
+  }
+ ],
+ "excluded": [
+  "Biblica_Open_Bible_Map_01_The_Holy_Land_relief.png",
+  "NordNordWest *_location_map.svg (CC-BY-SA)"
+ ],
+ "skipped": []
+}

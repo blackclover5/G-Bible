@@ -1,0 +1,266 @@
+{
+  "license": "CC-BY-4.0",
+  "items": [
+    {
+      "id": "tbesh",
+      "title": "TBESH — Brief Hebrew lexicon (extended Strong's)",
+      "category": "Lexicon",
+      "subjects": [
+        "Lexicon",
+        "Original Language"
+      ],
+      "lang": "eng",
+      "lang_name": "English",
+      "license": "CC-BY-4.0",
+      "attribution": "STEP Bible (www.STEPBible.org) — CC BY 4.0",
+      "author": "STEP Bible / Tyndale House",
+      "year": "2024",
+      "description": "Abridged BDB linked to extended Strong's. Hebrew lexicon entries.",
+      "download_url": "https://raw.githubusercontent.com/STEPBible/STEPBible-Data/master/Lexicons/TBESH%20-%20Translators%20Brief%20lexicon%20of%20Extended%20Strongs%20for%20Hebrew%20-%20STEPBible.org%20CC%20BY.txt",
+      "page_url": "https://github.com/STEPBible/STEPBible-Data",
+      "format": "text",
+      "size_bytes": null
+    },
+    {
+      "id": "tbesg",
+      "title": "TBESG — Brief Greek lexicon (extended Strong's)",
+      "category": "Lexicon",
+      "subjects": [
+        "Lexicon",
+        "Original Language"
+      ],
+      "lang": "eng",
+      "lang_name": "English",
+      "license": "CC-BY-4.0",
+      "attribution": "STEP Bible (www.STEPBible.org) — CC BY 4.0",
+      "author": "STEP Bible / Tyndale House",
+      "year": "2024",
+      "description": "Brief definitions for all Greek Bible words. Greek lexicon entries.",
+      "download_url": "https://raw.githubusercontent.com/STEPBible/STEPBible-Data/master/Lexicons/TBESG%20-%20Translators%20Brief%20lexicon%20of%20Extended%20Strongs%20for%20Greek%20-%20STEPBible.org%20CC%20BY.txt",
+      "page_url": "https://github.com/STEPBible/STEPBible-Data",
+      "format": "text",
+      "size_bytes": null
+    },
+    {
+      "id": "tflsj--0-5624",
+      "title": "TFLSJ — Full LSJ Bible lexicon (G0–G5624)",
+      "category": "Lexicon",
+      "subjects": [
+        "Lexicon",
+        "Original Language"
+      ],
+      "lang": "eng",
+      "lang_name": "English",
+      "license": "CC-BY-4.0",
+      "attribution": "STEP Bible (www.STEPBible.org) — CC BY 4.0",
+      "author": "STEP Bible / Tyndale House",
+      "year": "2024",
+      "description": "Full LSJ entries for all Bible words, formatted for easy reading.",
+      "download_url": "https://raw.githubusercontent.com/STEPBible/STEPBible-Data/master/Lexicons/TFLSJ%20%200-5624%20-%20Translators%20Formatted%20full%20LSJ%20Bible%20lexicon%20-%20STEPBible.org%20CC%20BY.txt",
+      "page_url": "https://github.com/STEPBible/STEPBible-Data",
+      "format": "text",
+      "size_bytes": null
+    },
+    {
+      "id": "tflsj-extra",
+      "title": "TFLSJ (extra entries)",
+      "category": "Lexicon",
+      "subjects": [
+        "Lexicon",
+        "Original Language"
+      ],
+      "lang": "eng",
+      "lang_name": "English",
+      "license": "CC-BY-4.0",
+      "attribution": "STEP Bible (www.STEPBible.org) — CC BY 4.0",
+      "author": "STEP Bible / Tyndale House",
+      "year": "2024",
+      "description": "Additional LSJ entries not in the main TFLSJ file.",
+      "download_url": "https://raw.githubusercontent.com/STEPBible/STEPBible-Data/master/Lexicons/TFLSJ%20extra%20-%20Translators%20Formatted%20full%20LSJ%20Bible%20lexicon%20-%20STEPBible.org%20CC%20BY.txt",
+      "page_url": "https://github.com/STEPBible/STEPBible-Data",
+      "format": "text",
+      "size_bytes": null
+    },
+    {
+      "id": "tipnr",
+      "title": "TIPNR — Individualised proper names with references",
+      "category": "Dictionary",
+      "subjects": [
+        "Names",
+        "Genealogy",
+        "Geography"
+      ],
+      "lang": "eng",
+      "lang_name": "English",
+      "license": "CC-BY-4.0",
+      "attribution": "STEP Bible (www.STEPBible.org) — CC BY 4.0",
+      "author": "STEP Bible / Tyndale House",
+      "year": "2024",
+      "description": "Every proper noun in the Bible, individualised, with genealogy, geolocation, descriptions and exhaustive references.",
+      "download_url": "https://raw.githubusercontent.com/STEPBible/STEPBible-Data/master/Proper%20Nouns/TIPNR%20-%20Translators%20Individualised%20Proper%20Names%20with%20all%20References%20-%20STEPBible.org%20CC%20BY.txt",
+      "page_url": "https://github.com/STEPBible/STEPBible-Data",
+      "format": "text",
+      "size_bytes": null
+    },
+    {
+      "id": "tagnt-mat-jhn",
+      "title": "TAGNT — Amalgamated Greek NT (Matthew–John)",
+      "category": "OriginalLanguage",
+      "subjects": [
+        "Original Language",
+        "Morphology"
+      ],
+      "lang": "grc",
+      "lang_name": "Greek (Ancient)",
+      "license": "CC-BY-4.0",
+      "attribution": "STEP Bible (www.STEPBible.org) — CC BY 4.0",
+      "author": "STEP Bible / Tyndale House",
+      "year": "2024",
+      "description": "Greek NT words from all major editions (NA27/28, TR, SBL, WH, Treg, Byz) with morphology, glosses and variants.",
+      "download_url": "https://raw.githubusercontent.com/STEPBible/STEPBible-Data/master/Translators%20Amalgamated%20OT%2BNT/TAGNT%20Mat-Jhn%20-%20Translators%20Amalgamated%20Greek%20NT%20-%20STEPBible.org%20CC-BY.txt",
+      "page_url": "https://github.com/STEPBible/STEPBible-Data",
+      "format": "text",
+      "size_bytes": null
+    },
+    {
+      "id": "tagnt-act-rev",
+      "title": "TAGNT — Amalgamated Greek NT (Acts–Revelation)",
+      "category": "OriginalLanguage",
+      "subjects": [
+        "Original Language",
+        "Morphology"
+      ],
+      "lang": "grc",
+      "lang_name": "Greek (Ancient)",
+      "license": "CC-BY-4.0",
+      "attribution": "STEP Bible (www.STEPBible.org) — CC BY 4.0",
+      "author": "STEP Bible / Tyndale House",
+      "year": "2024",
+      "description": "Greek NT words from all major editions with morphology, glosses and variants.",
+      "download_url": "https://raw.githubusercontent.com/STEPBible/STEPBible-Data/master/Translators%20Amalgamated%20OT%2BNT/TAGNT%20Act-Rev%20-%20Translators%20Amalgamated%20Greek%20NT%20-%20STEPBible.org%20CC-BY.txt",
+      "page_url": "https://github.com/STEPBible/STEPBible-Data",
+      "format": "text",
+      "size_bytes": null
+    },
+    {
+      "id": "tahot-gen-deu",
+      "title": "TAHOT — Amalgamated Hebrew OT (Genesis–Deuteronomy)",
+      "category": "OriginalLanguage",
+      "subjects": [
+        "Original Language",
+        "Morphology"
+      ],
+      "lang": "hbo",
+      "lang_name": "Hebrew",
+      "license": "CC-BY-4.0",
+      "attribution": "STEP Bible (www.STEPBible.org) — CC BY 4.0",
+      "author": "STEP Bible / Tyndale House",
+      "year": "2024",
+      "description": "Hebrew OT words with full morphology, semantic tags and LXX additions.",
+      "download_url": "https://raw.githubusercontent.com/STEPBible/STEPBible-Data/master/Translators%20Amalgamated%20OT%2BNT/TAHOT%20Gen-Deu%20-%20Translators%20Amalgamated%20Hebrew%20OT%20-%20STEPBible.org%20CC%20BY.txt",
+      "page_url": "https://github.com/STEPBible/STEPBible-Data",
+      "format": "text",
+      "size_bytes": null
+    },
+    {
+      "id": "tahot-jos-est",
+      "title": "TAHOT — Amalgamated Hebrew OT (Joshua–Esther)",
+      "category": "OriginalLanguage",
+      "subjects": [
+        "Original Language",
+        "Morphology"
+      ],
+      "lang": "hbo",
+      "lang_name": "Hebrew",
+      "license": "CC-BY-4.0",
+      "attribution": "STEP Bible (www.STEPBible.org) — CC BY 4.0",
+      "author": "STEP Bible / Tyndale House",
+      "year": "2024",
+      "description": "Hebrew OT words with full morphology, semantic tags and LXX additions.",
+      "download_url": "https://raw.githubusercontent.com/STEPBible/STEPBible-Data/master/Translators%20Amalgamated%20OT%2BNT/TAHOT%20Jos-Est%20-%20Translators%20Amalgamated%20Hebrew%20OT%20-%20STEPBible.org%20CC%20BY.txt",
+      "page_url": "https://github.com/STEPBible/STEPBible-Data",
+      "format": "text",
+      "size_bytes": null
+    },
+    {
+      "id": "tahot-job-sng",
+      "title": "TAHOT — Amalgamated Hebrew OT (Job–Song of Songs)",
+      "category": "OriginalLanguage",
+      "subjects": [
+        "Original Language",
+        "Morphology"
+      ],
+      "lang": "hbo",
+      "lang_name": "Hebrew",
+      "license": "CC-BY-4.0",
+      "attribution": "STEP Bible (www.STEPBible.org) — CC BY 4.0",
+      "author": "STEP Bible / Tyndale House",
+      "year": "2024",
+      "description": "Hebrew OT words with full morphology, semantic tags and LXX additions.",
+      "download_url": "https://raw.githubusercontent.com/STEPBible/STEPBible-Data/master/Translators%20Amalgamated%20OT%2BNT/TAHOT%20Job-Sng%20-%20Translators%20Amalgamated%20Hebrew%20OT%20-%20STEPBible.org%20CC%20BY.txt",
+      "page_url": "https://github.com/STEPBible/STEPBible-Data",
+      "format": "text",
+      "size_bytes": null
+    },
+    {
+      "id": "tahot-isa-mal",
+      "title": "TAHOT — Amalgamated Hebrew OT (Isaiah–Malachi)",
+      "category": "OriginalLanguage",
+      "subjects": [
+        "Original Language",
+        "Morphology"
+      ],
+      "lang": "hbo",
+      "lang_name": "Hebrew",
+      "license": "CC-BY-4.0",
+      "attribution": "STEP Bible (www.STEPBible.org) — CC BY 4.0",
+      "author": "STEP Bible / Tyndale House",
+      "year": "2024",
+      "description": "Hebrew OT words with full morphology, semantic tags and LXX additions.",
+      "download_url": "https://raw.githubusercontent.com/STEPBible/STEPBible-Data/master/Translators%20Amalgamated%20OT%2BNT/TAHOT%20Isa-Mal%20-%20Translators%20Amalgamated%20Hebrew%20OT%20-%20STEPBible.org%20CC%20BY.txt",
+      "page_url": "https://github.com/STEPBible/STEPBible-Data",
+      "format": "text",
+      "size_bytes": null
+    },
+    {
+      "id": "tehmc",
+      "title": "TEHMC — Hebrew morphology code expansion",
+      "category": "Grammar",
+      "subjects": [
+        "Grammar",
+        "Morphology"
+      ],
+      "lang": "hbo",
+      "lang_name": "Hebrew",
+      "license": "CC-BY-4.0",
+      "attribution": "STEP Bible (www.STEPBible.org) — CC BY 4.0",
+      "author": "STEP Bible / Tyndale House",
+      "year": "2024",
+      "description": "Hebrew morphology codes with expanded parsing, meaning and examples.",
+      "download_url": "https://raw.githubusercontent.com/STEPBible/STEPBible-Data/master/Morphology%20codes/TEHMC%20-%20Translators%20Expansion%20of%20Hebrew%20Morphology%20Codes%20-%20STEPBible.org%20CC%20BY.txt",
+      "page_url": "https://github.com/STEPBible/STEPBible-Data",
+      "format": "text",
+      "size_bytes": null
+    },
+    {
+      "id": "tegmc",
+      "title": "TEGMC — Greek morphology code expansion",
+      "category": "Grammar",
+      "subjects": [
+        "Grammar",
+        "Morphology"
+      ],
+      "lang": "grc",
+      "lang_name": "Greek (Ancient)",
+      "license": "CC-BY-4.0",
+      "attribution": "STEP Bible (www.STEPBible.org) — CC BY 4.0",
+      "author": "STEP Bible / Tyndale House",
+      "year": "2024",
+      "description": "Greek morphology codes with expanded parsing, meaning and examples.",
+      "download_url": "https://raw.githubusercontent.com/STEPBible/STEPBible-Data/master/Morphology%20codes/TEGMC%20-%20Translators%20Expansion%20of%20Greek%20Morphhology%20Codes%20-%20STEPBible.org%20CC%20BY.txt",
+      "page_url": "https://github.com/STEPBible/STEPBible-Data",
+      "format": "text",
+      "size_bytes": null
+    }
+  ]
+}

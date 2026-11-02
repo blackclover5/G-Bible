@@ -1,0 +1,939 @@
+{
+ "repo": "midvash",
+ "name": "Midvash open data",
+ "vendor": "Midvash",
+ "home": "https://github.com/midvash/bible-data",
+ "schema": {
+  "version": 1,
+  "generated": "2026-09-27",
+  "note": "Derived from the repository README version table."
+ },
+ "license_note": "All listed versions are public domain. The Westminster Leningrad Codex is present upstream under its own licence and is intentionally not listed.",
+ "items": [
+  {
+   "id": "ar-svd",
+   "slug": "svd",
+   "title": "Smith-Van Dyck Arabic",
+   "lang": "ar",
+   "lang_name": "Arabic",
+   "year": 1865,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Smith-Van Dyck Arabic (1865). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/ar/svd/svd.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/ar/svd/svd.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/ar/svd",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/ar/svd/svd.sqlite",
+   "format": "sqlite",
+   "version": "svd",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "cs-bkr",
+   "slug": "bkr",
+   "title": "Bible kralická",
+   "lang": "cs",
+   "lang_name": "Czech",
+   "year": 1613,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Bible kralická (1613). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/cs/bkr/bkr.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/cs/bkr/bkr.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/cs/bkr",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/cs/bkr/bkr.sqlite",
+   "format": "sqlite",
+   "version": "bkr",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "de-elb1905",
+   "slug": "elb1905",
+   "title": "Elberfelder Bibel 1905",
+   "lang": "de",
+   "lang_name": "German",
+   "year": 1905,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Elberfelder Bibel 1905 (1905). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/de/elb1905/elb1905.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/de/elb1905/elb1905.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/de/elb1905",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/de/elb1905/elb1905.sqlite",
+   "format": "sqlite",
+   "version": "elb1905",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "de-luth1912",
+   "slug": "luth1912",
+   "title": "Lutherbibel 1912",
+   "lang": "de",
+   "lang_name": "German",
+   "year": 1912,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Lutherbibel 1912 (1912). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/de/luth1912/luth1912.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/de/luth1912/luth1912.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/de/luth1912",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/de/luth1912/luth1912.sqlite",
+   "format": "sqlite",
+   "version": "luth1912",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "en-asv",
+   "slug": "asv",
+   "title": "American Standard Version",
+   "lang": "en",
+   "lang_name": "English",
+   "year": 1901,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "American Standard Version (1901). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/en/asv/asv.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/en/asv/asv.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/en/asv",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/en/asv/asv.sqlite",
+   "format": "sqlite",
+   "version": "asv",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "en-dra",
+   "slug": "dra",
+   "title": "Douay-Rheims American Edition",
+   "lang": "en",
+   "lang_name": "English",
+   "year": 1899,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Douay-Rheims American Edition (1899). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/en/dra/dra.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/en/dra/dra.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/en/dra",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/en/dra/dra.sqlite",
+   "format": "sqlite",
+   "version": "dra",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "en-geneva1599",
+   "slug": "geneva1599",
+   "title": "Geneva Bible 1599",
+   "lang": "en",
+   "lang_name": "English",
+   "year": 1599,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Geneva Bible 1599 (1599). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/en/geneva1599/geneva1599.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/en/geneva1599/geneva1599.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/en/geneva1599",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/en/geneva1599/geneva1599.sqlite",
+   "format": "sqlite",
+   "version": "geneva1599",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "en-kjv",
+   "slug": "kjv",
+   "title": "King James Version",
+   "lang": "en",
+   "lang_name": "English",
+   "year": 1769,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "King James Version (1769). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/en/kjv/kjv.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/en/kjv/kjv.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/en/kjv",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/en/kjv/kjv.sqlite",
+   "format": "sqlite",
+   "version": "kjv",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "en-web",
+   "slug": "web",
+   "title": "World English Bible",
+   "lang": "en",
+   "lang_name": "English",
+   "year": 2000,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "World English Bible (2000). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/en/web/web.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/en/web/web.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/en/web",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/en/web/web.sqlite",
+   "format": "sqlite",
+   "version": "web",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "eo-lsb",
+   "slug": "lsb",
+   "title": "La Sankta Biblio",
+   "lang": "eo",
+   "lang_name": "Esperanto",
+   "year": 1926,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "La Sankta Biblio (1926). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/eo/lsb/lsb.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/eo/lsb/lsb.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/eo/lsb",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/eo/lsb/lsb.sqlite",
+   "format": "sqlite",
+   "version": "lsb",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "fr-darby-fr",
+   "slug": "darby-fr",
+   "title": "Bible Darby Francaise",
+   "lang": "fr",
+   "lang_name": "French",
+   "year": 1885,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Bible Darby Francaise (1885). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/fr/darby-fr/darby-fr.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/fr/darby-fr/darby-fr.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/fr/darby-fr",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/fr/darby-fr/darby-fr.sqlite",
+   "format": "sqlite",
+   "version": "darby-fr",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "fr-lsg",
+   "slug": "lsg",
+   "title": "Louis Segond 1910",
+   "lang": "fr",
+   "lang_name": "French",
+   "year": 1910,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Louis Segond 1910 (1910). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/fr/lsg/lsg.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/fr/lsg/lsg.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/fr/lsg",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/fr/lsg/lsg.sqlite",
+   "format": "sqlite",
+   "version": "lsg",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "fr-martin1744",
+   "slug": "martin1744",
+   "title": "Bible David Martin 1744",
+   "lang": "fr",
+   "lang_name": "French",
+   "year": 1744,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Bible David Martin 1744 (1744). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/fr/martin1744/martin1744.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/fr/martin1744/martin1744.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/fr/martin1744",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/fr/martin1744/martin1744.sqlite",
+   "format": "sqlite",
+   "version": "martin1744",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "gr-tr",
+   "slug": "tr",
+   "title": "Textus Receptus (Stephanus 1550)",
+   "lang": "gr",
+   "lang_name": "Greek (Ancient)",
+   "year": 1550,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Textus Receptus (Stephanus 1550) (1550). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/gr/tr/tr.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/gr/tr/tr.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/gr/tr",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/gr/tr/tr.sqlite",
+   "format": "sqlite",
+   "version": "tr",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "he-aleppo",
+   "slug": "aleppo",
+   "title": "Aleppo Codex",
+   "lang": "he",
+   "lang_name": "Hebrew",
+   "year": 1000,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Aleppo Codex (1000). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/he/aleppo/aleppo.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/he/aleppo/aleppo.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/he/aleppo",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/he/aleppo/aleppo.sqlite",
+   "format": "sqlite",
+   "version": "aleppo",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "hu-kar",
+   "slug": "kar",
+   "title": "Karoli Biblia",
+   "lang": "hu",
+   "lang_name": "Hungarian",
+   "year": 1908,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Karoli Biblia (1908). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/hu/kar/kar.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/hu/kar/kar.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/hu/kar",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/hu/kar/kar.sqlite",
+   "format": "sqlite",
+   "version": "kar",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "it-diodati",
+   "slug": "diodati",
+   "title": "Bibbia Diodati 1649",
+   "lang": "it",
+   "lang_name": "Italian",
+   "year": 1649,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Bibbia Diodati 1649 (1649). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/it/diodati/diodati.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/it/diodati/diodati.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/it/diodati",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/it/diodati/diodati.sqlite",
+   "format": "sqlite",
+   "version": "diodati",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "it-riveduta",
+   "slug": "riveduta",
+   "title": "Bibbia Riveduta 1927",
+   "lang": "it",
+   "lang_name": "Italian",
+   "year": 1927,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Bibbia Riveduta 1927 (1927). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/it/riveduta/riveduta.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/it/riveduta/riveduta.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/it/riveduta",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/it/riveduta/riveduta.sqlite",
+   "format": "sqlite",
+   "version": "riveduta",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "la-clem",
+   "slug": "clem",
+   "title": "Clementine Vulgate",
+   "lang": "la",
+   "lang_name": "Latin",
+   "year": 1592,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Clementine Vulgate (1592). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/la/clem/clem.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/la/clem/clem.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/la/clem",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/la/clem/clem.sqlite",
+   "format": "sqlite",
+   "version": "clem",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "la-vulg",
+   "slug": "vulg",
+   "title": "Biblia Sacra Vulgata",
+   "lang": "la",
+   "lang_name": "Latin",
+   "year": 405,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Biblia Sacra Vulgata (405). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/la/vulg/vulg.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/la/vulg/vulg.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/la/vulg",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/la/vulg/vulg.sqlite",
+   "format": "sqlite",
+   "version": "vulg",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "nl-dutch1917",
+   "slug": "dutch1917",
+   "title": "De Heilige Schrift 1917",
+   "lang": "nl",
+   "lang_name": "Dutch",
+   "year": 1917,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "De Heilige Schrift 1917 (1917). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/nl/dutch1917/dutch1917.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/nl/dutch1917/dutch1917.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/nl/dutch1917",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/nl/dutch1917/dutch1917.sqlite",
+   "format": "sqlite",
+   "version": "dutch1917",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "pl-bg",
+   "slug": "bg",
+   "title": "Biblia Gdanska",
+   "lang": "pl",
+   "lang_name": "Polish",
+   "year": 1632,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Biblia Gdanska (1632). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/pl/bg/bg.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/pl/bg/bg.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/pl/bg",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/pl/bg/bg.sqlite",
+   "format": "sqlite",
+   "version": "bg",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "pt-almeida-livre",
+   "slug": "almeida-livre",
+   "title": "Almeida 1819 (Biblia Livre)",
+   "lang": "pt",
+   "lang_name": "Portuguese",
+   "year": 1819,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Almeida 1819 (Biblia Livre) (1819). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/pt/almeida-livre/almeida-livre.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/pt/almeida-livre/almeida-livre.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/pt/almeida-livre",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/pt/almeida-livre/almeida-livre.sqlite",
+   "format": "sqlite",
+   "version": "almeida-livre",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "ro-vdc",
+   "slug": "vdc",
+   "title": "Biblia Cornilescu",
+   "lang": "ro",
+   "lang_name": "Romanian",
+   "year": 1924,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Biblia Cornilescu (1924). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/ro/vdc/vdc.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/ro/vdc/vdc.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/ro/vdc",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/ro/vdc/vdc.sqlite",
+   "format": "sqlite",
+   "version": "vdc",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "ru-synodal",
+   "slug": "synodal",
+   "title": "Sinodalnyy perevod",
+   "lang": "ru",
+   "lang_name": "Russian",
+   "year": 1876,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Sinodalnyy perevod (1876). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/ru/synodal/synodal.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/ru/synodal/synodal.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/ru/synodal",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/ru/synodal/synodal.sqlite",
+   "format": "sqlite",
+   "version": "synodal",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "sv-sv1917",
+   "slug": "sv1917",
+   "title": "Bibeln 1917",
+   "lang": "sv",
+   "lang_name": "Swedish",
+   "year": 1917,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Bibeln 1917 (1917). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/sv/sv1917/sv1917.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/sv/sv1917/sv1917.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/sv/sv1917",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/sv/sv1917/sv1917.sqlite",
+   "format": "sqlite",
+   "version": "sv1917",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "uk-kp",
+   "slug": "kp",
+   "title": "Kulish-Puluy (1905)",
+   "lang": "uk",
+   "lang_name": "Ukrainian",
+   "year": 1905,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Kulish-Puluy (1905) (1905). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/uk/kp/kp.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/uk/kp/kp.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/uk/kp",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/uk/kp/kp.sqlite",
+   "format": "sqlite",
+   "version": "kp",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "zh-cuv",
+   "slug": "cuv",
+   "title": "Chinese Union Version (Traditional)",
+   "lang": "zh",
+   "lang_name": "Chinese",
+   "year": 1919,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Chinese Union Version (Traditional) (1919). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/zh/cuv/cuv.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/zh/cuv/cuv.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/zh/cuv",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/zh/cuv/cuv.sqlite",
+   "format": "sqlite",
+   "version": "cuv",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  },
+  {
+   "id": "zh-cuvs",
+   "slug": "cuvs",
+   "title": "Chinese Union Version (Simplified)",
+   "lang": "zh",
+   "lang_name": "Chinese",
+   "year": 1919,
+   "license": "Public Domain",
+   "rights": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md.",
+   "description": "Chinese Union Version (Simplified) (1919). OSIS-keyed JSON and SQLite from midvash/bible-data.",
+   "downloads": [
+    {
+     "format": "sqlite",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/zh/cuvs/cuvs.sqlite"
+    },
+    {
+     "format": "json",
+     "url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/zh/cuvs/cuvs.json"
+    }
+   ],
+   "category": "Bible",
+   "subjects": [
+    "Bible"
+   ],
+   "page_url": "https://github.com/midvash/bible-data/tree/main/versions/zh/cuvs",
+   "download_url": "https://raw.githubusercontent.com/midvash/bible-data/main/versions/zh/cuvs/cuvs.sqlite",
+   "format": "sqlite",
+   "version": "cuvs",
+   "author": "Various; see SOURCES.md in the upstream repository",
+   "attribution": "Public domain. Version metadata in metadata.json; provenance in SOURCES.md."
+  }
+ ],
+ "_excluded_by_date": {
+  "note": "These entries were in the upstream catalogue and are removed here, not merely hidden. Each claims Public Domain but was published from 1930 onwards, so copyright in the United States runs from publication and they are still protected there. gbible.taxonomy.pd_dated_ok refuses them, and the 'Licence gate' self-test fails if they reappear here.",
+  "items": [
+   {
+    "id": "da-dansk1931",
+    "title": "Dansk Bibel 1931",
+    "year": 1931,
+    "license": "Public Domain",
+    "reason": "published 1931 and offered as Public Domain, but copyright in the United States runs from publication, so anything from 1930 onwards is still protected there. A few recent works are listed as exceptions where the authors dedicated them to the public domain; this one is not one of them."
+   },
+   {
+    "id": "nb-nb1930",
+    "title": "Norsk Bibel 1930",
+    "year": 1930,
+    "license": "Public Domain",
+    "reason": "published 1930 and offered as Public Domain, but copyright in the United States runs from publication, so anything from 1930 onwards is still protected there. A few recent works are listed as exceptions where the authors dedicated them to the public domain; this one is not one of them."
+   },
+   {
+    "id": "vi-vi1934",
+    "title": "Kinh Thanh 1934",
+    "year": 1934,
+    "license": "Public Domain",
+    "reason": "published 1934 and offered as Public Domain, but copyright in the United States runs from publication, so anything from 1930 onwards is still protected there. A few recent works are listed as exceptions where the authors dedicated them to the public domain; this one is not one of them."
+   }
+  ]
+ }
+}

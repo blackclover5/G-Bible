@@ -1,0 +1,7702 @@
+{
+  "repository": "openbible-geo",
+  "generated": 1792208321,
+  "source": "https://www.openbible.info/geo/",
+  "places_url": "https://www.openbible.info/geo/data/places.txt",
+  "index_url": "https://www.openbible.info/geo/data/search-index.json",
+  "index_meta": {
+    "version": "2026-08-01",
+    "fields": [
+      "name",
+      "id",
+      "slug",
+      "type",
+      "weight",
+      "alt",
+      "refs",
+      "ascii"
+    ],
+    "places": 2938
+  },
+  "license": "CC-BY-4.0",
+  "attribution": "BiblePlaces.com data by OpenBible.info, CC BY 4.0",
+  "count": 354,
+  "places": [
+    {
+      "name": "Abana",
+      "lat": 33.545097,
+      "lon": 36.224661,
+      "passages": [
+        "2 Kgs 5:12"
+      ],
+      "comment": "Now Barada River",
+      "id": "aea17b7",
+      "slug": "abana",
+      "type": "a",
+      "osm": "aea17b7",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Abanah"
+      ]
+    },
+    {
+      "name": "Abdon",
+      "lat": 33.047808,
+      "lon": 35.146201,
+      "passages": [
+        "Josh 21:30",
+        "1 Chr 6:74"
+      ],
+      "comment": "",
+      "id": "a72a1ff",
+      "slug": "abdon",
+      "type": "a",
+      "osm": "a72a1ff",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Abel-keramim",
+      "lat": 32.02425,
+      "lon": 35.82352,
+      "passages": [
+        "Judg 11:33"
+      ],
+      "comment": "",
+      "id": "a957c5b",
+      "slug": "abel-keramim",
+      "type": "a",
+      "osm": "a957c5b",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Abel Keramim"
+      ]
+    },
+    {
+      "name": "Abel-meholah",
+      "lat": 32.35601,
+      "lon": 35.536929,
+      "passages": [
+        "Judg 7:22",
+        "1 Kgs 4:12",
+        "1 Kgs 19:16"
+      ],
+      "comment": "",
+      "id": "a5a1bdd",
+      "slug": "abel-meholah",
+      "type": "a",
+      "osm": "a5a1bdd",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Abel Meholah",
+        "Abel-Meholah"
+      ]
+    },
+    {
+      "name": "Abilene",
+      "lat": 33.5873,
+      "lon": 36.09171,
+      "passages": [
+        "Luke 3:1"
+      ],
+      "comment": "",
+      "id": "a498faa",
+      "slug": "abilene",
+      "type": "a",
+      "osm": "a498faa",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Achzib 1",
+      "lat": 31.7,
+      "lon": 35.0,
+      "passages": [
+        "Josh 15:44",
+        "Mic 1:14"
+      ],
+      "comment": "",
+      "id": "a2270e4",
+      "slug": "achzib-1",
+      "type": "a",
+      "osm": "a2270e4",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Achzib",
+        "Aczib",
+        "Akzib"
+      ]
+    },
+    {
+      "name": "Adadah",
+      "lat": 31.1858,
+      "lon": 34.96745,
+      "passages": [
+        "Josh 15:22"
+      ],
+      "comment": "",
+      "id": "abf4481",
+      "slug": "adadah",
+      "type": "a",
+      "osm": "abf4481",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Adami-nekeb",
+      "lat": 32.6105,
+      "lon": 35.54289,
+      "passages": [
+        "Josh 19:33"
+      ],
+      "comment": "",
+      "id": "a2c780b",
+      "slug": "adami-nekeb",
+      "type": "a",
+      "osm": "a2c780b",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Adami",
+        "Adami Nekeb",
+        "Nekeb"
+      ]
+    },
+    {
+      "name": "Addar",
+      "lat": 30.9522,
+      "lon": 34.7187,
+      "passages": [
+        "Josh 15:3"
+      ],
+      "comment": "",
+      "id": "aaee94d",
+      "slug": "addar",
+      "type": "a",
+      "osm": "aaee94d",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Adar"
+      ]
+    },
+    {
+      "name": "Adithaim",
+      "lat": 31.7001,
+      "lon": 34.89532,
+      "passages": [
+        "Josh 15:36"
+      ],
+      "comment": "",
+      "id": "a845493",
+      "slug": "adithaim",
+      "type": "a",
+      "osm": "a845493",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Adramyttium",
+      "lat": 39.5748,
+      "lon": 26.9367,
+      "passages": [
+        "Acts 27:2"
+      ],
+      "comment": "",
+      "id": "a184f3a",
+      "slug": "adramyttium",
+      "type": "a",
+      "osm": "a184f3a",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Adramyttian"
+      ]
+    },
+    {
+      "name": "Adriatic Sea",
+      "lat": 42.415,
+      "lon": 16.3735,
+      "passages": [
+        "Acts 27:27"
+      ],
+      "comment": "water",
+      "id": "adc77fb",
+      "slug": "adriatic-sea",
+      "type": "a",
+      "osm": "adc77fb",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Adria",
+        "Sea of Adria",
+        "sea of Adria"
+      ]
+    },
+    {
+      "name": "Adullam",
+      "lat": 31.65,
+      "lon": 35.0,
+      "passages": [
+        "Josh 12:15",
+        "Josh 15:35",
+        "1 Sam 22:1",
+        "2 Sam 23:13",
+        "1 Chr 11:15",
+        "2 Chr 11:7",
+        "Neh 11:30",
+        "Mic 1:15"
+      ],
+      "comment": "",
+      "id": "af82614",
+      "slug": "adullam",
+      "type": "a",
+      "osm": "af82614",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Adullamite"
+      ]
+    },
+    {
+      "name": "Adummim",
+      "lat": 31.817585,
+      "lon": 35.361646,
+      "passages": [
+        "Josh 15:7",
+        "Josh 18:17"
+      ],
+      "comment": "",
+      "id": "m9a12db",
+      "slug": "adummim",
+      "type": "m",
+      "osm": "m9a12db",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Aenon",
+      "lat": 32.398936,
+      "lon": 35.54351,
+      "passages": [
+        "John 3:23"
+      ],
+      "comment": "",
+      "id": "m65fe20",
+      "slug": "aenon",
+      "type": "m",
+      "osm": "m65fe20",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Ahava",
+      "lat": 33.625197,
+      "lon": 42.786647,
+      "passages": [
+        "Ezra 8:15",
+        "Ezra 8:21",
+        "Ezra 8:31"
+      ],
+      "comment": "",
+      "id": "a6c3859",
+      "slug": "ahava",
+      "type": "a",
+      "osm": "a6c3859",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Ahava Canal",
+        "Ahava River"
+      ]
+    },
+    {
+      "name": "Ain 1",
+      "lat": 34.353071,
+      "lon": 36.385705,
+      "passages": [
+        "Num 34:11"
+      ],
+      "comment": "",
+      "id": "a89511f",
+      "slug": "ain-1",
+      "type": "a",
+      "osm": "a89511f",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Ain"
+      ]
+    },
+    {
+      "name": "Ain 2",
+      "lat": 31.370835,
+      "lon": 34.860665,
+      "passages": [
+        "Josh 15:32",
+        "Josh 19:7",
+        "Josh 21:16",
+        "1 Chr 4:32"
+      ],
+      "comment": "",
+      "id": "afb265c",
+      "slug": "ain-2",
+      "type": "a",
+      "osm": "afb265c",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Ain"
+      ]
+    },
+    {
+      "name": "Akrabbim",
+      "lat": 30.688292,
+      "lon": 35.263182,
+      "passages": [
+        "Num 34:4",
+        "Josh 15:3",
+        "Judg 1:36"
+      ],
+      "comment": "",
+      "id": "a39267b",
+      "slug": "akrabbim",
+      "type": "a",
+      "osm": "a39267b",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Ascent of Akrabbim",
+        "Maaleh-acrabbim",
+        "Scorpion Ascent",
+        "Scorpion Pass",
+        "Scorpions’ Ascent"
+      ]
+    },
+    {
+      "name": "Alemeth",
+      "lat": 31.828406,
+      "lon": 35.287637,
+      "passages": [
+        "1 Chr 6:60"
+      ],
+      "comment": "",
+      "id": "ad4ad26",
+      "slug": "alemeth",
+      "type": "a",
+      "osm": "ad4ad26",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Allemeth"
+      ]
+    },
+    {
+      "name": "Allammelech",
+      "lat": 32.97829,
+      "lon": 35.182915,
+      "passages": [
+        "Josh 19:26"
+      ],
+      "comment": "",
+      "id": "a84cafa",
+      "slug": "allammelech",
+      "type": "a",
+      "osm": "a84cafa",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Alammelech",
+        "Allamelech",
+        "Allammelek"
+      ]
+    },
+    {
+      "name": "Amad",
+      "lat": 33.019337,
+      "lon": 35.173644,
+      "passages": [
+        "Josh 19:26"
+      ],
+      "comment": "",
+      "id": "a2f1fa1",
+      "slug": "amad",
+      "type": "a",
+      "osm": "a2f1fa1",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Amalek",
+      "lat": 30.65977,
+      "lon": 34.835554,
+      "passages": [
+        "Ex 17:8",
+        "Ex 17:9",
+        "Ex 17:10",
+        "Ex 17:11",
+        "Ex 17:13",
+        "Ex 17:14",
+        "Ex 17:16",
+        "Num 24:20",
+        "Deut 25:17",
+        "Deut 25:19",
+        "1 Sam 15:2",
+        "1 Sam 15:3",
+        "1 Sam 15:5",
+        "1 Sam 15:20",
+        "1 Sam 28:18",
+        "2 Sam 8:12",
+        "1 Chr 18:11",
+        "Ps 83:7"
+      ],
+      "comment": "region",
+      "id": "ab95484",
+      "slug": "amalek",
+      "type": "a",
+      "osm": "ab95484",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Amalekite",
+        "Amalekites"
+      ]
+    },
+    {
+      "name": "Amana",
+      "lat": 33.68137,
+      "lon": 36.055039,
+      "passages": [
+        "Sng 4:8"
+      ],
+      "comment": "",
+      "id": "ab428de",
+      "slug": "amana",
+      "type": "a",
+      "osm": "ab428de",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Mount Amana"
+      ]
+    },
+    {
+      "name": "Ammah",
+      "lat": 31.869005,
+      "lon": 35.343177,
+      "passages": [
+        "2 Sam 2:24"
+      ],
+      "comment": "",
+      "id": "a8e4a15",
+      "slug": "ammah",
+      "type": "a",
+      "osm": "a8e4a15",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Anab",
+      "lat": 31.403888,
+      "lon": 34.944185,
+      "passages": [
+        "Josh 11:21",
+        "Josh 15:50"
+      ],
+      "comment": "",
+      "id": "a234727",
+      "slug": "anab",
+      "type": "a",
+      "osm": "a234727",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Anaharath",
+      "lat": 32.607039,
+      "lon": 35.397389,
+      "passages": [
+        "Josh 19:19"
+      ],
+      "comment": "",
+      "id": "ac07206",
+      "slug": "anaharath",
+      "type": "a",
+      "osm": "ac07206",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Anim",
+      "lat": 31.373521,
+      "lon": 35.074552,
+      "passages": [
+        "Josh 15:50"
+      ],
+      "comment": "",
+      "id": "ac22b90",
+      "slug": "anim",
+      "type": "a",
+      "osm": "ac22b90",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Aphek 1",
+      "lat": 34.066067,
+      "lon": 35.865801,
+      "passages": [
+        "Josh 13:4",
+        "Josh 19:30"
+      ],
+      "comment": "http://www.traveljournals.net/explore/lebanon/map/m1170262/hamul.html",
+      "id": "ac4f712",
+      "slug": "aphek-1",
+      "type": "a",
+      "osm": "ac4f712",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Aphek"
+      ]
+    },
+    {
+      "name": "Arab",
+      "lat": 31.450746,
+      "lon": 35.045648,
+      "passages": [
+        "Josh 15:52"
+      ],
+      "comment": "",
+      "id": "adbc03e",
+      "slug": "arab",
+      "type": "a",
+      "osm": "adbc03e",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Arabah",
+      "lat": 32.029676,
+      "lon": 35.520995,
+      "passages": [
+        "Deut 1:1",
+        "Deut 1:7",
+        "Deut 2:8",
+        "Deut 3:17",
+        "Deut 4:49",
+        "Deut 11:30",
+        "Josh 8:14",
+        "Josh 11:2",
+        "Josh 11:16",
+        "Josh 12:1",
+        "Josh 12:3",
+        "Josh 12:8",
+        "Josh 18:18",
+        "1 Sam 23:24",
+        "2 Sam 2:29",
+        "2 Sam 4:7",
+        "2 Kgs 25:4",
+        "Jer 39:4",
+        "Jer 52:7",
+        "Ezek 47:8"
+      ],
+      "comment": "",
+      "id": "mfcf08d",
+      "slug": "arabah",
+      "type": "m",
+      "osm": "mfcf08d",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Araba"
+      ]
+    },
+    {
+      "name": "Arabia",
+      "lat": 27.4,
+      "lon": 37.7,
+      "passages": [
+        "2 Chr 9:14",
+        "Isa 21:13",
+        "Jer 25:24",
+        "Ezek 27:21",
+        "Ezek 30:5",
+        "Gal 1:17",
+        "Gal 4:25"
+      ],
+      "comment": "region",
+      "id": "arabia",
+      "slug": "arabia",
+      "type": "a",
+      "osm": "arabia",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Aram",
+      "lat": 34.85,
+      "lon": 39.12,
+      "passages": [
+        "Num 23:7",
+        "2 Sam 8:6",
+        "2 Sam 15:8",
+        "1 Chr 2:23",
+        "Hos 12:12"
+      ],
+      "comment": "",
+      "id": "a3e66cd",
+      "slug": "aram",
+      "type": "a",
+      "osm": "a3e66cd",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Aramean",
+        "Arameans",
+        "Syria"
+      ]
+    },
+    {
+      "name": "Aram-maacah",
+      "lat": 33.2,
+      "lon": 36.5,
+      "passages": [
+        "1 Chr 19:6"
+      ],
+      "comment": "",
+      "id": "aram-maacah",
+      "slug": "aram-maacah",
+      "type": "a",
+      "osm": "aram-maacah",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Aram-naharaim",
+      "lat": 35.1,
+      "lon": 42.0,
+      "passages": [
+        "Ps 60:1"
+      ],
+      "comment": "",
+      "id": "a3c7b44",
+      "slug": "aram-naharaim",
+      "type": "a",
+      "osm": "a3c7b44",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Aram Naharaim",
+        "Mesopotamia"
+      ]
+    },
+    {
+      "name": "Argob",
+      "lat": 33.144,
+      "lon": 36.136,
+      "passages": [
+        "Deut 3:4",
+        "Deut 3:13",
+        "Deut 3:14",
+        "1 Kgs 4:13"
+      ],
+      "comment": "",
+      "id": "md88865",
+      "slug": "argob",
+      "type": "m",
+      "osm": "md88865",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Arnon",
+      "lat": 31.4288,
+      "lon": 35.677009,
+      "passages": [
+        "Num 21:13",
+        "Num 21:14",
+        "Num 21:24",
+        "Num 21:26",
+        "Num 21:28",
+        "Num 22:36",
+        "Judg 11:13",
+        "Judg 11:18",
+        "Judg 11:22",
+        "Judg 11:26",
+        "Isa 16:2",
+        "Jer 48:20"
+      ],
+      "comment": "Now Wadi Mojib",
+      "id": "a4cc324",
+      "slug": "arnon",
+      "type": "a",
+      "osm": "a4cc324",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Aaron",
+        "Arnon River"
+      ]
+    },
+    {
+      "name": "Aroer 2",
+      "lat": 31.9617,
+      "lon": 35.9115,
+      "passages": [
+        "Num 32:34",
+        "Josh 13:25",
+        "Judg 11:33",
+        "2 Sam 24:5",
+        "1 Chr 5:8",
+        "Isa 17:2"
+      ],
+      "comment": "Guess (near Rabbah)",
+      "id": "af74969",
+      "slug": "aroer-2",
+      "type": "a",
+      "osm": "af74969",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Aroer"
+      ]
+    },
+    {
+      "name": "Arumah",
+      "lat": 32.154887,
+      "lon": 35.318192,
+      "passages": [
+        "Judg 9:41"
+      ],
+      "comment": "",
+      "id": "af536fb",
+      "slug": "arumah",
+      "type": "a",
+      "osm": "af536fb",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Tormah"
+      ]
+    },
+    {
+      "name": "Arvad",
+      "lat": 34.856082,
+      "lon": 35.858485,
+      "passages": [
+        "Ezek 27:8",
+        "Ezek 27:11"
+      ],
+      "comment": "",
+      "id": "afbf1b5",
+      "slug": "arvad",
+      "type": "a",
+      "osm": "afbf1b5",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Arvadites",
+        "Arvan"
+      ]
+    },
+    {
+      "name": "Ashkenaz",
+      "lat": 40.6,
+      "lon": 44.6,
+      "passages": [
+        "Jer 51:27"
+      ],
+      "comment": "",
+      "id": "aec9225",
+      "slug": "ashkenaz",
+      "type": "a",
+      "osm": "aec9225",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Ashchenaz"
+      ]
+    },
+    {
+      "name": "Ashnah",
+      "lat": 31.8099,
+      "lon": 34.9365,
+      "passages": [
+        "Josh 15:33",
+        "Josh 15:43"
+      ],
+      "comment": "",
+      "id": "ashnah",
+      "slug": "ashnah",
+      "type": "a",
+      "osm": "ashnah",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Asia",
+      "lat": 39.23,
+      "lon": 32.73,
+      "passages": [
+        "Acts 2:9",
+        "Acts 6:9",
+        "Acts 16:6",
+        "Acts 19:10",
+        "Acts 19:22",
+        "Acts 19:26",
+        "Acts 19:27",
+        "Acts 20:16",
+        "Acts 20:18",
+        "Acts 21:27",
+        "Acts 24:18",
+        "Acts 27:2",
+        "Rom 16:5",
+        "1 Cor 16:19",
+        "2 Cor 1:8",
+        "2 Tim 1:15",
+        "1 Pet 1:1",
+        "Rev 1:4"
+      ],
+      "comment": "region",
+      "id": "m3c5a04",
+      "slug": "asia",
+      "type": "m",
+      "osm": "m3c5a04",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Azmon",
+      "lat": 30.958506,
+      "lon": 34.3805,
+      "passages": [
+        "Num 34:4",
+        "Num 34:5",
+        "Josh 15:4"
+      ],
+      "comment": "~",
+      "id": "a8f6a28",
+      "slug": "azmon",
+      "type": "a",
+      "osm": "a8f6a28",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Baalath 1",
+      "lat": 31.927451,
+      "lon": 35.055378,
+      "passages": [
+        "Josh 19:44"
+      ],
+      "comment": "",
+      "id": "abc1b7c",
+      "slug": "baalath-1",
+      "type": "a",
+      "osm": "abc1b7c",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Baalath"
+      ]
+    },
+    {
+      "name": "Baalath-beer",
+      "lat": 32.049953,
+      "lon": 35.733402,
+      "passages": [
+        "Josh 19:8"
+      ],
+      "comment": "",
+      "id": "a03cc2d",
+      "slug": "baalath-beer",
+      "type": "a",
+      "osm": "a03cc2d",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Baal",
+        "Baalat-Beor",
+        "Baalath",
+        "Baalath Beer"
+      ]
+    },
+    {
+      "name": "Baal-hazor",
+      "lat": 31.979434,
+      "lon": 35.279229,
+      "passages": [
+        "2 Sam 13:23"
+      ],
+      "comment": "",
+      "id": "a366989",
+      "slug": "baal-hazor",
+      "type": "a",
+      "osm": "a366989",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Baal Hazor"
+      ]
+    },
+    {
+      "name": "Baal-meon",
+      "lat": 31.679454,
+      "lon": 35.734892,
+      "passages": [
+        "Num 32:38",
+        "1 Chr 5:8",
+        "Ezek 25:9"
+      ],
+      "comment": "",
+      "id": "a76f7b7",
+      "slug": "baal-meon",
+      "type": "a",
+      "osm": "a76f7b7",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Baal Meon",
+        "Baal-Meon",
+        "Beth Baal Meon",
+        "Beth-baal-meon"
+      ]
+    },
+    {
+      "name": "Bahurim",
+      "lat": 31.824736,
+      "lon": 35.388486,
+      "passages": [
+        "2 Sam 3:16",
+        "2 Sam 16:5",
+        "2 Sam 17:18",
+        "2 Sam 19:16",
+        "2 Sam 23:31",
+        "1 Kgs 2:8"
+      ],
+      "comment": "",
+      "id": "a9ed5a4",
+      "slug": "bahurim",
+      "type": "a",
+      "osm": "a9ed5a4",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Baharum",
+        "Baharumite",
+        "Barhumite"
+      ]
+    },
+    {
+      "name": "Bene-berak",
+      "lat": 32.035782,
+      "lon": 34.827108,
+      "passages": [
+        "Josh 19:45"
+      ],
+      "comment": "uk.geocities.com/jonpartin/joshua4.html",
+      "id": "ae83378",
+      "slug": "bene-berak",
+      "type": "a",
+      "osm": "ae83378",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Bene Berak"
+      ]
+    },
+    {
+      "name": "Berothah",
+      "lat": 33.93148,
+      "lon": 36.152049,
+      "passages": [
+        "Ezek 47:16"
+      ],
+      "comment": "",
+      "id": "a14b9f1",
+      "slug": "berothah",
+      "type": "a",
+      "osm": "a14b9f1",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Berothath"
+      ]
+    },
+    {
+      "name": "Besor",
+      "lat": 31.398056,
+      "lon": 34.436667,
+      "passages": [
+        "1 Sam 30:9",
+        "1 Sam 30:10",
+        "1 Sam 30:21"
+      ],
+      "comment": "wadi esh sheria",
+      "id": "a57df09",
+      "slug": "besor",
+      "type": "a",
+      "osm": "a57df09",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Besor Valley",
+        "Brook Besor",
+        "Wadi Besor"
+      ]
+    },
+    {
+      "name": "Beten",
+      "lat": 32.934736,
+      "lon": 35.270799,
+      "passages": [
+        "Josh 19:25"
+      ],
+      "comment": "",
+      "id": "aafc721",
+      "slug": "beten",
+      "type": "a",
+      "osm": "aafc721",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Beth-anath",
+      "lat": 33.146864,
+      "lon": 35.427134,
+      "passages": [
+        "Josh 19:38",
+        "Judg 1:33"
+      ],
+      "comment": "",
+      "id": "ae6cef8",
+      "slug": "beth-anath",
+      "type": "a",
+      "osm": "ae6cef8",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Beth Anath"
+      ]
+    },
+    {
+      "name": "Beth-anoth",
+      "lat": 31.558456,
+      "lon": 35.124483,
+      "passages": [
+        "Josh 15:59"
+      ],
+      "comment": "",
+      "id": "aa2fea1",
+      "slug": "beth-anoth",
+      "type": "a",
+      "osm": "aa2fea1",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Beth Anoth"
+      ]
+    },
+    {
+      "name": "Beth-arabah",
+      "lat": 31.84332,
+      "lon": 35.50649,
+      "passages": [
+        "Josh 15:6",
+        "Josh 15:61",
+        "Josh 18:18",
+        "Josh 18:22"
+      ],
+      "comment": "",
+      "id": "a3f8916",
+      "slug": "beth-arabah",
+      "type": "a",
+      "osm": "a3f8916",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Arabah",
+        "Beth Arabah"
+      ]
+    },
+    {
+      "name": "Beth-azmaveth",
+      "lat": 31.834203,
+      "lon": 35.260706,
+      "passages": [
+        "Neh 7:28"
+      ],
+      "comment": "",
+      "id": "beth-azmaveth",
+      "slug": "beth-azmaveth",
+      "type": "a",
+      "osm": "beth-azmaveth",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Beth-dagon 1",
+      "lat": 31.908,
+      "lon": 34.775,
+      "passages": [
+        "Josh 15:41"
+      ],
+      "comment": "",
+      "id": "a561af4",
+      "slug": "beth-dagon-1",
+      "type": "a",
+      "osm": "a561af4",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Beth Dagon",
+        "Beth-dagon"
+      ]
+    },
+    {
+      "name": "Beth-dagon 2",
+      "lat": 32.899561,
+      "lon": 35.107928,
+      "passages": [
+        "Josh 19:27"
+      ],
+      "comment": "",
+      "id": "a0cc925",
+      "slug": "beth-dagon-2",
+      "type": "a",
+      "osm": "a0cc925",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Beth Dagon",
+        "Beth-dagon"
+      ]
+    },
+    {
+      "name": "Beth-emek",
+      "lat": 32.978855,
+      "lon": 35.167096,
+      "passages": [
+        "Josh 19:27"
+      ],
+      "comment": "",
+      "id": "a587ea0",
+      "slug": "beth-emek",
+      "type": "a",
+      "osm": "a587ea0",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Beth Emeck",
+        "Beth Emek"
+      ]
+    },
+    {
+      "name": "Beth-gamul",
+      "lat": 31.519692,
+      "lon": 35.844714,
+      "passages": [
+        "Jer 48:23"
+      ],
+      "comment": "",
+      "id": "a367677",
+      "slug": "beth-gamul",
+      "type": "a",
+      "osm": "a367677",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Beth Gamul"
+      ]
+    },
+    {
+      "name": "Beth-haccherem",
+      "lat": 31.665911,
+      "lon": 35.241516,
+      "passages": [
+        "Neh 3:14",
+        "Jer 6:1"
+      ],
+      "comment": "",
+      "id": "a30f9a0",
+      "slug": "beth-haccherem",
+      "type": "a",
+      "osm": "a30f9a0",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Beth Haccerem",
+        "Beth Hakkerem",
+        "Beth-haccerem",
+        "Beth-hakkerem"
+      ]
+    },
+    {
+      "name": "Beth-haram",
+      "lat": 31.816667,
+      "lon": 35.583333,
+      "passages": [
+        "Josh 13:27"
+      ],
+      "comment": "~",
+      "id": "a4590cd",
+      "slug": "beth-haram",
+      "type": "a",
+      "osm": "a4590cd",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Beth Haram",
+        "Beth Haran",
+        "Beth-aram",
+        "Beth-haran"
+      ]
+    },
+    {
+      "name": "Beth-hoglah",
+      "lat": 31.837062,
+      "lon": 35.513151,
+      "passages": [
+        "Josh 15:6",
+        "Josh 18:19",
+        "Josh 18:21"
+      ],
+      "comment": "",
+      "id": "aabd0ba",
+      "slug": "beth-hoglah",
+      "type": "a",
+      "osm": "aabd0ba",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Beth Hoglah",
+        "Beth-hogla"
+      ]
+    },
+    {
+      "name": "Bethlehem 2",
+      "lat": 32.735379,
+      "lon": 35.189704,
+      "passages": [
+        "Josh 19:15"
+      ],
+      "comment": "",
+      "id": "a308715",
+      "slug": "bethlehem-2",
+      "type": "a",
+      "osm": "a308715",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Beth-lehem",
+        "Bethlehem"
+      ]
+    },
+    {
+      "name": "Beth-nimrah",
+      "lat": 31.900811,
+      "lon": 35.625693,
+      "passages": [
+        "Num 32:36",
+        "Josh 13:27"
+      ],
+      "comment": "now Beth-Nimrah",
+      "id": "af66b89",
+      "slug": "beth-nimrah",
+      "type": "a",
+      "osm": "af66b89",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Beth Nimrah"
+      ]
+    },
+    {
+      "name": "Beth-peor",
+      "lat": 31.656099,
+      "lon": 35.71187,
+      "passages": [
+        "Deut 3:29",
+        "Deut 4:46",
+        "Deut 34:6",
+        "Josh 13:20"
+      ],
+      "comment": "~",
+      "id": "af3ce34",
+      "slug": "beth-peor",
+      "type": "a",
+      "osm": "af3ce34",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Beth Peor"
+      ]
+    },
+    {
+      "name": "Beth-rehob",
+      "lat": 33.219354,
+      "lon": 35.544122,
+      "passages": [
+        "Judg 18:28",
+        "2 Sam 10:6"
+      ],
+      "comment": "",
+      "id": "ad44b24",
+      "slug": "beth-rehob",
+      "type": "a",
+      "osm": "ad44b24",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Aram Beth Rehob",
+        "Aram Beth-Rehob",
+        "Beth Rehob"
+      ]
+    },
+    {
+      "name": "Beth-shemesh 2",
+      "lat": 32.40643,
+      "lon": 35.504628,
+      "passages": [
+        "Josh 19:22"
+      ],
+      "comment": "~",
+      "id": "a3bb26d",
+      "slug": "beth-shemesh-2",
+      "type": "a",
+      "osm": "a3bb26d",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Beth Shemesh",
+        "Beth-shemesh"
+      ]
+    },
+    {
+      "name": "Beth-shittah",
+      "lat": 32.552496,
+      "lon": 35.438257,
+      "passages": [
+        "Judg 7:22"
+      ],
+      "comment": "",
+      "id": "a83d789",
+      "slug": "beth-shittah",
+      "type": "a",
+      "osm": "a83d789",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Acacia House",
+        "Beth Acacia",
+        "Beth Shittah"
+      ]
+    },
+    {
+      "name": "Beth-tappuah",
+      "lat": 31.52973,
+      "lon": 35.050377,
+      "passages": [
+        "Josh 15:53"
+      ],
+      "comment": "",
+      "id": "adac973",
+      "slug": "beth-tappuah",
+      "type": "a",
+      "osm": "adac973",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Beth Tappuah"
+      ]
+    },
+    {
+      "name": "Beth-togarmah",
+      "lat": 40.065539,
+      "lon": 45.036328,
+      "passages": [
+        "Ezek 27:14",
+        "Ezek 38:6"
+      ],
+      "comment": "region",
+      "id": "a263e60",
+      "slug": "beth-togarmah",
+      "type": "a",
+      "osm": "a263e60",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Beth Togarmah",
+        "Togarmah"
+      ]
+    },
+    {
+      "name": "Beth-zur",
+      "lat": 31.596107,
+      "lon": 35.10262,
+      "passages": [
+        "Josh 15:58",
+        "2 Chr 11:7",
+        "Neh 3:16"
+      ],
+      "comment": "",
+      "id": "addba2a",
+      "slug": "beth-zur",
+      "type": "a",
+      "osm": "addba2a",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Beth Zur",
+        "Beth-Zur",
+        "Bethzur"
+      ]
+    },
+    {
+      "name": "Betonim",
+      "lat": 32.0105,
+      "lon": 35.706297,
+      "passages": [
+        "Josh 13:26"
+      ],
+      "comment": "",
+      "id": "a079478",
+      "slug": "betonim",
+      "type": "a",
+      "osm": "a079478",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Bezek 1",
+      "lat": 31.898029,
+      "lon": 34.952878,
+      "passages": [
+        "Judg 1:4",
+        "Judg 1:5"
+      ],
+      "comment": "~",
+      "id": "af48fdd",
+      "slug": "bezek-1",
+      "type": "a",
+      "osm": "af48fdd",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Bezek"
+      ]
+    },
+    {
+      "name": "Bithynia",
+      "lat": 40.905503,
+      "lon": 30.685778,
+      "passages": [
+        "Acts 16:7",
+        "1 Pet 1:1"
+      ],
+      "comment": "region",
+      "id": "m29b4f7",
+      "slug": "bithynia",
+      "type": "m",
+      "osm": "m29b4f7",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Bozrah 1",
+      "lat": 30.734691,
+      "lon": 35.60625,
+      "passages": [
+        "Gen 36:33",
+        "1 Chr 1:44",
+        "Isa 34:6",
+        "Isa 63:1",
+        "Jer 49:13",
+        "Jer 49:22",
+        "Amos 1:12"
+      ],
+      "comment": "",
+      "id": "a871210",
+      "slug": "bozrah-1",
+      "type": "a",
+      "osm": "a871210",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Bozrah"
+      ]
+    },
+    {
+      "name": "Brook of Egypt",
+      "lat": 31.032047,
+      "lon": 33.854957,
+      "passages": [
+        "Num 34:5",
+        "Josh 15:4",
+        "Josh 15:47",
+        "1 Kgs 8:65",
+        "2 Kgs 24:7",
+        "2 Chr 7:8",
+        "Isa 27:12",
+        "Ezek 47:19",
+        "Ezek 48:28"
+      ],
+      "comment": "river: now Wadi al Arish; http://en.wikipedia.org/wiki/Brook_of_Egypt",
+      "id": "a7a59b4",
+      "slug": "brook-of-egypt",
+      "type": "a",
+      "osm": "a7a59b4",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Egypt",
+        "Stream of Egypt",
+        "Wadi of Egypt",
+        "brook of Egypt",
+        "river of Egypt",
+        "valley of Egypt",
+        "wadi of Egypt"
+      ]
+    },
+    {
+      "name": "Cabul 1",
+      "lat": 32.865661,
+      "lon": 35.211814,
+      "passages": [
+        "Josh 19:27"
+      ],
+      "comment": "",
+      "id": "a978a24",
+      "slug": "cabul-1",
+      "type": "a",
+      "osm": "a978a24",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Cabul",
+        "Kabul"
+      ]
+    },
+    {
+      "name": "Calah",
+      "lat": 36.142884,
+      "lon": 43.312178,
+      "passages": [
+        "Gen 10:11",
+        "Gen 10:12"
+      ],
+      "comment": "?",
+      "id": "ae1f807",
+      "slug": "calah",
+      "type": "a",
+      "osm": "ae1f807",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Calneh",
+      "lat": 32.127213,
+      "lon": 45.229995,
+      "passages": [
+        "Gen 10:10",
+        "Amos 6:2"
+      ],
+      "comment": "",
+      "id": "calneh",
+      "slug": "calneh",
+      "type": "a",
+      "osm": "calneh",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Cappadocia",
+      "lat": 36.731904,
+      "lon": 35.486302,
+      "passages": [
+        "Acts 2:9",
+        "1 Pet 1:1"
+      ],
+      "comment": "region",
+      "id": "m6e1e42",
+      "slug": "cappadocia",
+      "type": "m",
+      "osm": "m6e1e42",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Cauda",
+      "lat": 34.84351,
+      "lon": 24.091671,
+      "passages": [
+        "Acts 27:16"
+      ],
+      "comment": "island; now Gavdos; http://www.creteisland.gr/english/chania/selino/gavdos/",
+      "id": "aca2b0a",
+      "slug": "cauda",
+      "type": "a",
+      "osm": "aca2b0a",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Clauda"
+      ]
+    },
+    {
+      "name": "Chebar",
+      "lat": 33.159129,
+      "lon": 44.06293,
+      "passages": [
+        "Ezek 1:1",
+        "Ezek 1:3",
+        "Ezek 3:15",
+        "Ezek 3:23",
+        "Ezek 10:15",
+        "Ezek 10:20",
+        "Ezek 10:22",
+        "Ezek 43:3"
+      ],
+      "comment": "~; now Nehardea; http://www.hebrewhistory.info/factpapers/fp031_iraq.htm",
+      "id": "a3d2f0a",
+      "slug": "chebar",
+      "type": "a",
+      "osm": "a3d2f0a",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Chebar Canal",
+        "Kebar",
+        "Kebar River",
+        "River Chebar"
+      ]
+    },
+    {
+      "name": "Chephar-ammoni",
+      "lat": 31.966667,
+      "lon": 35.25,
+      "passages": [
+        "Josh 18:24"
+      ],
+      "comment": "?; now Khirbat Kafr Ana",
+      "id": "a2cb16b",
+      "slug": "chephar-ammoni",
+      "type": "a",
+      "osm": "a2cb16b",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Chephar Haammoni",
+        "Chephar-haammonai",
+        "Kephar Ammoni",
+        "Kephar-ammoni"
+      ]
+    },
+    {
+      "name": "Chephirah",
+      "lat": 31.836401,
+      "lon": 35.095272,
+      "passages": [
+        "Josh 9:17",
+        "Josh 18:26",
+        "Ezra 2:25",
+        "Neh 7:29"
+      ],
+      "comment": "now Kirbat el Kafira",
+      "id": "a2e5054",
+      "slug": "chephirah",
+      "type": "a",
+      "osm": "a2e5054",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Kephirah"
+      ]
+    },
+    {
+      "name": "Chesalon",
+      "lat": 31.781049,
+      "lon": 35.05113,
+      "passages": [
+        "Josh 15:10"
+      ],
+      "comment": "",
+      "id": "a42c452",
+      "slug": "chesalon",
+      "type": "a",
+      "osm": "a42c452",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Kesalon"
+      ]
+    },
+    {
+      "name": "Chesulloth",
+      "lat": 32.683231,
+      "lon": 35.324694,
+      "passages": [
+        "Josh 19:18"
+      ],
+      "comment": "",
+      "id": "ac3d92d",
+      "slug": "chesulloth",
+      "type": "a",
+      "osm": "ac3d92d",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Kesulloth"
+      ]
+    },
+    {
+      "name": "Chios",
+      "lat": 38.44484,
+      "lon": 26.063302,
+      "passages": [
+        "Acts 20:15"
+      ],
+      "comment": "now Chios",
+      "id": "mf3ab86",
+      "slug": "chios",
+      "type": "m",
+      "osm": "mf3ab86",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Crete",
+      "lat": 35.171239,
+      "lon": 25.007204,
+      "passages": [
+        "Acts 27:7",
+        "Acts 27:12",
+        "Acts 27:13",
+        "Acts 27:21",
+        "Titus 1:5"
+      ],
+      "comment": "island",
+      "id": "mf93341",
+      "slug": "crete",
+      "type": "m",
+      "osm": "mf93341",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Cuth",
+      "lat": 32.733333,
+      "lon": 44.666667,
+      "passages": [
+        "2 Kgs 17:30"
+      ],
+      "comment": "http://en.wikipedia.org/wiki/Kutha",
+      "id": "a538831",
+      "slug": "cuth",
+      "type": "a",
+      "osm": "a538831",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Cush",
+        "Cuthah",
+        "Kuthah"
+      ]
+    },
+    {
+      "name": "Cyprus",
+      "lat": 35.018306,
+      "lon": 33.207693,
+      "passages": [
+        "Isa 23:1",
+        "Isa 23:12",
+        "Jer 2:10",
+        "Ezek 27:6",
+        "Acts 4:36",
+        "Acts 11:19",
+        "Acts 11:20",
+        "Acts 13:4",
+        "Acts 15:39",
+        "Acts 21:3",
+        "Acts 21:16",
+        "Acts 27:4"
+      ],
+      "comment": "island",
+      "id": "me751fb",
+      "slug": "cyprus",
+      "type": "m",
+      "osm": "me751fb",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Cyrene",
+      "lat": 32.824979,
+      "lon": 21.858301,
+      "passages": [
+        "Matt 27:32",
+        "Mark 15:21",
+        "Luke 23:26",
+        "Acts 2:10",
+        "Acts 11:20",
+        "Acts 13:1"
+      ],
+      "comment": "http://en.wikipedia.org/wiki/Cyrene%2C_Libya",
+      "id": "me649fd",
+      "slug": "cyrene",
+      "type": "m",
+      "osm": "me649fd",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Dabbesheth",
+      "lat": 33.0,
+      "lon": 35.266682,
+      "passages": [
+        "Josh 19:11"
+      ],
+      "comment": "",
+      "id": "a411151",
+      "slug": "dabbesheth",
+      "type": "a",
+      "osm": "a411151",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Dabbasheth"
+      ]
+    },
+    {
+      "name": "Dalmatia",
+      "lat": 43.515484,
+      "lon": 16.071538,
+      "passages": [
+        "2 Tim 4:10"
+      ],
+      "comment": "region",
+      "id": "me8c716",
+      "slug": "dalmatia",
+      "type": "m",
+      "osm": "me8c716",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Dannah",
+      "lat": 31.561025,
+      "lon": 34.975472,
+      "passages": [
+        "Josh 15:49"
+      ],
+      "comment": "",
+      "id": "a65c305",
+      "slug": "dannah",
+      "type": "a",
+      "osm": "a65c305",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Debir 2",
+      "lat": 31.816662,
+      "lon": 35.349994,
+      "passages": [
+        "Josh 15:7"
+      ],
+      "comment": "now Ed Dhaherie",
+      "id": "ad334c4",
+      "slug": "debir-2",
+      "type": "a",
+      "osm": "ad334c4",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Debir"
+      ]
+    },
+    {
+      "name": "Dedan",
+      "lat": 26.625139,
+      "lon": 37.919663,
+      "passages": [
+        "Jer 25:23",
+        "Jer 49:8",
+        "Ezek 25:13",
+        "Ezek 27:15",
+        "Ezek 27:20",
+        "Ezek 38:13"
+      ],
+      "comment": "http://en.wikipedia.org/wiki/Al-%27Ula",
+      "id": "a3a2a75",
+      "slug": "dedan",
+      "type": "a",
+      "osm": "a3a2a75",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Dedanim",
+        "Dedanite",
+        "Dedanites",
+        "Rhodes",
+        "Rhodians"
+      ]
+    },
+    {
+      "name": "Dimnah",
+      "lat": 32.781808,
+      "lon": 35.321364,
+      "passages": [
+        "Josh 21:35"
+      ],
+      "comment": "",
+      "id": "mf517cf",
+      "slug": "dimnah",
+      "type": "m",
+      "osm": "mf517cf",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Ad Dimnah",
+        "Ed Dimnah",
+        "Khirbet Dimneh"
+      ]
+    },
+    {
+      "name": "Dizahab",
+      "lat": 28.507836,
+      "lon": 34.516339,
+      "passages": [
+        "Deut 1:1"
+      ],
+      "comment": "",
+      "id": "afcb77d",
+      "slug": "dizahab",
+      "type": "a",
+      "osm": "afcb77d",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Di Zahab",
+        "Di-zahab"
+      ]
+    },
+    {
+      "name": "Dophkah",
+      "lat": 28.770015,
+      "lon": 33.40046,
+      "passages": [
+        "Num 33:12",
+        "Num 33:13"
+      ],
+      "comment": "",
+      "id": "a070c7b",
+      "slug": "dophkah",
+      "type": "a",
+      "osm": "a070c7b",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Dumah 1",
+      "lat": 31.43827,
+      "lon": 34.982762,
+      "passages": [
+        "Josh 15:52"
+      ],
+      "comment": "",
+      "id": "a75d2ab",
+      "slug": "dumah-1",
+      "type": "a",
+      "osm": "a75d2ab",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Dumah"
+      ]
+    },
+    {
+      "name": "Ebez",
+      "lat": 32.261621,
+      "lon": 35.328129,
+      "passages": [
+        "Josh 19:20"
+      ],
+      "comment": "now Al-Bathan",
+      "id": "acd9b19",
+      "slug": "ebez",
+      "type": "a",
+      "osm": "acd9b19",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Abez"
+      ]
+    },
+    {
+      "name": "Ecbatana",
+      "lat": 34.798311,
+      "lon": 48.514966,
+      "passages": [
+        "Ezra 6:2"
+      ],
+      "comment": "",
+      "id": "a212ef7",
+      "slug": "ecbatana",
+      "type": "a",
+      "osm": "a212ef7",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Achmetha"
+      ]
+    },
+    {
+      "name": "Elath",
+      "lat": 29.528502,
+      "lon": 35.005732,
+      "passages": [
+        "Deut 2:8",
+        "2 Kgs 14:22",
+        "2 Kgs 16:6"
+      ],
+      "comment": "",
+      "id": "af0ac29",
+      "slug": "elath",
+      "type": "a",
+      "osm": "af0ac29",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Elat",
+        "Eloth"
+      ]
+    },
+    {
+      "name": "Elealeh",
+      "lat": 31.813796,
+      "lon": 35.824275,
+      "passages": [
+        "Num 32:3",
+        "Num 32:37",
+        "Isa 15:4",
+        "Isa 16:9",
+        "Jer 48:34"
+      ],
+      "comment": "",
+      "id": "a5ccd34",
+      "slug": "elealeh",
+      "type": "a",
+      "osm": "a5ccd34",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Elim",
+      "lat": 29.306194,
+      "lon": 32.980924,
+      "passages": [
+        "Ex 15:27",
+        "Ex 16:1",
+        "Num 33:9",
+        "Num 33:10"
+      ],
+      "comment": "~",
+      "id": "a2410c1",
+      "slug": "elim",
+      "type": "a",
+      "osm": "a2410c1",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Ellasar",
+      "lat": 37.056944,
+      "lon": 40.997222,
+      "passages": [
+        "Gen 14:1",
+        "Gen 14:9"
+      ],
+      "comment": "region; http://en.wikipedia.org/wiki/Urkesh",
+      "id": "a6f4a6d",
+      "slug": "ellasar",
+      "type": "a",
+      "osm": "a6f4a6d",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Elon",
+      "lat": 31.973818,
+      "lon": 35.116531,
+      "passages": [
+        "Josh 19:43"
+      ],
+      "comment": "",
+      "id": "ae180d8",
+      "slug": "elon",
+      "type": "a",
+      "osm": "ae180d8",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Elonbeth-hanan",
+      "lat": 31.852593,
+      "lon": 35.109078,
+      "passages": [
+        "1 Kgs 4:9"
+      ],
+      "comment": "",
+      "id": "a8e6824",
+      "slug": "elonbeth-hanan",
+      "type": "a",
+      "osm": "a8e6824",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Elon Beth Hanan",
+        "Elon Bethhanan",
+        "Elon of Beth-Hanan",
+        "Elon-beth-hanan",
+        "Elon-bethhanan"
+      ]
+    },
+    {
+      "name": "Eltekeh",
+      "lat": 31.869521,
+      "lon": 35.06688,
+      "passages": [
+        "Josh 19:44"
+      ],
+      "comment": "",
+      "id": "a3c4559",
+      "slug": "eltekeh",
+      "type": "a",
+      "osm": "a3c4559",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Elteke"
+      ]
+    },
+    {
+      "name": "Eltekon",
+      "lat": 31.66057,
+      "lon": 34.995406,
+      "passages": [
+        "Josh 15:59"
+      ],
+      "comment": "from tyndale",
+      "id": "a26cd81",
+      "slug": "eltekon",
+      "type": "a",
+      "osm": "a26cd81",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Enam",
+      "lat": 32.15,
+      "lon": 35.126,
+      "passages": [
+        "Josh 15:34"
+      ],
+      "comment": "",
+      "id": "a26921e",
+      "slug": "enam",
+      "type": "a",
+      "osm": "a26921e",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Eneglaim",
+      "lat": 30.998062,
+      "lon": 35.498547,
+      "passages": [
+        "Ezek 47:10"
+      ],
+      "comment": "",
+      "id": "ad44943",
+      "slug": "eneglaim",
+      "type": "a",
+      "osm": "ad44943",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "En Eglaim",
+        "En-eglaim"
+      ]
+    },
+    {
+      "name": "En-gannim 1",
+      "lat": 31.75,
+      "lon": 34.950106,
+      "passages": [
+        "Josh 15:34"
+      ],
+      "comment": "~",
+      "id": "abe5f95",
+      "slug": "en-gannim-1",
+      "type": "a",
+      "osm": "abe5f95",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "En Gannim",
+        "En-gannim"
+      ]
+    },
+    {
+      "name": "En-haddah",
+      "lat": 32.478425,
+      "lon": 35.254452,
+      "passages": [
+        "Josh 19:21"
+      ],
+      "comment": "",
+      "id": "a009e7d",
+      "slug": "en-haddah",
+      "type": "a",
+      "osm": "a009e7d",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "En Haddah"
+      ]
+    },
+    {
+      "name": "En-hazor",
+      "lat": 33.1,
+      "lon": 35.35,
+      "passages": [
+        "Josh 19:37"
+      ],
+      "comment": "~",
+      "id": "a156070",
+      "slug": "en-hazor",
+      "type": "a",
+      "osm": "a156070",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "En Hazor"
+      ]
+    },
+    {
+      "name": "En-rogel",
+      "lat": 31.767775,
+      "lon": 35.234408,
+      "passages": [
+        "Josh 15:7",
+        "Josh 18:16",
+        "2 Sam 17:17",
+        "1 Kgs 1:9"
+      ],
+      "comment": "",
+      "id": "af9cfc9",
+      "slug": "en-rogel",
+      "type": "a",
+      "osm": "af9cfc9",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "En Rogel"
+      ]
+    },
+    {
+      "name": "En-shemesh",
+      "lat": 31.77402,
+      "lon": 35.270231,
+      "passages": [
+        "Josh 15:7",
+        "Josh 18:17"
+      ],
+      "comment": "",
+      "id": "a34e870",
+      "slug": "en-shemesh",
+      "type": "a",
+      "osm": "a34e870",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "En Shemesh",
+        "Waters of En-shemesh"
+      ]
+    },
+    {
+      "name": "Ephes-dammim",
+      "lat": 31.691186,
+      "lon": 34.944496,
+      "passages": [
+        "1 Sam 17:1"
+      ],
+      "comment": "",
+      "id": "aafd7c4",
+      "slug": "ephes-dammim",
+      "type": "a",
+      "osm": "aafd7c4",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Ephes Dammim",
+        "Pas Dammim",
+        "Pas-Dammim",
+        "Pas-dammim",
+        "Pasdammim"
+      ]
+    },
+    {
+      "name": "Erech",
+      "lat": 32.322222,
+      "lon": 45.636111,
+      "passages": [
+        "Gen 10:10",
+        "Ezra 4:9"
+      ],
+      "comment": "now Uruk",
+      "id": "a5db1a6",
+      "slug": "erech",
+      "type": "a",
+      "osm": "a5db1a6",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Archevites",
+        "Erechites",
+        "Erechs",
+        "Uruk"
+      ]
+    },
+    {
+      "name": "Eshan",
+      "lat": 31.420175,
+      "lon": 35.033537,
+      "passages": [
+        "Josh 15:52"
+      ],
+      "comment": "",
+      "id": "acd9498",
+      "slug": "eshan",
+      "type": "a",
+      "osm": "acd9498",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Eshean"
+      ]
+    },
+    {
+      "name": "Eshtaol",
+      "lat": 31.782429,
+      "lon": 35.009012,
+      "passages": [
+        "Josh 15:33",
+        "Josh 19:41",
+        "Judg 13:25",
+        "Judg 16:31",
+        "Judg 18:2",
+        "Judg 18:8",
+        "Judg 18:11"
+      ],
+      "comment": "",
+      "id": "mda9727",
+      "slug": "eshtaol",
+      "type": "m",
+      "osm": "mda9727",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Eshua",
+        "Eshwa",
+        "Ishwa"
+      ]
+    },
+    {
+      "name": "Etam 1",
+      "lat": 31.736294,
+      "lon": 35.05485,
+      "passages": [
+        "Judg 15:8",
+        "Judg 15:11"
+      ],
+      "comment": "http://www.tiuli.com/english/Judean_Mountains/Judean_Mountains.asp",
+      "id": "ae05348",
+      "slug": "etam-1",
+      "type": "a",
+      "osm": "ae05348",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Etam"
+      ]
+    },
+    {
+      "name": "Etam 3",
+      "lat": 31.686465,
+      "lon": 35.17474,
+      "passages": [
+        "2 Chr 11:6"
+      ],
+      "comment": "now Khirbet el Khokh; palestine-family.net/index.php?nav=8-18&cid=17&did=193",
+      "id": "aa21f26",
+      "slug": "etam-3",
+      "type": "a",
+      "osm": "aa21f26",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Etah",
+        "Etam"
+      ]
+    },
+    {
+      "name": "Etham",
+      "lat": 30.467511,
+      "lon": 32.282767,
+      "passages": [
+        "Ex 13:20",
+        "Num 33:6",
+        "Num 33:7",
+        "Num 33:8"
+      ],
+      "comment": "~",
+      "id": "a27d0e0",
+      "slug": "etham",
+      "type": "a",
+      "osm": "a27d0e0",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Desert of Etham",
+        "Wilderness of Etham"
+      ]
+    },
+    {
+      "name": "Ethiopia",
+      "lat": 21.959788,
+      "lon": 31.343557,
+      "passages": [
+        "Est 1:1",
+        "Est 8:9",
+        "Job 28:19"
+      ],
+      "comment": "region",
+      "id": "ab45bd3",
+      "slug": "ethiopia",
+      "type": "a",
+      "osm": "ab45bd3",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Cush",
+        "Cushite",
+        "Cushites",
+        "Ethiopian",
+        "Ethiopians"
+      ]
+    },
+    {
+      "name": "Euphrates",
+      "lat": 35.090577,
+      "lon": 40.42778,
+      "passages": [
+        "Gen 2:14",
+        "Gen 15:18",
+        "Gen 31:21",
+        "Gen 36:37",
+        "Ex 23:31",
+        "Deut 1:7",
+        "Deut 11:24",
+        "Josh 1:4",
+        "Josh 24:2",
+        "2 Sam 8:3",
+        "2 Sam 10:16",
+        "1 Kgs 4:21",
+        "1 Kgs 4:24",
+        "1 Kgs 14:15",
+        "2 Kgs 23:29",
+        "2 Kgs 24:7",
+        "1 Chr 1:48",
+        "1 Chr 5:9",
+        "1 Chr 18:3",
+        "1 Chr 19:16",
+        "2 Chr 9:26",
+        "2 Chr 35:20",
+        "Isa 27:12",
+        "Jer 2:18",
+        "Jer 13:4",
+        "Jer 13:5",
+        "Jer 13:6",
+        "Jer 13:7",
+        "Jer 46:2",
+        "Jer 46:6",
+        "Jer 46:10",
+        "Jer 51:63",
+        "Rev 9:14",
+        "Rev 16:12"
+      ],
+      "comment": "river",
+      "id": "a62dec4",
+      "slug": "euphrates",
+      "type": "a",
+      "osm": "a62dec4",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Euphrates River",
+        "Great River",
+        "Perath",
+        "River",
+        "River Euphrates"
+      ]
+    },
+    {
+      "name": "Forum of Appius",
+      "lat": 41.468706,
+      "lon": 12.993929,
+      "passages": [
+        "Acts 28:15"
+      ],
+      "comment": "http://gnswww.nga.mil/geonames/Gazetteer/Search/Results.jsp?Feature__Unique_Feature_ID=-117178&Diacritics=Yes&reload=1",
+      "id": "a121d5e",
+      "slug": "forum-of-appius",
+      "type": "a",
+      "osm": "a121d5e",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Appii Forum",
+        "Appii forum",
+        "Forum on the Appian Way",
+        "Market of Appius"
+      ]
+    },
+    {
+      "name": "Gallim",
+      "lat": 31.816667,
+      "lon": 35.25,
+      "passages": [
+        "1 Sam 25:44",
+        "Isa 10:30"
+      ],
+      "comment": "~; from tyndale",
+      "id": "ac10bcf",
+      "slug": "gallim",
+      "type": "a",
+      "osm": "ac10bcf",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Gebim",
+      "lat": 31.8,
+      "lon": 35.25,
+      "passages": [
+        "Isa 10:31"
+      ],
+      "comment": "~",
+      "id": "a58df35",
+      "slug": "gebim",
+      "type": "a",
+      "osm": "a58df35",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Gederah",
+      "lat": 31.823337,
+      "lon": 34.777779,
+      "passages": [
+        "Josh 15:36",
+        "1 Chr 4:23",
+        "1 Chr 12:4"
+      ],
+      "comment": "",
+      "id": "gederah",
+      "slug": "gederah",
+      "type": "a",
+      "osm": "gederah",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Gedor 1",
+      "lat": 31.63333,
+      "lon": 35.083333,
+      "passages": [
+        "Josh 15:58",
+        "1 Chr 12:7"
+      ],
+      "comment": "",
+      "id": "af054ba",
+      "slug": "gedor-1",
+      "type": "a",
+      "osm": "af054ba",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Gedor"
+      ]
+    },
+    {
+      "name": "Geshur",
+      "lat": 33.0,
+      "lon": 36.41667,
+      "passages": [
+        "Josh 13:13",
+        "2 Sam 3:3",
+        "2 Sam 13:37",
+        "2 Sam 13:38",
+        "2 Sam 14:23",
+        "2 Sam 14:32",
+        "2 Sam 15:8",
+        "1 Chr 2:23",
+        "1 Chr 3:2"
+      ],
+      "comment": "~; now Leja",
+      "id": "af6c325",
+      "slug": "geshur",
+      "type": "a",
+      "osm": "af6c325",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Geshurite",
+        "Geshurites"
+      ]
+    },
+    {
+      "name": "Gibbethon",
+      "lat": 31.976623,
+      "lon": 35.004896,
+      "passages": [
+        "Josh 19:44",
+        "Josh 21:23",
+        "1 Kgs 15:27",
+        "1 Kgs 16:15",
+        "1 Kgs 16:17"
+      ],
+      "comment": "now Qibya",
+      "id": "a6f048c",
+      "slug": "gibbethon",
+      "type": "a",
+      "osm": "a6f048c",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Gihon 2",
+      "lat": 31.773116,
+      "lon": 35.237186,
+      "passages": [
+        "1 Kgs 1:33",
+        "1 Kgs 1:38",
+        "1 Kgs 1:45",
+        "2 Chr 32:30",
+        "2 Chr 33:14"
+      ],
+      "comment": "",
+      "id": "a2a303c",
+      "slug": "gihon-2",
+      "type": "a",
+      "osm": "a2a303c",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Gihon",
+        "Gihon Spring"
+      ]
+    },
+    {
+      "name": "Gilboa",
+      "lat": 32.516667,
+      "lon": 35.4,
+      "passages": [
+        "1 Sam 28:4",
+        "2 Sam 1:21",
+        "2 Sam 21:12"
+      ],
+      "comment": "",
+      "id": "gilboa",
+      "slug": "gilboa",
+      "type": "a",
+      "osm": "gilboa",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Gilead",
+      "lat": 32.042523,
+      "lon": 35.724241,
+      "passages": [
+        "Gen 31:21",
+        "Gen 31:23",
+        "Gen 31:25",
+        "Gen 37:25",
+        "Num 32:1",
+        "Num 32:26",
+        "Num 32:29",
+        "Num 32:39",
+        "Num 32:40",
+        "Deut 2:36",
+        "Deut 3:10",
+        "Deut 3:12",
+        "Deut 3:13",
+        "Deut 3:15",
+        "Deut 3:16",
+        "Deut 4:43",
+        "Deut 34:1",
+        "Josh 12:2",
+        "Josh 12:5",
+        "Josh 13:11",
+        "Josh 13:25",
+        "Josh 13:31",
+        "Josh 17:1",
+        "Josh 17:5",
+        "Josh 17:6",
+        "Josh 20:8",
+        "Josh 21:38",
+        "Josh 22:9",
+        "Josh 22:13",
+        "Josh 22:15",
+        "Josh 22:32",
+        "Judg 5:17",
+        "Judg 10:4",
+        "Judg 10:8",
+        "Judg 10:17",
+        "Judg 10:18",
+        "Judg 11:5",
+        "Judg 11:7",
+        "Judg 11:8",
+        "Judg 11:9",
+        "Judg 11:10",
+        "Judg 11:11",
+        "Judg 11:29",
+        "Judg 12:4",
+        "Judg 12:5",
+        "Judg 12:7",
+        "Judg 20:1",
+        "1 Sam 13:7",
+        "2 Sam 2:9",
+        "2 Sam 17:26",
+        "2 Sam 24:6",
+        "1 Kgs 4:13",
+        "1 Kgs 4:19",
+        "1 Kgs 17:1",
+        "2 Kgs 10:33",
+        "2 Kgs 15:25",
+        "2 Kgs 15:29",
+        "1 Chr 2:22",
+        "1 Chr 5:9",
+        "1 Chr 5:10",
+        "1 Chr 5:16",
+        "1 Chr 6:80",
+        "1 Chr 26:31",
+        "1 Chr 27:21",
+        "Ps 60:7",
+        "Ps 108:8",
+        "Sng 4:1",
+        "Sng 6:5",
+        "Jer 8:22",
+        "Jer 22:6",
+        "Jer 46:11",
+        "Jer 50:19",
+        "Ezek 47:18",
+        "Hos 6:8",
+        "Hos 12:11",
+        "Amos 1:3",
+        "Amos 1:13",
+        "Obad 1:19",
+        "Mic 7:14",
+        "Zech 10:10"
+      ],
+      "comment": "region",
+      "id": "gilead",
+      "slug": "gilead",
+      "type": "a",
+      "osm": "gilead",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Gilgal 2",
+      "lat": 32.029737,
+      "lon": 35.222604,
+      "passages": [
+        "2 Kgs 2:1",
+        "2 Kgs 4:38"
+      ],
+      "comment": "",
+      "id": "a6399b3",
+      "slug": "gilgal-2",
+      "type": "a",
+      "osm": "a6399b3",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Gilgal"
+      ]
+    },
+    {
+      "name": "Giloh",
+      "lat": 31.616667,
+      "lon": 35.083333,
+      "passages": [
+        "Josh 15:51",
+        "2 Sam 15:12"
+      ],
+      "comment": "~",
+      "id": "a6df20a",
+      "slug": "giloh",
+      "type": "a",
+      "osm": "a6df20a",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Gilo",
+        "Gilonite"
+      ]
+    },
+    {
+      "name": "Gimzo",
+      "lat": 31.928659,
+      "lon": 34.943219,
+      "passages": [
+        "2 Chr 28:18"
+      ],
+      "comment": "",
+      "id": "a5dd9e3",
+      "slug": "gimzo",
+      "type": "a",
+      "osm": "a5dd9e3",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Gog",
+      "lat": 46.0,
+      "lon": 47.0,
+      "passages": [
+        "Rev 20:8"
+      ],
+      "comment": "region",
+      "id": "a858723",
+      "slug": "gog",
+      "type": "a",
+      "osm": "a858723",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Goshen 2",
+      "lat": 31.45,
+      "lon": 34.916667,
+      "passages": [
+        "Josh 10:41",
+        "Josh 11:16",
+        "Josh 15:51"
+      ],
+      "comment": "~; from harper",
+      "id": "ad3e63c",
+      "slug": "goshen-2",
+      "type": "a",
+      "osm": "ad3e63c",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Goshen"
+      ]
+    },
+    {
+      "name": "Gozan",
+      "lat": 36.840013,
+      "lon": 40.06889,
+      "passages": [
+        "2 Kgs 17:6",
+        "2 Kgs 18:11",
+        "2 Kgs 19:12",
+        "1 Chr 5:26",
+        "Isa 37:12"
+      ],
+      "comment": "from harper",
+      "id": "a924b16",
+      "slug": "gozan",
+      "type": "a",
+      "osm": "a924b16",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Gozan River",
+        "River of Gozan"
+      ]
+    },
+    {
+      "name": "Great Sea",
+      "lat": 33.24,
+      "lon": 33.47,
+      "passages": [
+        "Num 34:6",
+        "Num 34:7",
+        "Josh 1:4",
+        "Josh 9:1",
+        "Josh 15:12",
+        "Josh 15:47",
+        "Josh 23:4",
+        "Ezek 47:10",
+        "Ezek 47:15",
+        "Ezek 47:19",
+        "Ezek 47:20",
+        "Ezek 48:28"
+      ],
+      "comment": "sea",
+      "id": "aa805fb",
+      "slug": "great-sea",
+      "type": "a",
+      "osm": "aa805fb",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Mediterranean",
+        "Mediterranean Sea",
+        "Philistia",
+        "Sea",
+        "Sea of the Philistines",
+        "Western Sea",
+        "sea of the Philistines"
+      ]
+    },
+    {
+      "name": "Habor",
+      "lat": 36.344972,
+      "lon": 40.789333,
+      "passages": [
+        "2 Kgs 17:6",
+        "2 Kgs 18:11",
+        "1 Chr 5:26"
+      ],
+      "comment": "river",
+      "id": "af19252",
+      "slug": "habor",
+      "type": "a",
+      "osm": "af19252",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Habor River"
+      ]
+    },
+    {
+      "name": "Hachilah",
+      "lat": 31.466604,
+      "lon": 35.216691,
+      "passages": [
+        "1 Sam 23:19",
+        "1 Sam 26:1",
+        "1 Sam 26:3"
+      ],
+      "comment": "?; now Zahrat al Kula",
+      "id": "a28a7df",
+      "slug": "hachilah",
+      "type": "a",
+      "osm": "a28a7df",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Hakilah"
+      ]
+    },
+    {
+      "name": "Hadad-rimmon",
+      "lat": 32.524106,
+      "lon": 35.205136,
+      "passages": [
+        "Zech 12:11"
+      ],
+      "comment": "now Rommanah",
+      "id": "a05ee76",
+      "slug": "hadad-rimmon",
+      "type": "a",
+      "osm": "a05ee76",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Hadad Rimmon",
+        "Hadadrimmon"
+      ]
+    },
+    {
+      "name": "Hadashah",
+      "lat": 31.679512,
+      "lon": 34.695903,
+      "passages": [
+        "Josh 15:37"
+      ],
+      "comment": "now Ibdis",
+      "id": "a785680",
+      "slug": "hadashah",
+      "type": "a",
+      "osm": "a785680",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Hadid",
+      "lat": 31.963575,
+      "lon": 34.952536,
+      "passages": [
+        "Neh 11:34"
+      ],
+      "comment": "",
+      "id": "a044272",
+      "slug": "hadid",
+      "type": "a",
+      "osm": "a044272",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Haeleph",
+      "lat": 31.792733,
+      "lon": 35.196862,
+      "passages": [
+        "Josh 18:28"
+      ],
+      "comment": "now Lifta",
+      "id": "ae1d208",
+      "slug": "haeleph",
+      "type": "a",
+      "osm": "ae1d208",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Eleph"
+      ]
+    },
+    {
+      "name": "Halhul",
+      "lat": 31.579549,
+      "lon": 35.099103,
+      "passages": [
+        "Josh 15:58"
+      ],
+      "comment": "",
+      "id": "meeeda4",
+      "slug": "halhul",
+      "type": "m",
+      "osm": "meeeda4",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Hamath",
+      "lat": 35.136204,
+      "lon": 36.749488,
+      "passages": [
+        "2 Sam 8:9",
+        "2 Kgs 14:28",
+        "2 Kgs 17:24",
+        "2 Kgs 17:30",
+        "2 Kgs 18:34",
+        "2 Kgs 19:13",
+        "2 Kgs 23:33",
+        "2 Kgs 25:21",
+        "1 Chr 18:9",
+        "2 Chr 8:4",
+        "Isa 10:9",
+        "Isa 11:11",
+        "Isa 36:19",
+        "Isa 37:13",
+        "Jer 39:5",
+        "Jer 49:23",
+        "Jer 52:9",
+        "Jer 52:27",
+        "Ezek 47:16",
+        "Ezek 47:17",
+        "Ezek 48:1",
+        "Amos 6:2",
+        "Zech 9:2"
+      ],
+      "comment": "",
+      "id": "hamath",
+      "slug": "hamath",
+      "type": "a",
+      "osm": "hamath",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Hammath",
+      "lat": 33.125828,
+      "lon": 35.165,
+      "passages": [
+        "Josh 19:35",
+        "1 Chr 2:55"
+      ],
+      "comment": "",
+      "id": "hammath",
+      "slug": "hammath",
+      "type": "a",
+      "osm": "hammath",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Hanes",
+      "lat": 29.085425,
+      "lon": 30.934402,
+      "passages": [
+        "Isa 30:4"
+      ],
+      "comment": "http://www.digitalegypt.ucl.ac.uk/ehnasya/index.html",
+      "id": "abf97ba",
+      "slug": "hanes",
+      "type": "a",
+      "osm": "abf97ba",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Hannathon",
+      "lat": 32.916002,
+      "lon": 35.426637,
+      "passages": [
+        "Josh 19:14"
+      ],
+      "comment": "",
+      "id": "a412c43",
+      "slug": "hannathon",
+      "type": "a",
+      "osm": "a412c43",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Harod",
+      "lat": 32.549638,
+      "lon": 35.355647,
+      "passages": [
+        "Judg 7:1",
+        "2 Sam 23:25",
+        "1 Chr 11:27"
+      ],
+      "comment": "now Ein Harod",
+      "id": "harod",
+      "slug": "harod",
+      "type": "a",
+      "osm": "harod",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Harosheth-hagoyim",
+      "lat": 32.691177,
+      "lon": 35.110039,
+      "passages": [
+        "Judg 4:2",
+        "Judg 4:13",
+        "Judg 4:16"
+      ],
+      "comment": "",
+      "id": "a49c017",
+      "slug": "harosheth-hagoyim",
+      "type": "a",
+      "osm": "a49c017",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Harosheth Haggoyim",
+        "Harosheth Hagoyim",
+        "Harosheth of the Gentiles",
+        "Harosheth of the Nations",
+        "Harosheth-ha-goiim",
+        "Harosheth-haggoyim"
+      ]
+    },
+    {
+      "name": "Havilah 2",
+      "lat": 30.14,
+      "lon": 35.22,
+      "passages": [
+        "Gen 25:18",
+        "1 Sam 15:7"
+      ],
+      "comment": "",
+      "id": "ac5e5c4",
+      "slug": "havilah-2",
+      "type": "a",
+      "osm": "ac5e5c4",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Havilah"
+      ]
+    },
+    {
+      "name": "Hazar-enan",
+      "lat": 34.229499,
+      "lon": 37.240077,
+      "passages": [
+        "Num 34:9",
+        "Num 34:10",
+        "Ezek 47:17",
+        "Ezek 48:1"
+      ],
+      "comment": "now Al Qaryatayn",
+      "id": "a1ce1b7",
+      "slug": "hazar-enan",
+      "type": "a",
+      "osm": "a1ce1b7",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Hazar Enan",
+        "Hazar-enon"
+      ]
+    },
+    {
+      "name": "Hazar-shual",
+      "lat": 31.215418,
+      "lon": 34.942986,
+      "passages": [
+        "Josh 15:28",
+        "Josh 19:3",
+        "1 Chr 4:28",
+        "Neh 11:27"
+      ],
+      "comment": "",
+      "id": "a89005a",
+      "slug": "hazar-shual",
+      "type": "a",
+      "osm": "a89005a",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Hazar Shual"
+      ]
+    },
+    {
+      "name": "Hazeroth",
+      "lat": 28.916667,
+      "lon": 34.5,
+      "passages": [
+        "Num 11:35",
+        "Num 12:16",
+        "Num 33:17",
+        "Num 33:18",
+        "Deut 1:1"
+      ],
+      "comment": "~",
+      "id": "a1b6474",
+      "slug": "hazeroth",
+      "type": "a",
+      "osm": "a1b6474",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Hazor 4",
+      "lat": 31.833333,
+      "lon": 35.2,
+      "passages": [
+        "Neh 11:33"
+      ],
+      "comment": "",
+      "id": "ae9b9bc",
+      "slug": "hazor-4",
+      "type": "a",
+      "osm": "ae9b9bc",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Hazor"
+      ]
+    },
+    {
+      "name": "Helbon",
+      "lat": 33.664912,
+      "lon": 36.248576,
+      "passages": [
+        "Ezek 27:18"
+      ],
+      "comment": "now Halbon",
+      "id": "a8a8e54",
+      "slug": "helbon",
+      "type": "a",
+      "osm": "a8a8e54",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Heleph",
+      "lat": 33.134416,
+      "lon": 35.332157,
+      "passages": [
+        "Josh 19:33"
+      ],
+      "comment": "",
+      "id": "a8687ff",
+      "slug": "heleph",
+      "type": "a",
+      "osm": "a8687ff",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Helkath",
+      "lat": 32.955448,
+      "lon": 35.211971,
+      "passages": [
+        "Josh 19:25",
+        "Josh 21:31"
+      ],
+      "comment": "",
+      "id": "a1d1918",
+      "slug": "helkath",
+      "type": "a",
+      "osm": "a1d1918",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Helkath-hazzurim",
+      "lat": 31.880126,
+      "lon": 35.280188,
+      "passages": [
+        "2 Sam 2:16"
+      ],
+      "comment": "",
+      "id": "ac722b9",
+      "slug": "helkath-hazzurim",
+      "type": "a",
+      "osm": "ac722b9",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Field of Blades",
+        "Field of Flints",
+        "Field of Sharp Swords",
+        "Field of Swords",
+        "Helkath Hazzurim"
+      ]
+    },
+    {
+      "name": "Hena",
+      "lat": 34.467725,
+      "lon": 41.964955,
+      "passages": [
+        "2 Kgs 18:34",
+        "2 Kgs 19:13",
+        "Isa 37:13"
+      ],
+      "comment": "",
+      "id": "aab9a5e",
+      "slug": "hena",
+      "type": "a",
+      "osm": "aab9a5e",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Hereth",
+      "lat": 31.621492,
+      "lon": 35.029273,
+      "passages": [
+        "1 Sam 22:5"
+      ],
+      "comment": "",
+      "id": "a7df136",
+      "slug": "hereth",
+      "type": "a",
+      "osm": "a7df136",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Hareth"
+      ]
+    },
+    {
+      "name": "Hethlon",
+      "lat": 34.73799,
+      "lon": 36.340918,
+      "passages": [
+        "Ezek 47:15",
+        "Ezek 48:1"
+      ],
+      "comment": "~",
+      "id": "a1ab517",
+      "slug": "hethlon",
+      "type": "a",
+      "osm": "a1ab517",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Hierapolis",
+      "lat": 37.924517,
+      "lon": 29.124525,
+      "passages": [
+        "Col 4:13"
+      ],
+      "comment": "",
+      "id": "me32616",
+      "slug": "hierapolis",
+      "type": "m",
+      "osm": "me32616",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Hobah",
+      "lat": 33.5,
+      "lon": 36.466667,
+      "passages": [
+        "Gen 14:15"
+      ],
+      "comment": "",
+      "id": "a6779cd",
+      "slug": "hobah",
+      "type": "a",
+      "osm": "a6779cd",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Holon 1",
+      "lat": 31.583333,
+      "lon": 34.95,
+      "passages": [
+        "Josh 15:51",
+        "Josh 21:15"
+      ],
+      "comment": "~",
+      "id": "a8819e0",
+      "slug": "holon-1",
+      "type": "a",
+      "osm": "a8819e0",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Hilen",
+        "Hilez",
+        "Holon"
+      ]
+    },
+    {
+      "name": "Horem",
+      "lat": 33.166667,
+      "lon": 35.433333,
+      "passages": [
+        "Josh 19:38"
+      ],
+      "comment": "~",
+      "id": "a9cdd53",
+      "slug": "horem",
+      "type": "a",
+      "osm": "a9cdd53",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Horonaim",
+      "lat": 31.288056,
+      "lon": 35.515,
+      "passages": [
+        "Isa 15:5",
+        "Jer 48:3",
+        "Jer 48:5",
+        "Jer 48:34"
+      ],
+      "comment": "~",
+      "id": "horonaim",
+      "slug": "horonaim",
+      "type": "a",
+      "osm": "horonaim",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Hosah",
+      "lat": 32.178502,
+      "lon": 35.22758,
+      "passages": [
+        "Josh 19:29"
+      ],
+      "comment": "",
+      "id": "a2feddf",
+      "slug": "hosah",
+      "type": "a",
+      "osm": "a2feddf",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Hukkok",
+      "lat": 32.882153,
+      "lon": 35.496694,
+      "passages": [
+        "Josh 19:34"
+      ],
+      "comment": "",
+      "id": "a901903",
+      "slug": "hukkok",
+      "type": "a",
+      "osm": "a901903",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Hukok"
+      ]
+    },
+    {
+      "name": "Idalah",
+      "lat": 32.733333,
+      "lon": 35.166667,
+      "passages": [
+        "Josh 19:15"
+      ],
+      "comment": "",
+      "id": "ae8fac6",
+      "slug": "idalah",
+      "type": "a",
+      "osm": "ae8fac6",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "India",
+      "lat": 22.0,
+      "lon": 77.0,
+      "passages": [
+        "Est 1:1",
+        "Est 8:9"
+      ],
+      "comment": "",
+      "id": "a878481",
+      "slug": "india",
+      "type": "a",
+      "osm": "a878481",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Irpeel",
+      "lat": 31.869343,
+      "lon": 35.197712,
+      "passages": [
+        "Josh 18:27"
+      ],
+      "comment": "",
+      "id": "a21b934",
+      "slug": "irpeel",
+      "type": "a",
+      "osm": "a21b934",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Ithlah",
+      "lat": 31.823593,
+      "lon": 35.075769,
+      "passages": [
+        "Josh 19:42"
+      ],
+      "comment": "Now Bayt Thul",
+      "id": "abf8060",
+      "slug": "ithlah",
+      "type": "a",
+      "osm": "abf8060",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Jethlah"
+      ]
+    },
+    {
+      "name": "Jabbok",
+      "lat": 32.193237,
+      "lon": 35.676305,
+      "passages": [
+        "Gen 32:22",
+        "Num 21:24",
+        "Deut 2:37",
+        "Deut 3:16",
+        "Josh 12:2",
+        "Judg 11:13",
+        "Judg 11:22"
+      ],
+      "comment": "",
+      "id": "aca7bd9",
+      "slug": "jabbok",
+      "type": "a",
+      "osm": "aca7bd9",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Jabbok River",
+        "Jabbok Valley",
+        "River Jabbok",
+        "Wadi Jabbok"
+      ]
+    },
+    {
+      "name": "Jabneel 1",
+      "lat": 31.865518,
+      "lon": 34.746856,
+      "passages": [
+        "Josh 15:11"
+      ],
+      "comment": "now Yavneh",
+      "id": "a7adb01",
+      "slug": "jabneel-1",
+      "type": "a",
+      "osm": "a7adb01",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Jabneel",
+        "Jabneh"
+      ]
+    },
+    {
+      "name": "Jabneel 2",
+      "lat": 32.7,
+      "lon": 35.5,
+      "passages": [
+        "Josh 19:33"
+      ],
+      "comment": "now Yavneel",
+      "id": "abff89f",
+      "slug": "jabneel-2",
+      "type": "a",
+      "osm": "abff89f",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Jabneel"
+      ]
+    },
+    {
+      "name": "Janim",
+      "lat": 31.516667,
+      "lon": 35.166667,
+      "passages": [
+        "Josh 15:53"
+      ],
+      "comment": "now Bani Naim",
+      "id": "a175f4b",
+      "slug": "janim",
+      "type": "a",
+      "osm": "a175f4b",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Janum"
+      ]
+    },
+    {
+      "name": "Janoah 1",
+      "lat": 33.260246,
+      "lon": 35.302915,
+      "passages": [
+        "Josh 16:6",
+        "Josh 16:7"
+      ],
+      "comment": "now Yanouh",
+      "id": "a0bcd48",
+      "slug": "janoah-1",
+      "type": "a",
+      "osm": "a0bcd48",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Janoah",
+        "Janohah"
+      ]
+    },
+    {
+      "name": "Janoah 2",
+      "lat": 32.155895,
+      "lon": 35.361606,
+      "passages": [
+        "2 Kgs 15:29"
+      ],
+      "comment": "",
+      "id": "a4f2291",
+      "slug": "janoah-2",
+      "type": "a",
+      "osm": "a4f2291",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Janoah"
+      ]
+    },
+    {
+      "name": "Japhia",
+      "lat": 32.691633,
+      "lon": 35.274955,
+      "passages": [
+        "Josh 19:12"
+      ],
+      "comment": "now Yafa",
+      "id": "ab15bb3",
+      "slug": "japhia",
+      "type": "a",
+      "osm": "ab15bb3",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Jehud",
+      "lat": 32.033636,
+      "lon": 34.889599,
+      "passages": [
+        "Josh 19:45"
+      ],
+      "comment": "now Yehud",
+      "id": "aa0ef78",
+      "slug": "jehud",
+      "type": "a",
+      "osm": "aa0ef78",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Jerusalem",
+      "lat": 31.777444,
+      "lon": 35.234935,
+      "passages": [
+        "Josh 10:1",
+        "Josh 10:3",
+        "Josh 10:5",
+        "Josh 10:23",
+        "Josh 12:10",
+        "Josh 15:8",
+        "Josh 15:63",
+        "Josh 18:28",
+        "Judg 1:7",
+        "Judg 1:8",
+        "Judg 1:21",
+        "Judg 19:10",
+        "1 Sam 17:54",
+        "2 Sam 5:5",
+        "2 Sam 5:6",
+        "2 Sam 5:13",
+        "2 Sam 5:14",
+        "2 Sam 8:7",
+        "2 Sam 9:13",
+        "2 Sam 10:14",
+        "2 Sam 11:1",
+        "2 Sam 11:12",
+        "2 Sam 12:31",
+        "2 Sam 14:23",
+        "2 Sam 14:28",
+        "2 Sam 15:8",
+        "2 Sam 15:11",
+        "2 Sam 15:14",
+        "2 Sam 15:29",
+        "2 Sam 15:37",
+        "2 Sam 16:3",
+        "2 Sam 16:15",
+        "2 Sam 17:20",
+        "2 Sam 19:19",
+        "2 Sam 19:25",
+        "2 Sam 19:33",
+        "2 Sam 19:34",
+        "2 Sam 20:2",
+        "2 Sam 20:3",
+        "2 Sam 20:7",
+        "2 Sam 20:22",
+        "2 Sam 24:8",
+        "2 Sam 24:16",
+        "1 Kgs 2:11",
+        "1 Kgs 2:36",
+        "1 Kgs 2:38",
+        "1 Kgs 2:41",
+        "1 Kgs 3:1",
+        "1 Kgs 3:15",
+        "1 Kgs 8:1",
+        "1 Kgs 9:15",
+        "1 Kgs 9:19",
+        "1 Kgs 10:2",
+        "1 Kgs 10:26",
+        "1 Kgs 10:27",
+        "1 Kgs 11:7",
+        "1 Kgs 11:13",
+        "1 Kgs 11:29",
+        "1 Kgs 11:32",
+        "1 Kgs 11:36",
+        "1 Kgs 11:42",
+        "1 Kgs 12:18",
+        "1 Kgs 12:21",
+        "1 Kgs 12:27",
+        "1 Kgs 12:28",
+        "1 Kgs 14:21",
+        "1 Kgs 14:25",
+        "1 Kgs 15:2",
+        "1 Kgs 15:4",
+        "1 Kgs 15:10",
+        "1 Kgs 22:42",
+        "2 Kgs 8:17",
+        "2 Kgs 8:26",
+        "2 Kgs 9:28",
+        "2 Kgs 12:1",
+        "2 Kgs 12:17",
+        "2 Kgs 12:18",
+        "2 Kgs 14:2",
+        "2 Kgs 14:13",
+        "2 Kgs 14:19",
+        "2 Kgs 14:20",
+        "2 Kgs 15:2",
+        "2 Kgs 15:33",
+        "2 Kgs 16:2",
+        "2 Kgs 16:5",
+        "2 Kgs 18:2",
+        "2 Kgs 18:17",
+        "2 Kgs 18:22",
+        "2 Kgs 18:35",
+        "2 Kgs 19:10",
+        "2 Kgs 19:21",
+        "2 Kgs 19:31",
+        "2 Kgs 21:1",
+        "2 Kgs 21:4",
+        "2 Kgs 21:7",
+        "2 Kgs 21:12",
+        "2 Kgs 21:13",
+        "2 Kgs 21:16",
+        "2 Kgs 21:19",
+        "2 Kgs 22:1",
+        "2 Kgs 22:14",
+        "2 Kgs 23:1",
+        "2 Kgs 23:2",
+        "2 Kgs 23:4",
+        "2 Kgs 23:5",
+        "2 Kgs 23:6",
+        "2 Kgs 23:9",
+        "2 Kgs 23:13",
+        "2 Kgs 23:20",
+        "2 Kgs 23:23",
+        "2 Kgs 23:24",
+        "2 Kgs 23:27",
+        "2 Kgs 23:30",
+        "2 Kgs 23:31",
+        "2 Kgs 23:33",
+        "2 Kgs 23:36",
+        "2 Kgs 24:4",
+        "2 Kgs 24:8",
+        "2 Kgs 24:10",
+        "2 Kgs 24:14",
+        "2 Kgs 24:15",
+        "2 Kgs 24:18",
+        "2 Kgs 24:20",
+        "2 Kgs 25:1",
+        "2 Kgs 25:8",
+        "2 Kgs 25:9",
+        "2 Kgs 25:10",
+        "1 Chr 3:4",
+        "1 Chr 3:5",
+        "1 Chr 6:10",
+        "1 Chr 6:15",
+        "1 Chr 6:32",
+        "1 Chr 8:28",
+        "1 Chr 8:32",
+        "1 Chr 9:3",
+        "1 Chr 9:34",
+        "1 Chr 9:38",
+        "1 Chr 11:4",
+        "1 Chr 14:3",
+        "1 Chr 14:4",
+        "1 Chr 15:3",
+        "1 Chr 18:7",
+        "1 Chr 19:15",
+        "1 Chr 20:1",
+        "1 Chr 20:3",
+        "1 Chr 21:4",
+        "1 Chr 21:15",
+        "1 Chr 21:16",
+        "1 Chr 23:25",
+        "1 Chr 28:1",
+        "1 Chr 29:27",
+        "2 Chr 1:4",
+        "2 Chr 1:13",
+        "2 Chr 1:14",
+        "2 Chr 1:15",
+        "2 Chr 2:7",
+        "2 Chr 2:16",
+        "2 Chr 3:1",
+        "2 Chr 5:2",
+        "2 Chr 6:6",
+        "2 Chr 8:6",
+        "2 Chr 9:1",
+        "2 Chr 9:25",
+        "2 Chr 9:27",
+        "2 Chr 9:30",
+        "2 Chr 10:18",
+        "2 Chr 11:1",
+        "2 Chr 11:5",
+        "2 Chr 11:14",
+        "2 Chr 11:16",
+        "2 Chr 12:2",
+        "2 Chr 12:4",
+        "2 Chr 12:5",
+        "2 Chr 12:7",
+        "2 Chr 12:9",
+        "2 Chr 12:13",
+        "2 Chr 13:2",
+        "2 Chr 14:15",
+        "2 Chr 15:10",
+        "2 Chr 17:13",
+        "2 Chr 19:1",
+        "2 Chr 19:4",
+        "2 Chr 19:8",
+        "2 Chr 20:5",
+        "2 Chr 20:15",
+        "2 Chr 20:17",
+        "2 Chr 20:18",
+        "2 Chr 20:20",
+        "2 Chr 30:14",
+        "2 Chr 32:19",
+        "2 Chr 32:22",
+        "2 Chr 32:23",
+        "2 Chr 32:25",
+        "2 Chr 32:26",
+        "2 Chr 32:33",
+        "2 Chr 33:1",
+        "2 Chr 33:4",
+        "2 Chr 33:7",
+        "2 Chr 33:9",
+        "2 Chr 33:13",
+        "2 Chr 33:15",
+        "2 Chr 33:21",
+        "2 Chr 34:1",
+        "2 Chr 34:3",
+        "2 Chr 34:5",
+        "2 Chr 34:7",
+        "2 Chr 34:9",
+        "2 Chr 34:22",
+        "2 Chr 34:29",
+        "2 Chr 34:30",
+        "2 Chr 34:32",
+        "2 Chr 35:1",
+        "2 Chr 35:18",
+        "2 Chr 35:24",
+        "2 Chr 36:1",
+        "2 Chr 36:2",
+        "2 Chr 36:3",
+        "2 Chr 36:4",
+        "2 Chr 36:5",
+        "2 Chr 36:9",
+        "2 Chr 36:10",
+        "2 Chr 36:11",
+        "2 Chr 36:14",
+        "2 Chr 36:19",
+        "2 Chr 36:23",
+        "Ezra 1:2",
+        "Ezra 1:3",
+        "Ezra 1:4",
+        "Ezra 1:5",
+        "Ezra 1:7",
+        "Ezra 1:11",
+        "Ezra 2:1",
+        "Ezra 2:68",
+        "Ezra 3:1",
+        "Ezra 3:8",
+        "Ezra 4:6",
+        "Ezra 4:8",
+        "Ezra 4:12",
+        "Ezra 4:20",
+        "Ezra 4:23",
+        "Ezra 4:24",
+        "Ezra 5:1",
+        "Ezra 5:2",
+        "Ezra 5:14",
+        "Ezra 5:15",
+        "Ezra 5:16",
+        "Ezra 5:17",
+        "Ezra 6:3",
+        "Ezra 6:5",
+        "Ezra 6:9",
+        "Ezra 6:12",
+        "Ezra 6:18",
+        "Ezra 7:7",
+        "Ezra 7:8",
+        "Ezra 7:9",
+        "Ezra 7:13",
+        "Ezra 7:14",
+        "Ezra 7:15",
+        "Ezra 7:16",
+        "Ezra 7:17",
+        "Ezra 7:19",
+        "Ezra 7:27",
+        "Ezra 8:29",
+        "Ezra 8:30",
+        "Ezra 8:31",
+        "Ezra 8:32",
+        "Ezra 9:9",
+        "Ezra 10:7",
+        "Ezra 10:9",
+        "Neh 1:2",
+        "Neh 1:3",
+        "Neh 2:11",
+        "Neh 2:12",
+        "Neh 2:13",
+        "Neh 2:17",
+        "Neh 2:20",
+        "Neh 3:8",
+        "Neh 3:9",
+        "Neh 3:12",
+        "Neh 4:7",
+        "Neh 4:8",
+        "Neh 4:22",
+        "Neh 6:7",
+        "Neh 7:2",
+        "Neh 7:3",
+        "Neh 7:6",
+        "Neh 8:15",
+        "Neh 11:1",
+        "Neh 11:2",
+        "Neh 11:3",
+        "Neh 11:4",
+        "Neh 11:6",
+        "Neh 11:22",
+        "Neh 12:27",
+        "Neh 12:28",
+        "Neh 12:29",
+        "Neh 12:43",
+        "Neh 13:6",
+        "Neh 13:7",
+        "Neh 13:15",
+        "Neh 13:16",
+        "Neh 13:19",
+        "Neh 13:20",
+        "Est 2:6",
+        "Ps 51:18",
+        "Ps 68:29",
+        "Ps 79:1",
+        "Ps 79:3",
+        "Ps 102:21",
+        "Ps 116:19",
+        "Ps 122:2",
+        "Ps 122:3",
+        "Ps 122:6",
+        "Ps 125:2",
+        "Ps 128:5",
+        "Ps 135:21",
+        "Ps 137:5",
+        "Ps 137:6",
+        "Ps 137:7",
+        "Ps 147:2",
+        "Ps 147:12",
+        "Eccl 1:1",
+        "Eccl 1:12",
+        "Eccl 1:16",
+        "Eccl 2:7",
+        "Eccl 2:9",
+        "Sng 1:5",
+        "Sng 2:7",
+        "Sng 3:5",
+        "Sng 3:10",
+        "Sng 5:8",
+        "Sng 5:16",
+        "Sng 6:4",
+        "Sng 8:4",
+        "Isa 1:1",
+        "Isa 2:1",
+        "Isa 2:3",
+        "Isa 3:1",
+        "Isa 3:8",
+        "Isa 4:3",
+        "Isa 4:4",
+        "Isa 5:3",
+        "Isa 5:14",
+        "Isa 7:1",
+        "Isa 8:14",
+        "Isa 10:10",
+        "Isa 10:11",
+        "Isa 10:12",
+        "Isa 10:32",
+        "Isa 22:10",
+        "Isa 22:21",
+        "Isa 24:23",
+        "Isa 27:13",
+        "Isa 28:14",
+        "Isa 30:19",
+        "Isa 31:5",
+        "Isa 31:9",
+        "Isa 33:20",
+        "Isa 36:2",
+        "Isa 36:7",
+        "Isa 36:20",
+        "Isa 37:10",
+        "Isa 37:22",
+        "Isa 37:32",
+        "Isa 40:2",
+        "Isa 40:9",
+        "Isa 41:27",
+        "Isa 44:26",
+        "Isa 44:28",
+        "Isa 51:17",
+        "Isa 52:1",
+        "Isa 52:2",
+        "Isa 52:9",
+        "Isa 62:6",
+        "Isa 62:7",
+        "Isa 64:10",
+        "Isa 65:18",
+        "Isa 65:19",
+        "Isa 66:10",
+        "Isa 66:13",
+        "Isa 66:20",
+        "Jer 1:3",
+        "Jer 1:15",
+        "Jer 2:2",
+        "Jer 3:17",
+        "Jer 4:3",
+        "Jer 4:4",
+        "Jer 4:5",
+        "Jer 4:10",
+        "Jer 4:11",
+        "Jer 4:14",
+        "Jer 4:16",
+        "Jer 5:1",
+        "Jer 6:1",
+        "Jer 6:6",
+        "Jer 6:8",
+        "Jer 7:17",
+        "Jer 7:34",
+        "Jer 8:1",
+        "Jer 9:11",
+        "Jer 11:2",
+        "Jer 11:6",
+        "Jer 11:9",
+        "Jer 11:12",
+        "Jer 11:13",
+        "Jer 13:9",
+        "Jer 13:13",
+        "Jer 13:27",
+        "Jer 14:2",
+        "Jer 14:16",
+        "Jer 15:4",
+        "Jer 15:5",
+        "Jer 17:19",
+        "Jer 17:20",
+        "Jer 17:21",
+        "Jer 17:25",
+        "Jer 17:26",
+        "Jer 17:27",
+        "Jer 18:11",
+        "Jer 19:3",
+        "Jer 19:7",
+        "Jer 19:13",
+        "Jer 22:19",
+        "Jer 23:14",
+        "Jer 23:15",
+        "Jer 24:1",
+        "Jer 24:8",
+        "Jer 25:2",
+        "Jer 25:18",
+        "Jer 26:18",
+        "Jer 27:3",
+        "Jer 27:18",
+        "Jer 27:20",
+        "Jer 27:21",
+        "Jer 29:1",
+        "Jer 29:2",
+        "Jer 29:4",
+        "Jer 29:20",
+        "Jer 29:25",
+        "Jer 32:2",
+        "Jer 32:32",
+        "Jer 32:44",
+        "Jer 33:10",
+        "Jer 33:13",
+        "Jer 33:16",
+        "Jer 34:1",
+        "Jer 34:6",
+        "Jer 34:7",
+        "Jer 34:8",
+        "Jer 34:19",
+        "Jer 35:11",
+        "Jer 35:13",
+        "Jer 35:17",
+        "Jer 36:9",
+        "Jer 36:31",
+        "Jer 37:5",
+        "Jer 37:11",
+        "Jer 37:12",
+        "Jer 38:28",
+        "Jer 39:1",
+        "Jer 39:8",
+        "Jer 40:1",
+        "Jer 42:18",
+        "Jer 44:2",
+        "Jer 44:6",
+        "Jer 44:9",
+        "Jer 44:13",
+        "Jer 44:17",
+        "Jer 44:21",
+        "Jer 51:35",
+        "Jer 51:50",
+        "Jer 52:1",
+        "Jer 52:3",
+        "Jer 52:4",
+        "Jer 52:12",
+        "Jer 52:13",
+        "Jer 52:14",
+        "Jer 52:29",
+        "Lam 1:7",
+        "Lam 1:8",
+        "Lam 1:17",
+        "Lam 2:10",
+        "Lam 2:13",
+        "Lam 2:15",
+        "Lam 4:12",
+        "Ezek 4:1",
+        "Ezek 4:7",
+        "Ezek 4:16",
+        "Ezek 5:5",
+        "Ezek 8:3",
+        "Ezek 9:4",
+        "Ezek 9:8",
+        "Ezek 11:15",
+        "Ezek 12:10",
+        "Ezek 12:19",
+        "Ezek 13:16",
+        "Ezek 14:21",
+        "Ezek 14:22",
+        "Ezek 15:6",
+        "Ezek 16:2",
+        "Ezek 16:3",
+        "Ezek 17:12",
+        "Ezek 21:2",
+        "Ezek 21:20",
+        "Ezek 21:22",
+        "Ezek 22:19",
+        "Ezek 23:4",
+        "Ezek 24:2",
+        "Ezek 26:2",
+        "Ezek 33:21",
+        "Ezek 36:38",
+        "Dan 1:1",
+        "Dan 5:2",
+        "Dan 5:3",
+        "Dan 6:10",
+        "Dan 9:2",
+        "Dan 9:7",
+        "Dan 9:12",
+        "Dan 9:16",
+        "Dan 9:25",
+        "Joel 2:32",
+        "Joel 3:1",
+        "Joel 3:6",
+        "Joel 3:16",
+        "Joel 3:17",
+        "Joel 3:20",
+        "Amos 1:2",
+        "Amos 2:5",
+        "Obad 1:11",
+        "Obad 1:20",
+        "Mic 1:1",
+        "Mic 1:5",
+        "Mic 1:9",
+        "Mic 1:12",
+        "Mic 3:10",
+        "Mic 3:12",
+        "Mic 4:2",
+        "Mic 4:8",
+        "Zeph 1:4",
+        "Zeph 1:12",
+        "Zeph 3:14",
+        "Zeph 3:16",
+        "Zech 1:12",
+        "Zech 1:14",
+        "Zech 1:16",
+        "Zech 1:17",
+        "Zech 1:19",
+        "Zech 2:2",
+        "Zech 2:4",
+        "Zech 2:12",
+        "Zech 3:2",
+        "Zech 7:7",
+        "Zech 8:3",
+        "Zech 8:4",
+        "Zech 8:8",
+        "Zech 8:15",
+        "Zech 8:22",
+        "Zech 9:9",
+        "Zech 9:10",
+        "Zech 12:2",
+        "Zech 12:3",
+        "Zech 12:5",
+        "Zech 12:6",
+        "Zech 12:7",
+        "Zech 12:8",
+        "Zech 12:9",
+        "Zech 12:10",
+        "Zech 12:11",
+        "Zech 13:1",
+        "Zech 14:2",
+        "Zech 14:4",
+        "Zech 14:8",
+        "Zech 14:10",
+        "Zech 14:11",
+        "Zech 14:12",
+        "Zech 14:14",
+        "Zech 14:16",
+        "Zech 14:17",
+        "Zech 14:21",
+        "Mal 2:11",
+        "Mal 3:4",
+        "Matt 2:1",
+        "Matt 2:3",
+        "Matt 3:5",
+        "Matt 4:25",
+        "Matt 5:35",
+        "Matt 15:1",
+        "Matt 16:21",
+        "Matt 20:17",
+        "Matt 20:18",
+        "Matt 21:1",
+        "Matt 21:10",
+        "Matt 23:37",
+        "Mark 1:5",
+        "Mark 3:8",
+        "Mark 3:22",
+        "Mark 7:1",
+        "Mark 10:32",
+        "Mark 10:33",
+        "Mark 11:1",
+        "Mark 11:11",
+        "Mark 11:15",
+        "Mark 11:27",
+        "Mark 15:41",
+        "Luke 2:22",
+        "Luke 2:25",
+        "Luke 2:38",
+        "Luke 2:41",
+        "Luke 2:43",
+        "Luke 2:45",
+        "Luke 4:9",
+        "Luke 5:17",
+        "Luke 6:17",
+        "Luke 9:31",
+        "Luke 9:51",
+        "Luke 9:53",
+        "Luke 10:30",
+        "Luke 13:4",
+        "Luke 13:22",
+        "Luke 13:33",
+        "Luke 13:34",
+        "Luke 17:11",
+        "Luke 18:31",
+        "Luke 19:11",
+        "Luke 19:28",
+        "Luke 21:20",
+        "Luke 21:24",
+        "Luke 23:7",
+        "Luke 23:28",
+        "Luke 24:13",
+        "Luke 24:18",
+        "Luke 24:33",
+        "Luke 24:47",
+        "Luke 24:52",
+        "John 1:19",
+        "John 2:13",
+        "John 2:23",
+        "John 4:20",
+        "John 4:21",
+        "John 4:45",
+        "John 5:1",
+        "John 5:2",
+        "John 7:25",
+        "John 10:22",
+        "John 11:18",
+        "John 11:55",
+        "John 12:12",
+        "Acts 1:4",
+        "Acts 1:8",
+        "Acts 1:12",
+        "Acts 1:19",
+        "Acts 2:5",
+        "Acts 2:14",
+        "Acts 4:5",
+        "Acts 4:16",
+        "Acts 5:16",
+        "Acts 5:28",
+        "Acts 6:7",
+        "Acts 8:1",
+        "Acts 8:14",
+        "Acts 8:25",
+        "Acts 8:26",
+        "Acts 8:27",
+        "Acts 9:2",
+        "Acts 9:13",
+        "Acts 9:21",
+        "Acts 9:26",
+        "Acts 9:28",
+        "Acts 10:39",
+        "Acts 11:2",
+        "Acts 11:22",
+        "Acts 11:27",
+        "Acts 12:25",
+        "Acts 13:13",
+        "Acts 13:27",
+        "Acts 13:31",
+        "Acts 15:2",
+        "Acts 15:4",
+        "Acts 16:4",
+        "Acts 19:21",
+        "Acts 20:16",
+        "Acts 20:22",
+        "Acts 21:4",
+        "Acts 21:11",
+        "Acts 21:12",
+        "Acts 21:13",
+        "Acts 21:15",
+        "Acts 21:17",
+        "Acts 21:31",
+        "Acts 22:5",
+        "Acts 22:17",
+        "Acts 22:18",
+        "Acts 23:11",
+        "Acts 24:11",
+        "Acts 25:1",
+        "Acts 25:3",
+        "Acts 25:7",
+        "Acts 25:9",
+        "Acts 25:15",
+        "Acts 25:20",
+        "Acts 25:24",
+        "Acts 26:4",
+        "Acts 26:10",
+        "Acts 26:20",
+        "Acts 28:17",
+        "Rom 15:19",
+        "Rom 15:25",
+        "Rom 15:26",
+        "Rom 15:31",
+        "1 Cor 16:3",
+        "Gal 1:17",
+        "Gal 1:18",
+        "Gal 2:1",
+        "Gal 4:25",
+        "Gal 4:26",
+        "Heb 12:22",
+        "Rev 3:12",
+        "Rev 21:2",
+        "Rev 21:10"
+      ],
+      "comment": "",
+      "id": "m66c5b8",
+      "slug": "jerusalem",
+      "type": "m",
+      "osm": "m66c5b8",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Jeshanah",
+      "lat": 31.980029,
+      "lon": 35.229709,
+      "passages": [
+        "2 Chr 13:19"
+      ],
+      "comment": "now Ein Sinya",
+      "id": "a5f5b06",
+      "slug": "jeshanah",
+      "type": "a",
+      "osm": "a5f5b06",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Jogbehah",
+      "lat": 32.028743,
+      "lon": 35.862887,
+      "passages": [
+        "Num 32:35",
+        "Judg 8:11"
+      ],
+      "comment": "",
+      "id": "acf6e00",
+      "slug": "jogbehah",
+      "type": "a",
+      "osm": "acf6e00",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Jordan Valley",
+      "lat": 32.309099,
+      "lon": 35.5599,
+      "passages": [
+        "Gen 13:10",
+        "Gen 13:11"
+      ],
+      "comment": "",
+      "id": "m8fcc34",
+      "slug": "jordan-valley",
+      "type": "m",
+      "osm": "m8fcc34",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Juttah",
+      "lat": 31.45,
+      "lon": 35.083333,
+      "passages": [
+        "Josh 15:55",
+        "Josh 21:16"
+      ],
+      "comment": "~; now Yatta",
+      "id": "acc7184",
+      "slug": "juttah",
+      "type": "a",
+      "osm": "acc7184",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Kadesh 2",
+      "lat": 34.558327,
+      "lon": 36.522943,
+      "passages": [
+        "2 Sam 24:6"
+      ],
+      "comment": "",
+      "id": "adc9b5a",
+      "slug": "kadesh-2",
+      "type": "a",
+      "osm": "adc9b5a",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Kadesh",
+        "Tahtim Hodshi",
+        "Tahtim-hodshi"
+      ]
+    },
+    {
+      "name": "Kain",
+      "lat": 31.5,
+      "lon": 35.166667,
+      "passages": [
+        "Num 24:22",
+        "Josh 15:57"
+      ],
+      "comment": "now Yaqin",
+      "id": "a765bd8",
+      "slug": "kain",
+      "type": "a",
+      "osm": "a765bd8",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Cain",
+        "Kenite",
+        "Kenites"
+      ]
+    },
+    {
+      "name": "Kanah 1",
+      "lat": 32.138219,
+      "lon": 35.038971,
+      "passages": [
+        "Josh 16:8",
+        "Josh 17:9"
+      ],
+      "comment": "",
+      "id": "a373106",
+      "slug": "kanah-1",
+      "type": "a",
+      "osm": "a373106",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Brook Kanah",
+        "Brook of Kanah",
+        "Kanah",
+        "Kanah Ravine",
+        "Valley of Kanah",
+        "Wadi Kanah"
+      ]
+    },
+    {
+      "name": "Kedemoth",
+      "lat": 31.646073,
+      "lon": 35.894537,
+      "passages": [
+        "Deut 2:26",
+        "Josh 13:18",
+        "Josh 21:37",
+        "1 Chr 6:79"
+      ],
+      "comment": "~; esv map",
+      "id": "a416b43",
+      "slug": "kedemoth",
+      "type": "a",
+      "osm": "a416b43",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Desert of Kedemoth",
+        "Wilderness of Kedemoth"
+      ]
+    },
+    {
+      "name": "Keilah",
+      "lat": 31.614175,
+      "lon": 35.002752,
+      "passages": [
+        "Josh 15:44",
+        "1 Sam 23:1",
+        "1 Sam 23:2",
+        "1 Sam 23:3",
+        "1 Sam 23:4",
+        "1 Sam 23:5",
+        "1 Sam 23:6",
+        "1 Sam 23:7",
+        "1 Sam 23:8",
+        "1 Sam 23:10",
+        "1 Sam 23:11",
+        "1 Sam 23:12",
+        "1 Sam 23:13",
+        "Neh 3:17",
+        "Neh 3:18"
+      ],
+      "comment": "now Khirbet Qila",
+      "id": "ad9df93",
+      "slug": "keilah",
+      "type": "a",
+      "osm": "ad9df93",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Kenath",
+      "lat": 32.756919,
+      "lon": 36.6164,
+      "passages": [
+        "Num 32:42",
+        "1 Chr 2:23"
+      ],
+      "comment": "",
+      "id": "a4f650b",
+      "slug": "kenath",
+      "type": "a",
+      "osm": "a4f650b",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Kibzaim",
+      "lat": 31.833333,
+      "lon": 35.3,
+      "passages": [
+        "Josh 21:22"
+      ],
+      "comment": "~; now Kabus",
+      "id": "a5187a4",
+      "slug": "kibzaim",
+      "type": "a",
+      "osm": "a5187a4",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Kidron",
+      "lat": 31.772134,
+      "lon": 35.236596,
+      "passages": [
+        "2 Sam 15:23",
+        "1 Kgs 2:37",
+        "1 Kgs 15:13",
+        "2 Kgs 23:4",
+        "2 Kgs 23:6",
+        "2 Kgs 23:12",
+        "2 Chr 15:16",
+        "2 Chr 29:16",
+        "Jer 31:40"
+      ],
+      "comment": "",
+      "id": "a553110",
+      "slug": "kidron",
+      "type": "a",
+      "osm": "a553110",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Brook Kidron",
+        "Cedron",
+        "Kidron Valley",
+        "Wadi Kidron",
+        "Wadi of the Kidron"
+      ]
+    },
+    {
+      "name": "Kishion",
+      "lat": 32.559061,
+      "lon": 35.246206,
+      "passages": [
+        "Josh 19:20",
+        "Josh 21:28"
+      ],
+      "comment": "~",
+      "id": "a20364a",
+      "slug": "kishion",
+      "type": "a",
+      "osm": "a20364a",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Kishon"
+      ]
+    },
+    {
+      "name": "Kishon",
+      "lat": 32.761948,
+      "lon": 35.064096,
+      "passages": [
+        "Judg 4:7",
+        "Judg 4:13",
+        "Judg 5:21",
+        "1 Kgs 18:40",
+        "Ps 83:9"
+      ],
+      "comment": "river",
+      "id": "a5a6458",
+      "slug": "kishon",
+      "type": "a",
+      "osm": "a5a6458",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Brook Kishon",
+        "Kishon River",
+        "Kishon Valley",
+        "Kison",
+        "River Kishon",
+        "Wadi Kishon"
+      ]
+    },
+    {
+      "name": "Kitron",
+      "lat": 32.753141,
+      "lon": 35.279335,
+      "passages": [
+        "Judg 1:30"
+      ],
+      "comment": "",
+      "id": "ae5cc46",
+      "slug": "kitron",
+      "type": "a",
+      "osm": "ae5cc46",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Lahmam",
+      "lat": 31.566667,
+      "lon": 34.9,
+      "passages": [
+        "Josh 15:40"
+      ],
+      "comment": "~",
+      "id": "a62aa3a",
+      "slug": "lahmam",
+      "type": "a",
+      "osm": "a62aa3a",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Lahma",
+        "Lahmas"
+      ]
+    },
+    {
+      "name": "Laishah",
+      "lat": 31.8,
+      "lon": 35.25,
+      "passages": [
+        "Isa 10:30"
+      ],
+      "comment": "now Isawiya",
+      "id": "a7e39d2",
+      "slug": "laishah",
+      "type": "a",
+      "osm": "a7e39d2",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Laish"
+      ]
+    },
+    {
+      "name": "Lasha",
+      "lat": 31.718148,
+      "lon": 35.584826,
+      "passages": [
+        "Gen 10:19"
+      ],
+      "comment": "http://www.christusrex.org/www1/ofm/mad/sections/section3.html",
+      "id": "adaef13",
+      "slug": "lasha",
+      "type": "a",
+      "osm": "adaef13",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Lasharon",
+      "lat": 32.72544,
+      "lon": 35.467002,
+      "passages": [
+        "Josh 12:18"
+      ],
+      "comment": "now Sharona",
+      "id": "a8bbf2b",
+      "slug": "lasharon",
+      "type": "a",
+      "osm": "a8bbf2b",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Lebanon",
+      "lat": 33.752479,
+      "lon": 35.590804,
+      "passages": [
+        "Deut 1:7",
+        "Deut 3:25",
+        "Deut 11:24",
+        "Josh 1:4",
+        "Josh 9:1",
+        "Josh 13:5",
+        "Josh 13:6",
+        "Judg 9:15",
+        "1 Kgs 4:33",
+        "1 Kgs 5:6",
+        "1 Kgs 5:9",
+        "1 Kgs 5:14",
+        "1 Kgs 9:19",
+        "2 Kgs 14:9",
+        "2 Kgs 19:23",
+        "2 Chr 2:8",
+        "2 Chr 2:16",
+        "2 Chr 8:6",
+        "2 Chr 25:18",
+        "Ezra 3:7",
+        "Ps 29:5",
+        "Ps 29:6",
+        "Ps 72:16",
+        "Ps 92:12",
+        "Ps 104:16",
+        "Sng 3:9",
+        "Sng 4:8",
+        "Sng 4:11",
+        "Sng 4:15",
+        "Sng 5:15",
+        "Sng 7:4",
+        "Isa 2:13",
+        "Isa 10:34",
+        "Isa 14:8",
+        "Isa 29:17",
+        "Isa 33:9",
+        "Isa 35:2",
+        "Isa 37:24",
+        "Isa 40:16",
+        "Isa 60:13",
+        "Jer 18:14",
+        "Jer 22:6",
+        "Jer 22:20",
+        "Jer 22:23",
+        "Ezek 17:3",
+        "Ezek 27:5",
+        "Ezek 31:3",
+        "Ezek 31:15",
+        "Ezek 31:16",
+        "Hos 14:5",
+        "Hos 14:6",
+        "Hos 14:7",
+        "Nahum 1:4",
+        "Hab 2:17",
+        "Zech 10:10",
+        "Zech 11:1"
+      ],
+      "comment": "region",
+      "id": "a730058",
+      "slug": "lebanon",
+      "type": "a",
+      "osm": "a730058",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Lebonah",
+      "lat": 32.07077,
+      "lon": 35.239871,
+      "passages": [
+        "Judg 21:19"
+      ],
+      "comment": "now al-Lubban",
+      "id": "ab6bb68",
+      "slug": "lebonah",
+      "type": "a",
+      "osm": "ab6bb68",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Lo-debar",
+      "lat": 32.662488,
+      "lon": 35.783568,
+      "passages": [
+        "2 Sam 9:4",
+        "2 Sam 9:5",
+        "2 Sam 17:27",
+        "Amos 6:13"
+      ],
+      "comment": "",
+      "id": "a376eed",
+      "slug": "lo-debar",
+      "type": "a",
+      "osm": "a376eed",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Lo Debar",
+        "Lo-Debar",
+        "Lodebar"
+      ]
+    },
+    {
+      "name": "Maarath",
+      "lat": 31.621003,
+      "lon": 35.102328,
+      "passages": [
+        "Josh 15:59"
+      ],
+      "comment": "now Bayt Ummar",
+      "id": "ae60c0c",
+      "slug": "maarath",
+      "type": "a",
+      "osm": "ae60c0c",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Madmannah",
+      "lat": 31.391668,
+      "lon": 34.940502,
+      "passages": [
+        "Josh 15:31",
+        "1 Chr 2:49"
+      ],
+      "comment": "",
+      "id": "a8661e2",
+      "slug": "madmannah",
+      "type": "a",
+      "osm": "a8661e2",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Madon",
+      "lat": 32.799879,
+      "lon": 35.459506,
+      "passages": [
+        "Josh 11:1",
+        "Josh 12:19"
+      ],
+      "comment": "",
+      "id": "a6c2936",
+      "slug": "madon",
+      "type": "a",
+      "osm": "a6c2936",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Mahaneh-dan",
+      "lat": 31.758315,
+      "lon": 34.994252,
+      "passages": [
+        "Judg 13:25",
+        "Judg 18:12"
+      ],
+      "comment": "~",
+      "id": "mahaneh-dan",
+      "slug": "mahaneh-dan",
+      "type": "a",
+      "osm": "mahaneh-dan",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Makkedah",
+      "lat": 31.935117,
+      "lon": 34.781326,
+      "passages": [
+        "Josh 10:10",
+        "Josh 10:16",
+        "Josh 10:17",
+        "Josh 10:21",
+        "Josh 10:28",
+        "Josh 10:29",
+        "Josh 12:16",
+        "Josh 15:41"
+      ],
+      "comment": "~",
+      "id": "abf8e4e",
+      "slug": "makkedah",
+      "type": "a",
+      "osm": "abf8e4e",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Manahath",
+      "lat": 31.752603,
+      "lon": 35.181972,
+      "passages": [
+        "1 Chr 8:6"
+      ],
+      "comment": "now Malha",
+      "id": "a6e2c95",
+      "slug": "manahath",
+      "type": "a",
+      "osm": "a6e2c95",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Marah",
+      "lat": 29.35,
+      "lon": 32.933333,
+      "passages": [
+        "Ex 15:23",
+        "Num 33:8",
+        "Num 33:9"
+      ],
+      "comment": "~",
+      "id": "ad3970d",
+      "slug": "marah",
+      "type": "a",
+      "osm": "ad3970d",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Mareal",
+      "lat": 32.697409,
+      "lon": 35.241789,
+      "passages": [
+        "Josh 19:11"
+      ],
+      "comment": "now Malul",
+      "id": "ad04336",
+      "slug": "mareal",
+      "type": "a",
+      "osm": "ad04336",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Maralah"
+      ]
+    },
+    {
+      "name": "Mearah",
+      "lat": 33.633333,
+      "lon": 35.433333,
+      "passages": [
+        "Josh 13:4"
+      ],
+      "comment": "~",
+      "id": "a8c3105",
+      "slug": "mearah",
+      "type": "a",
+      "osm": "a8c3105",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Arah"
+      ]
+    },
+    {
+      "name": "Memphis",
+      "lat": 29.849632,
+      "lon": 31.253958,
+      "passages": [
+        "Isa 19:13",
+        "Jer 2:16",
+        "Jer 44:1",
+        "Jer 46:14",
+        "Jer 46:19",
+        "Ezek 30:13",
+        "Ezek 30:16",
+        "Hos 9:6"
+      ],
+      "comment": "http://en.wikipedia.org/wiki/Memphis%2C_Egypt",
+      "id": "m02ea33",
+      "slug": "memphis",
+      "type": "m",
+      "osm": "m02ea33",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Mephaath",
+      "lat": 31.85,
+      "lon": 35.933333,
+      "passages": [
+        "Josh 13:18",
+        "Josh 21:37",
+        "1 Chr 6:79",
+        "Jer 48:21"
+      ],
+      "comment": "",
+      "id": "a97cb23",
+      "slug": "mephaath",
+      "type": "a",
+      "osm": "a97cb23",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Merom",
+      "lat": 33.075269,
+      "lon": 35.60548,
+      "passages": [
+        "Josh 11:5",
+        "Josh 11:7"
+      ],
+      "comment": "lake",
+      "id": "acea44c",
+      "slug": "merom",
+      "type": "a",
+      "osm": "acea44c",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Michmethath",
+      "lat": 32.183333,
+      "lon": 35.283333,
+      "passages": [
+        "Josh 16:6",
+        "Josh 17:7"
+      ],
+      "comment": "~",
+      "id": "a2f0a70",
+      "slug": "michmethath",
+      "type": "a",
+      "osm": "a2f0a70",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Michmethah",
+        "Micmethath",
+        "Mikmethath"
+      ]
+    },
+    {
+      "name": "Middin",
+      "lat": 31.743894,
+      "lon": 35.401591,
+      "passages": [
+        "Josh 15:61"
+      ],
+      "comment": "",
+      "id": "aec139c",
+      "slug": "middin",
+      "type": "a",
+      "osm": "aec139c",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Midian",
+      "lat": 28.932881,
+      "lon": 34.90832,
+      "passages": [
+        "Gen 36:35",
+        "Ex 2:15",
+        "Ex 2:16",
+        "Ex 3:1",
+        "Ex 4:19",
+        "Ex 18:1",
+        "Num 22:4",
+        "Num 22:7",
+        "Num 25:15",
+        "Num 25:18",
+        "Num 31:3",
+        "Num 31:7",
+        "Num 31:8",
+        "Num 31:9",
+        "Josh 13:21",
+        "Judg 6:1",
+        "Judg 6:2",
+        "Judg 6:6",
+        "Judg 6:13",
+        "Judg 6:14",
+        "Judg 7:1",
+        "Judg 7:8",
+        "Judg 7:13",
+        "Judg 7:14",
+        "Judg 7:15",
+        "Judg 7:23",
+        "Judg 7:25",
+        "Judg 8:1",
+        "Judg 8:3",
+        "Judg 8:5",
+        "Judg 8:12",
+        "Judg 8:22",
+        "Judg 8:26",
+        "Judg 8:28",
+        "Judg 9:17",
+        "1 Kgs 11:18",
+        "1 Chr 1:46",
+        "Ps 83:9",
+        "Isa 9:4",
+        "Isa 10:26",
+        "Isa 60:6",
+        "Hab 3:7",
+        "Acts 7:29"
+      ],
+      "comment": "region",
+      "id": "acc6d8e",
+      "slug": "midian",
+      "type": "a",
+      "osm": "acc6d8e",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Madian",
+        "Midianite",
+        "Midianites"
+      ]
+    },
+    {
+      "name": "Migdal-el",
+      "lat": 33.232131,
+      "lon": 35.362942,
+      "passages": [
+        "Josh 19:38"
+      ],
+      "comment": "",
+      "id": "a5f0bc3",
+      "slug": "migdal-el",
+      "type": "a",
+      "osm": "a5f0bc3",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Migdal El"
+      ]
+    },
+    {
+      "name": "Migdal-gad",
+      "lat": 31.666667,
+      "lon": 34.583333,
+      "passages": [
+        "Josh 15:37"
+      ],
+      "comment": "~",
+      "id": "a571ca0",
+      "slug": "migdal-gad",
+      "type": "a",
+      "osm": "a571ca0",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Migdal Gad"
+      ]
+    },
+    {
+      "name": "Minnith",
+      "lat": 31.75,
+      "lon": 35.85,
+      "passages": [
+        "Judg 11:33",
+        "Ezek 27:17"
+      ],
+      "comment": "~",
+      "id": "a222545",
+      "slug": "minnith",
+      "type": "a",
+      "osm": "a222545",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Misrephoth-maim",
+      "lat": 33.118952,
+      "lon": 35.139434,
+      "passages": [
+        "Josh 11:8",
+        "Josh 13:6"
+      ],
+      "comment": "now Narouq",
+      "id": "a5bf0bd",
+      "slug": "misrephoth-maim",
+      "type": "a",
+      "osm": "a5bf0bd",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Brook Misrephoth",
+        "Misrephoth Maim"
+      ]
+    },
+    {
+      "name": "Moladah",
+      "lat": 31.162327,
+      "lon": 35.057114,
+      "passages": [
+        "Josh 15:26",
+        "Josh 19:2",
+        "1 Chr 4:28",
+        "Neh 11:26"
+      ],
+      "comment": "",
+      "id": "a03a5d0",
+      "slug": "moladah",
+      "type": "a",
+      "osm": "a03a5d0",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Mount Ephron",
+      "lat": 31.675746,
+      "lon": 35.042407,
+      "passages": [
+        "Josh 15:9"
+      ],
+      "comment": "",
+      "id": "a75aff4",
+      "slug": "mount-ephron",
+      "type": "a",
+      "osm": "a75aff4",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Ephron"
+      ]
+    },
+    {
+      "name": "Mount Halak",
+      "lat": 30.916667,
+      "lon": 34.833333,
+      "passages": [
+        "Josh 11:17",
+        "Josh 12:7"
+      ],
+      "comment": "?; http://www.bibleorigins.net/MountHalakGebelHalaqMap.html",
+      "id": "a11fadd",
+      "slug": "mount-halak",
+      "type": "a",
+      "osm": "a11fadd",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Halak"
+      ]
+    },
+    {
+      "name": "Mount Hor 1",
+      "lat": 30.317396,
+      "lon": 35.407152,
+      "passages": [
+        "Num 20:22",
+        "Num 20:23",
+        "Num 20:25",
+        "Num 20:27",
+        "Num 21:4",
+        "Num 33:37",
+        "Num 33:38",
+        "Num 33:39",
+        "Num 33:41",
+        "Deut 32:50"
+      ],
+      "comment": "",
+      "id": "ad8027f",
+      "slug": "mount-hor-1",
+      "type": "a",
+      "osm": "ad8027f",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Hor",
+        "Mount Hor"
+      ]
+    },
+    {
+      "name": "Mount Hor 2",
+      "lat": 35.710069,
+      "lon": 36.18808,
+      "passages": [
+        "Num 34:7",
+        "Num 34:8"
+      ],
+      "comment": "",
+      "id": "a62fa2d",
+      "slug": "mount-hor-2",
+      "type": "a",
+      "osm": "a62fa2d",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Hor",
+        "Mount Hor"
+      ]
+    },
+    {
+      "name": "Mount Seir 2",
+      "lat": 31.783333,
+      "lon": 34.994,
+      "passages": [
+        "Josh 15:10"
+      ],
+      "comment": "",
+      "id": "a36c283",
+      "slug": "mount-seir-2",
+      "type": "a",
+      "osm": "a36c283",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Mount Seir",
+        "Seir"
+      ]
+    },
+    {
+      "name": "Mount Sinai",
+      "lat": 28.539722,
+      "lon": 33.973333,
+      "passages": [
+        "Ex 19:11",
+        "Ex 19:18",
+        "Ex 19:20",
+        "Ex 19:23",
+        "Ex 24:16",
+        "Ex 31:18",
+        "Ex 34:2",
+        "Ex 34:4",
+        "Ex 34:29",
+        "Ex 34:32",
+        "Lev 7:38",
+        "Lev 25:1",
+        "Lev 26:46",
+        "Lev 27:34",
+        "Num 3:1",
+        "Num 28:6",
+        "Neh 9:13",
+        "Acts 7:30",
+        "Acts 7:38",
+        "Gal 4:24",
+        "Gal 4:25"
+      ],
+      "comment": "",
+      "id": "abfba2a",
+      "slug": "mount-sinai",
+      "type": "a",
+      "osm": "abfba2a",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Sina",
+        "Sinai",
+        "mount Sinai"
+      ]
+    },
+    {
+      "name": "Mozah",
+      "lat": 31.802641,
+      "lon": 35.158376,
+      "passages": [
+        "Josh 18:26"
+      ],
+      "comment": "~",
+      "id": "af35635",
+      "slug": "mozah",
+      "type": "a",
+      "osm": "af35635",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Naamah",
+      "lat": 31.871782,
+      "lon": 34.871894,
+      "passages": [
+        "Josh 15:41"
+      ],
+      "comment": "",
+      "id": "naamah",
+      "slug": "naamah",
+      "type": "a",
+      "osm": "naamah",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Naaran",
+      "lat": 31.949518,
+      "lon": 35.45873,
+      "passages": [
+        "1 Chr 7:28"
+      ],
+      "comment": "~",
+      "id": "a9f5289",
+      "slug": "naaran",
+      "type": "a",
+      "osm": "a9f5289",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Nahalol",
+      "lat": 32.722209,
+      "lon": 35.35282,
+      "passages": [
+        "Judg 1:30"
+      ],
+      "comment": "",
+      "id": "nahalol",
+      "slug": "nahalol",
+      "type": "a",
+      "osm": "nahalol",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Neballat",
+      "lat": 31.992079,
+      "lon": 34.957563,
+      "passages": [
+        "Neh 11:34"
+      ],
+      "comment": "now Bayt Nabala",
+      "id": "acd682e",
+      "slug": "neballat",
+      "type": "a",
+      "osm": "acd682e",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Nebo 1",
+      "lat": 31.748024,
+      "lon": 35.743257,
+      "passages": [
+        "Num 32:3",
+        "Num 32:38",
+        "Num 33:47",
+        "1 Chr 5:8",
+        "Isa 15:2",
+        "Jer 48:1",
+        "Jer 48:22"
+      ],
+      "comment": "from harper; now El Mekhaiyat",
+      "id": "ab5bd29",
+      "slug": "nebo-1",
+      "type": "a",
+      "osm": "ab5bd29",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Mount Nebo",
+        "Nebo"
+      ]
+    },
+    {
+      "name": "Nebo 2",
+      "lat": 31.606256,
+      "lon": 35.037417,
+      "passages": [
+        "Ezra 2:29",
+        "Ezra 10:43",
+        "Neh 7:33"
+      ],
+      "comment": "",
+      "id": "accdd09",
+      "slug": "nebo-2",
+      "type": "a",
+      "osm": "accdd09",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Nebo"
+      ]
+    },
+    {
+      "name": "Negeb",
+      "lat": 30.3,
+      "lon": 34.2,
+      "passages": [
+        "Gen 12:9",
+        "Gen 13:1",
+        "Gen 13:3",
+        "Gen 20:1",
+        "Gen 24:62",
+        "Num 13:17",
+        "Num 13:22",
+        "Num 13:29",
+        "Num 21:1",
+        "Num 33:40",
+        "Deut 1:7",
+        "Deut 34:3",
+        "Josh 10:40",
+        "Josh 11:16",
+        "Josh 12:8",
+        "Josh 15:19",
+        "Josh 19:8",
+        "Judg 1:9",
+        "Judg 1:15",
+        "Judg 1:16",
+        "1 Sam 27:10",
+        "1 Sam 30:1",
+        "1 Sam 30:14",
+        "1 Sam 30:27",
+        "2 Sam 24:7",
+        "2 Chr 28:18",
+        "Ps 126:4",
+        "Isa 21:1",
+        "Isa 30:6",
+        "Jer 13:19",
+        "Jer 17:26",
+        "Jer 32:44",
+        "Jer 33:13",
+        "Ezek 20:46",
+        "Ezek 20:47",
+        "Obad 1:19",
+        "Obad 1:20"
+      ],
+      "comment": "",
+      "id": "a1cb244",
+      "slug": "negeb",
+      "type": "a",
+      "osm": "a1cb244",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Negev",
+        "Ramoth-negev",
+        "South",
+        "southern Judah",
+        "southern part of Judah"
+      ]
+    },
+    {
+      "name": "Neiel",
+      "lat": 32.894254,
+      "lon": 35.221877,
+      "passages": [
+        "Josh 19:27"
+      ],
+      "comment": "~; now Yenin",
+      "id": "ab571de",
+      "slug": "neiel",
+      "type": "a",
+      "osm": "ab571de",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Nephtoah",
+      "lat": 31.683036,
+      "lon": 35.167987,
+      "passages": [
+        "Josh 15:9",
+        "Josh 18:15"
+      ],
+      "comment": "~",
+      "id": "ac1fef1",
+      "slug": "nephtoah",
+      "type": "a",
+      "osm": "ac1fef1",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Waters of Nephtoah"
+      ]
+    },
+    {
+      "name": "Netophah",
+      "lat": 31.735465,
+      "lon": 35.220503,
+      "passages": [
+        "2 Sam 23:28",
+        "2 Sam 23:29",
+        "1 Chr 11:30",
+        "1 Chr 27:13",
+        "Ezra 2:22",
+        "Neh 7:26"
+      ],
+      "comment": "~",
+      "id": "a9ad5ae",
+      "slug": "netophah",
+      "type": "a",
+      "osm": "a9ad5ae",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Netophathite",
+        "Netophathites"
+      ]
+    },
+    {
+      "name": "Nezib",
+      "lat": 31.58805,
+      "lon": 34.992389,
+      "passages": [
+        "Josh 15:43"
+      ],
+      "comment": "",
+      "id": "aafe3bd",
+      "slug": "nezib",
+      "type": "a",
+      "osm": "aafe3bd",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Nicopolis",
+      "lat": 39.024033,
+      "lon": 20.73573,
+      "passages": [
+        "Titus 3:12"
+      ],
+      "comment": "",
+      "id": "ma7fa5c",
+      "slug": "nicopolis",
+      "type": "m",
+      "osm": "ma7fa5c",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Nile",
+      "lat": 30.092632,
+      "lon": 31.230987,
+      "passages": [
+        "Gen 41:1",
+        "Gen 41:2",
+        "Gen 41:3",
+        "Gen 41:17",
+        "Gen 41:18",
+        "Ex 1:22",
+        "Ex 4:9",
+        "Ex 7:15",
+        "Ex 7:17",
+        "Ex 7:18",
+        "Ex 7:20",
+        "Ex 7:21",
+        "Ex 7:24",
+        "Ex 7:25",
+        "Ex 8:3",
+        "Ex 8:9",
+        "Ex 8:11",
+        "Ex 17:5",
+        "1 Chr 13:5",
+        "Isa 19:6",
+        "Isa 19:7",
+        "Isa 19:8",
+        "Isa 23:3",
+        "Isa 23:10",
+        "Jer 2:18",
+        "Jer 46:7",
+        "Jer 46:8",
+        "Ezek 29:3",
+        "Ezek 29:9",
+        "Ezek 30:12",
+        "Amos 8:8",
+        "Amos 9:5",
+        "Nahum 3:8",
+        "Zech 10:11"
+      ],
+      "comment": "",
+      "id": "a012705",
+      "slug": "nile",
+      "type": "a",
+      "osm": "a012705",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Nile River",
+        "River",
+        "Shihor",
+        "Sihor"
+      ]
+    },
+    {
+      "name": "Nimrim",
+      "lat": 31.133191,
+      "lon": 35.531138,
+      "passages": [
+        "Isa 15:6",
+        "Jer 48:34"
+      ],
+      "comment": "from harper; now Numeira",
+      "id": "ace3edc",
+      "slug": "nimrim",
+      "type": "a",
+      "osm": "ace3edc",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Waters of Nimrim"
+      ]
+    },
+    {
+      "name": "Nineveh",
+      "lat": 36.35941,
+      "lon": 43.152887,
+      "passages": [
+        "Gen 10:11",
+        "Gen 10:12",
+        "2 Kgs 19:36",
+        "Isa 37:37",
+        "Jonah 1:2",
+        "Jonah 3:2",
+        "Jonah 3:3",
+        "Jonah 3:4",
+        "Jonah 3:5",
+        "Jonah 3:6",
+        "Jonah 3:7",
+        "Jonah 4:11",
+        "Nahum 1:1",
+        "Nahum 2:8",
+        "Nahum 3:7",
+        "Zeph 2:13",
+        "Matt 12:41",
+        "Luke 11:30",
+        "Luke 11:32"
+      ],
+      "comment": "Nineveh in KML",
+      "id": "m52bd87",
+      "slug": "nineveh",
+      "type": "m",
+      "osm": "m52bd87",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Nob",
+      "lat": 31.799605,
+      "lon": 35.23298,
+      "passages": [
+        "1 Sam 21:1",
+        "1 Sam 22:9",
+        "1 Sam 22:11",
+        "1 Sam 22:19",
+        "Neh 11:32",
+        "Isa 10:32"
+      ],
+      "comment": "~",
+      "id": "afdda14",
+      "slug": "nob",
+      "type": "a",
+      "osm": "afdda14",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "On",
+      "lat": 30.108086,
+      "lon": 31.33822,
+      "passages": [
+        "Gen 41:45",
+        "Gen 41:50",
+        "Gen 46:20",
+        "Ezek 30:17"
+      ],
+      "comment": "",
+      "id": "on",
+      "slug": "on",
+      "type": "a",
+      "osm": "on",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Ophni",
+      "lat": 31.961989,
+      "lon": 35.215483,
+      "passages": [
+        "Josh 18:24"
+      ],
+      "comment": "",
+      "id": "a1f2174",
+      "slug": "ophni",
+      "type": "a",
+      "osm": "a1f2174",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Parah",
+      "lat": 31.833333,
+      "lon": 35.3,
+      "passages": [
+        "Josh 18:23"
+      ],
+      "comment": "~",
+      "id": "a2ec6b7",
+      "slug": "parah",
+      "type": "a",
+      "osm": "a2ec6b7",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Paran",
+      "lat": 29.151667,
+      "lon": 33.541944,
+      "passages": [
+        "Gen 21:21",
+        "Num 10:12",
+        "Num 12:16",
+        "Num 13:3",
+        "Num 13:26",
+        "Deut 1:1",
+        "1 Sam 25:1",
+        "1 Kgs 11:18"
+      ],
+      "comment": "",
+      "id": "md3087e",
+      "slug": "paran",
+      "type": "m",
+      "osm": "md3087e",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Pathros",
+      "lat": 28.322364,
+      "lon": 30.692312,
+      "passages": [
+        "Isa 11:11",
+        "Jer 44:1",
+        "Jer 44:15",
+        "Ezek 29:14",
+        "Ezek 30:14"
+      ],
+      "comment": "region",
+      "id": "aab30ec",
+      "slug": "pathros",
+      "type": "a",
+      "osm": "aab30ec",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Upper Egypt",
+        "southern Egypt"
+      ]
+    },
+    {
+      "name": "Patmos",
+      "lat": 37.30752,
+      "lon": 26.548274,
+      "passages": [
+        "Rev 1:9"
+      ],
+      "comment": "",
+      "id": "m5c4548",
+      "slug": "patmos",
+      "type": "m",
+      "osm": "m5c4548",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Pethor",
+      "lat": 36.654616,
+      "lon": 38.068879,
+      "passages": [
+        "Num 22:5",
+        "Deut 23:4"
+      ],
+      "comment": "http://www.aushariye.hum.ku.dk/images/large/fig-01.htm",
+      "id": "aa9e754",
+      "slug": "pethor",
+      "type": "a",
+      "osm": "aa9e754",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Pharpar",
+      "lat": 33.379601,
+      "lon": 36.306085,
+      "passages": [
+        "2 Kgs 5:12"
+      ],
+      "comment": "river",
+      "id": "a8d054a",
+      "slug": "pharpar",
+      "type": "a",
+      "osm": "a8d054a",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Pi-beseth",
+      "lat": 30.583333,
+      "lon": 31.5,
+      "passages": [
+        "Ezek 30:17"
+      ],
+      "comment": "~",
+      "id": "a2cd991",
+      "slug": "pi-beseth",
+      "type": "a",
+      "osm": "a2cd991",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Bubastis",
+        "Pi Beseth"
+      ]
+    },
+    {
+      "name": "Pirathon",
+      "lat": 32.286022,
+      "lon": 35.022944,
+      "passages": [
+        "Judg 12:15",
+        "2 Sam 23:30",
+        "1 Chr 11:31",
+        "1 Chr 27:14"
+      ],
+      "comment": "now Faroun",
+      "id": "a40647c",
+      "slug": "pirathon",
+      "type": "a",
+      "osm": "a40647c",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Pirathonite"
+      ]
+    },
+    {
+      "name": "Pontus",
+      "lat": 40.905222,
+      "lon": 37.799969,
+      "passages": [
+        "Acts 2:9",
+        "Acts 18:2",
+        "1 Pet 1:1"
+      ],
+      "comment": "region",
+      "id": "m220f70",
+      "slug": "pontus",
+      "type": "m",
+      "osm": "m220f70",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Raamah",
+      "lat": 15.68,
+      "lon": 42.78,
+      "passages": [
+        "Ezek 27:22"
+      ],
+      "comment": "?",
+      "id": "a57bb2e",
+      "slug": "raamah",
+      "type": "a",
+      "osm": "a57bb2e",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Rabbith",
+      "lat": 32.391416,
+      "lon": 35.377302,
+      "passages": [
+        "Josh 19:20"
+      ],
+      "comment": "",
+      "id": "a13ffd4",
+      "slug": "rabbith",
+      "type": "a",
+      "osm": "a13ffd4",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Rakkon",
+      "lat": 32.132898,
+      "lon": 34.788144,
+      "passages": [
+        "Josh 19:46"
+      ],
+      "comment": "~",
+      "id": "aa3e5ae",
+      "slug": "rakkon",
+      "type": "a",
+      "osm": "aa3e5ae",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Ramah 2",
+      "lat": 33.111078,
+      "lon": 35.310464,
+      "passages": [
+        "Josh 19:29"
+      ],
+      "comment": "",
+      "id": "a664d03",
+      "slug": "ramah-2",
+      "type": "a",
+      "osm": "a664d03",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Ramah"
+      ]
+    },
+    {
+      "name": "Ramah 3",
+      "lat": 32.93901,
+      "lon": 35.368123,
+      "passages": [
+        "Josh 19:36"
+      ],
+      "comment": "",
+      "id": "a010244",
+      "slug": "ramah-3",
+      "type": "a",
+      "osm": "a010244",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Ramah"
+      ]
+    },
+    {
+      "name": "Red Sea",
+      "lat": 27.088473,
+      "lon": 34.771729,
+      "passages": [
+        "Ex 10:19",
+        "Ex 13:18",
+        "Ex 15:4",
+        "Ex 15:22",
+        "Ex 23:31",
+        "Num 14:25",
+        "Num 21:4",
+        "Num 33:10",
+        "Num 33:11",
+        "Deut 1:40",
+        "Deut 2:1",
+        "Deut 11:4",
+        "Josh 2:10",
+        "Josh 4:23",
+        "Josh 24:6",
+        "Judg 11:16",
+        "1 Kgs 9:26",
+        "Neh 9:9",
+        "Ps 106:7",
+        "Ps 106:9",
+        "Ps 106:22",
+        "Ps 136:13",
+        "Ps 136:15",
+        "Jer 49:21",
+        "Acts 7:36",
+        "Heb 11:29"
+      ],
+      "comment": "water",
+      "id": "red-sea",
+      "slug": "red-sea",
+      "type": "a",
+      "osm": "red-sea",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Rehoboth 1",
+      "lat": 31.066829,
+      "lon": 34.59783,
+      "passages": [
+        "Gen 26:22"
+      ],
+      "comment": "",
+      "id": "ab1d954",
+      "slug": "rehoboth-1",
+      "type": "a",
+      "osm": "ab1d954",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Rehoboth"
+      ]
+    },
+    {
+      "name": "Rezeph",
+      "lat": 35.95,
+      "lon": 39.016667,
+      "passages": [
+        "2 Kgs 19:12",
+        "Isa 37:12"
+      ],
+      "comment": "~; from http://en.wikipedia.org/wiki/Resafa",
+      "id": "aefdac1",
+      "slug": "rezeph",
+      "type": "a",
+      "osm": "aefdac1",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Riblah 1",
+      "lat": 34.431703,
+      "lon": 36.545259,
+      "passages": [
+        "2 Kgs 23:33",
+        "2 Kgs 25:6",
+        "2 Kgs 25:20",
+        "2 Kgs 25:21",
+        "Jer 39:5",
+        "Jer 39:6",
+        "Jer 52:9",
+        "Jer 52:10",
+        "Jer 52:26",
+        "Jer 52:27",
+        "Ezek 6:14"
+      ],
+      "comment": "",
+      "id": "ab2bde8",
+      "slug": "riblah-1",
+      "type": "a",
+      "osm": "ab2bde8",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Diblah",
+        "Diblath",
+        "Riblah"
+      ]
+    },
+    {
+      "name": "Rimmon 1",
+      "lat": 31.93466,
+      "lon": 35.297063,
+      "passages": [
+        "Judg 20:45",
+        "Judg 20:47",
+        "Judg 21:13"
+      ],
+      "comment": "",
+      "id": "a45acc3",
+      "slug": "rimmon-1",
+      "type": "a",
+      "osm": "a45acc3",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Rimmon"
+      ]
+    },
+    {
+      "name": "Salecah",
+      "lat": 32.493941,
+      "lon": 36.710337,
+      "passages": [
+        "Deut 3:10",
+        "Josh 12:5",
+        "Josh 13:11",
+        "1 Chr 5:11"
+      ],
+      "comment": "",
+      "id": "ac3bc41",
+      "slug": "salecah",
+      "type": "a",
+      "osm": "ac3bc41",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Salcah",
+        "Salchah",
+        "Salekah"
+      ]
+    },
+    {
+      "name": "Salt Sea",
+      "lat": 31.538593,
+      "lon": 35.482268,
+      "passages": [
+        "Gen 14:3",
+        "Num 34:3",
+        "Num 34:12",
+        "Deut 3:17",
+        "Josh 3:16",
+        "Josh 12:3",
+        "Josh 15:2",
+        "Josh 15:5",
+        "Josh 18:19"
+      ],
+      "comment": "",
+      "id": "abed304",
+      "slug": "salt-sea",
+      "type": "a",
+      "osm": "abed304",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Dead Sea",
+        "Dead Sea Valley",
+        "Sea",
+        "Sea of Arabah",
+        "Sea of the Arabah",
+        "sea of Arabah",
+        "sea of the Arabah"
+      ]
+    },
+    {
+      "name": "Samos",
+      "lat": 37.715172,
+      "lon": 26.934167,
+      "passages": [
+        "Acts 20:15"
+      ],
+      "comment": "",
+      "id": "m509072",
+      "slug": "samos",
+      "type": "m",
+      "osm": "m509072",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Samothrace",
+      "lat": 40.467279,
+      "lon": 25.486069,
+      "passages": [
+        "Acts 16:11"
+      ],
+      "comment": "",
+      "id": "a68750d",
+      "slug": "samothrace",
+      "type": "a",
+      "osm": "a68750d",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Samothracia"
+      ]
+    },
+    {
+      "name": "Secacah",
+      "lat": 31.766667,
+      "lon": 35.283333,
+      "passages": [
+        "Josh 15:61"
+      ],
+      "comment": "~",
+      "id": "af74b9f",
+      "slug": "secacah",
+      "type": "a",
+      "osm": "af74b9f",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Sekakah"
+      ]
+    },
+    {
+      "name": "Secu",
+      "lat": 31.883333,
+      "lon": 35.2,
+      "passages": [
+        "1 Sam 19:22"
+      ],
+      "comment": "~; now Suweika",
+      "id": "a4052df",
+      "slug": "secu",
+      "type": "a",
+      "osm": "a4052df",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Sechu",
+        "Seku"
+      ]
+    },
+    {
+      "name": "Sephar",
+      "lat": 14.550219,
+      "lon": 44.392642,
+      "passages": [
+        "Gen 10:30"
+      ],
+      "comment": "~",
+      "id": "a3cae2c",
+      "slug": "sephar",
+      "type": "a",
+      "osm": "a3cae2c",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Shaalbim",
+      "lat": 31.870364,
+      "lon": 34.981728,
+      "passages": [
+        "Judg 1:35",
+        "1 Kgs 4:9"
+      ],
+      "comment": "now Salbit",
+      "id": "ae89331",
+      "slug": "shaalbim",
+      "type": "a",
+      "osm": "ae89331",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Shaalabbin"
+      ]
+    },
+    {
+      "name": "Shaaraim 1",
+      "lat": 31.7001,
+      "lon": 34.89532,
+      "passages": [
+        "Josh 15:36",
+        "1 Sam 17:52"
+      ],
+      "comment": "",
+      "id": "a28da66",
+      "slug": "shaaraim-1",
+      "type": "a",
+      "osm": "a28da66",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Shaaraim",
+        "Sharaim"
+      ]
+    },
+    {
+      "name": "Shamir 1",
+      "lat": 31.416667,
+      "lon": 34.933333,
+      "passages": [
+        "Josh 15:48"
+      ],
+      "comment": "~",
+      "id": "a846a2a",
+      "slug": "shamir-1",
+      "type": "a",
+      "osm": "a846a2a",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Shamir"
+      ]
+    },
+    {
+      "name": "Shamir 2",
+      "lat": 32.36047,
+      "lon": 35.250054,
+      "passages": [
+        "Judg 10:1",
+        "Judg 10:2"
+      ],
+      "comment": "now Sanur",
+      "id": "af6476f",
+      "slug": "shamir-2",
+      "type": "a",
+      "osm": "af6476f",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Shamir"
+      ]
+    },
+    {
+      "name": "Shaphir",
+      "lat": 31.743719,
+      "lon": 34.694006,
+      "passages": [
+        "Mic 1:11"
+      ],
+      "comment": "",
+      "id": "a7b3f5d",
+      "slug": "shaphir",
+      "type": "a",
+      "osm": "a7b3f5d",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Saphir"
+      ]
+    },
+    {
+      "name": "Sharon 1",
+      "lat": 32.639068,
+      "lon": 34.945929,
+      "passages": [
+        "1 Chr 27:29",
+        "Sng 2:1",
+        "Isa 33:9",
+        "Isa 35:2",
+        "Isa 65:10",
+        "Acts 9:35"
+      ],
+      "comment": "region",
+      "id": "a83fd43",
+      "slug": "sharon-1",
+      "type": "a",
+      "osm": "a83fd43",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Saron",
+        "Sharon",
+        "Sharon Plain"
+      ]
+    },
+    {
+      "name": "Sharuhen",
+      "lat": 31.282222,
+      "lon": 34.4825,
+      "passages": [
+        "Josh 19:6"
+      ],
+      "comment": "now Tel Sharuhen",
+      "id": "a887d36",
+      "slug": "sharuhen",
+      "type": "a",
+      "osm": "a887d36",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Sheba",
+      "lat": 9.022736,
+      "lon": 38.746799,
+      "passages": [
+        "Josh 19:2",
+        "1 Kgs 10:1",
+        "1 Kgs 10:4",
+        "1 Kgs 10:10",
+        "1 Kgs 10:13",
+        "2 Chr 9:1",
+        "2 Chr 9:3",
+        "2 Chr 9:9",
+        "2 Chr 9:12",
+        "Job 6:19",
+        "Ps 72:10",
+        "Ps 72:15",
+        "Isa 60:6",
+        "Jer 6:20",
+        "Ezek 27:22",
+        "Ezek 27:23",
+        "Ezek 38:13"
+      ],
+      "comment": "region",
+      "id": "m06de45",
+      "slug": "sheba",
+      "type": "m",
+      "osm": "m06de45",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Shihor-libnath",
+      "lat": 32.538496,
+      "lon": 34.907697,
+      "passages": [
+        "Josh 19:26"
+      ],
+      "comment": "river; now Nahar Tanninim?",
+      "id": "ac6b338",
+      "slug": "shihor-libnath",
+      "type": "a",
+      "osm": "ac6b338",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Brook Shihor Libnath",
+        "Shihor Libnath",
+        "Shihor-Libnat"
+      ]
+    },
+    {
+      "name": "Shion",
+      "lat": 32.716666,
+      "lon": 35.333334,
+      "passages": [
+        "Josh 19:19"
+      ],
+      "comment": "~",
+      "id": "a03f6cf",
+      "slug": "shion",
+      "type": "a",
+      "osm": "a03f6cf",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Shur",
+      "lat": 30.2354,
+      "lon": 33.247,
+      "passages": [
+        "Gen 16:7",
+        "Gen 20:1",
+        "Gen 25:18",
+        "Ex 15:22",
+        "1 Sam 15:7",
+        "1 Sam 27:8"
+      ],
+      "comment": "",
+      "id": "acdbce0",
+      "slug": "shur",
+      "type": "a",
+      "osm": "acdbce0",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Desert of Shur",
+        "Wilderness of Shur"
+      ]
+    },
+    {
+      "name": "Sibmah",
+      "lat": 31.815283,
+      "lon": 35.766738,
+      "passages": [
+        "Num 32:38",
+        "Josh 13:19",
+        "Isa 16:8",
+        "Isa 16:9",
+        "Jer 48:32"
+      ],
+      "comment": "",
+      "id": "aa10f27",
+      "slug": "sibmah",
+      "type": "a",
+      "osm": "aa10f27",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Sebam",
+        "Shebam",
+        "Shibmah"
+      ]
+    },
+    {
+      "name": "Sin",
+      "lat": 28.838778,
+      "lon": 33.420573,
+      "passages": [
+        "Ex 16:1",
+        "Ex 17:1",
+        "Num 33:11",
+        "Num 33:12"
+      ],
+      "comment": "region",
+      "id": "a0f54e4",
+      "slug": "sin",
+      "type": "a",
+      "osm": "a0f54e4",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Desert of Sin",
+        "Wilderness of Sin"
+      ]
+    },
+    {
+      "name": "Sirah",
+      "lat": 31.55,
+      "lon": 35.1,
+      "passages": [
+        "2 Sam 3:26"
+      ],
+      "comment": "",
+      "id": "a63b8c7",
+      "slug": "sirah",
+      "type": "a",
+      "osm": "a63b8c7",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Bor Hasirah"
+      ]
+    },
+    {
+      "name": "Spain",
+      "lat": 40.481391,
+      "lon": -3.175332,
+      "passages": [
+        "Rom 15:24",
+        "Rom 15:28"
+      ],
+      "comment": "region",
+      "id": "a3f0f69",
+      "slug": "spain",
+      "type": "a",
+      "osm": "a3f0f69",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Syene",
+      "lat": 24.066181,
+      "lon": 32.895862,
+      "passages": [
+        "Isa 49:12",
+        "Ezek 29:10",
+        "Ezek 30:6"
+      ],
+      "comment": "now Aswan",
+      "id": "a8a6a5b",
+      "slug": "syene",
+      "type": "a",
+      "osm": "a8a6a5b",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Aswan",
+        "Egypt",
+        "Sinim"
+      ]
+    },
+    {
+      "name": "Syrtis",
+      "lat": 31.766667,
+      "lon": 18.505556,
+      "passages": [
+        "Acts 27:17"
+      ],
+      "comment": "water; from harper; now Sidra",
+      "id": "ad36371",
+      "slug": "syrtis",
+      "type": "a",
+      "osm": "ad36371",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Taanath-shiloh",
+      "lat": 32.15,
+      "lon": 35.383333,
+      "passages": [
+        "Josh 16:6"
+      ],
+      "comment": "~; now Khirbat Tana",
+      "id": "a5d37f9",
+      "slug": "taanath-shiloh",
+      "type": "a",
+      "osm": "a5d37f9",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Taanath Shiloh"
+      ]
+    },
+    {
+      "name": "Tahpanhes",
+      "lat": 30.860556,
+      "lon": 32.171389,
+      "passages": [
+        "Jer 2:16",
+        "Jer 43:7",
+        "Jer 43:8",
+        "Jer 43:9",
+        "Jer 44:1",
+        "Jer 46:14"
+      ],
+      "comment": "http://en.wikipedia.org/wiki/Tahpanhes",
+      "id": "adb008c",
+      "slug": "tahpanhes",
+      "type": "a",
+      "osm": "adb008c",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Tahapanes",
+        "Tehaphnehes"
+      ]
+    },
+    {
+      "name": "Tamar 2",
+      "lat": 31.024923,
+      "lon": 35.064154,
+      "passages": [
+        "Ezek 47:18",
+        "Ezek 47:19",
+        "Ezek 48:28"
+      ],
+      "comment": "now Kurnub; from New Bible Dictionary",
+      "id": "a5947d7",
+      "slug": "tamar-2",
+      "type": "a",
+      "osm": "a5947d7",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Tamar"
+      ]
+    },
+    {
+      "name": "Tema",
+      "lat": 27.633172,
+      "lon": 38.554125,
+      "passages": [
+        "Job 6:19",
+        "Isa 21:14",
+        "Jer 25:23"
+      ],
+      "comment": "",
+      "id": "acd48d6",
+      "slug": "tema",
+      "type": "a",
+      "osm": "acd48d6",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Teman",
+      "lat": 30.203813,
+      "lon": 35.732568,
+      "passages": [
+        "Jer 49:7",
+        "Jer 49:20",
+        "Ezek 25:13",
+        "Amos 1:12",
+        "Obad 1:9",
+        "Hab 3:3"
+      ],
+      "comment": "region",
+      "id": "a831506",
+      "slug": "teman",
+      "type": "a",
+      "osm": "a831506",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Edom"
+      ]
+    },
+    {
+      "name": "Thebes",
+      "lat": 25.700025,
+      "lon": 32.639441,
+      "passages": [
+        "Jer 46:25",
+        "Ezek 30:14",
+        "Ezek 30:15",
+        "Ezek 30:16",
+        "Nahum 3:8"
+      ],
+      "comment": "",
+      "id": "mf51729",
+      "slug": "thebes",
+      "type": "m",
+      "osm": "mf51729",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Three Taverns",
+      "lat": 41.59132,
+      "lon": 12.828636,
+      "passages": [
+        "Acts 28:15"
+      ],
+      "comment": "",
+      "id": "m8996a4",
+      "slug": "three-taverns",
+      "type": "m",
+      "osm": "m8996a4",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Tigris",
+      "lat": 35.983343,
+      "lon": 43.346466,
+      "passages": [
+        "Gen 2:14",
+        "Dan 10:4"
+      ],
+      "comment": "",
+      "id": "a38ebfd",
+      "slug": "tigris",
+      "type": "a",
+      "osm": "a38ebfd",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Hiddekel",
+        "Tigris River"
+      ]
+    },
+    {
+      "name": "Timnah 1",
+      "lat": 31.784368,
+      "lon": 34.90968,
+      "passages": [
+        "Gen 38:12",
+        "Gen 38:13",
+        "Gen 38:14",
+        "Josh 15:10",
+        "Josh 19:43",
+        "Judg 14:1",
+        "Judg 14:2",
+        "Judg 14:5",
+        "2 Chr 28:18"
+      ],
+      "comment": "now Tel Batash",
+      "id": "a21f909",
+      "slug": "timnah-1",
+      "type": "a",
+      "osm": "a21f909",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Thimnathah",
+        "Timnah",
+        "Timnath",
+        "Timnite"
+      ]
+    },
+    {
+      "name": "Timnah 2",
+      "lat": 31.699323,
+      "lon": 35.040359,
+      "passages": [
+        "Josh 15:57"
+      ],
+      "comment": "~",
+      "id": "ae3f164",
+      "slug": "timnah-2",
+      "type": "a",
+      "osm": "ae3f164",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Timnah"
+      ]
+    },
+    {
+      "name": "Timnath-heres",
+      "lat": 32.121473,
+      "lon": 35.150392,
+      "passages": [
+        "Judg 2:9"
+      ],
+      "comment": "",
+      "id": "a6e6528",
+      "slug": "timnath-heres",
+      "type": "a",
+      "osm": "a6e6528",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Timnah-heres",
+        "Timnath Heres",
+        "Timnath Serah",
+        "Timnath-Serah",
+        "Timnath-serah"
+      ]
+    },
+    {
+      "name": "Tiphsah 1",
+      "lat": 35.847967,
+      "lon": 38.73235,
+      "passages": [
+        "1 Kgs 4:24"
+      ],
+      "comment": "",
+      "id": "aab8f2d",
+      "slug": "tiphsah-1",
+      "type": "a",
+      "osm": "aab8f2d",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Tiphsah"
+      ]
+    },
+    {
+      "name": "Tiphsah 2",
+      "lat": 32.166667,
+      "lon": 35.166667,
+      "passages": [
+        "2 Kgs 15:16"
+      ],
+      "comment": "~",
+      "id": "abf2443",
+      "slug": "tiphsah-2",
+      "type": "a",
+      "osm": "abf2443",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Tappuah",
+        "Tiphsah"
+      ]
+    },
+    {
+      "name": "Tob",
+      "lat": 32.561735,
+      "lon": 36.240494,
+      "passages": [
+        "Judg 11:3",
+        "Judg 11:5",
+        "2 Sam 10:6",
+        "2 Sam 10:8"
+      ],
+      "comment": "from harper; now et-Taiyibeh",
+      "id": "aaff3e1",
+      "slug": "tob",
+      "type": "a",
+      "osm": "aaff3e1",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Ish-Tob",
+        "Ish-tob"
+      ]
+    },
+    {
+      "name": "Tophel",
+      "lat": 30.936991,
+      "lon": 35.61687,
+      "passages": [
+        "Deut 1:1"
+      ],
+      "comment": "",
+      "id": "a7ecf6c",
+      "slug": "tophel",
+      "type": "a",
+      "osm": "a7ecf6c",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Trachonitis",
+      "lat": 32.833333,
+      "lon": 36.5,
+      "passages": [
+        "Luke 3:1"
+      ],
+      "comment": "region",
+      "id": "a85a60a",
+      "slug": "trachonitis",
+      "type": "a",
+      "osm": "a85a60a",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Traconitis"
+      ]
+    },
+    {
+      "name": "Ulai",
+      "lat": 32.178696,
+      "lon": 48.22489,
+      "passages": [
+        "Dan 8:2",
+        "Dan 8:16"
+      ],
+      "comment": "river; from http://en.wikipedia.org/wiki/Ulai",
+      "id": "a7a7549",
+      "slug": "ulai",
+      "type": "a",
+      "osm": "a7a7549",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "River Ulai",
+        "Ulai Canal",
+        "Ulai River"
+      ]
+    },
+    {
+      "name": "Ummah",
+      "lat": 33.104377,
+      "lon": 35.180623,
+      "passages": [
+        "Josh 19:30"
+      ],
+      "comment": "now Alma el Shaab",
+      "id": "afa792e",
+      "slug": "ummah",
+      "type": "a",
+      "osm": "afa792e",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Umah"
+      ]
+    },
+    {
+      "name": "Uz",
+      "lat": 30.0334,
+      "lon": 36.44839,
+      "passages": [
+        "Job 1:1",
+        "Jer 25:20",
+        "Lam 4:21"
+      ],
+      "comment": "",
+      "id": "a324c4d",
+      "slug": "uz",
+      "type": "a",
+      "osm": "a324c4d",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Uzal",
+      "lat": 15.354879,
+      "lon": 44.215092,
+      "passages": [
+        "Ezek 27:19"
+      ],
+      "comment": "now Sanaa",
+      "id": "a217cc5",
+      "slug": "uzal",
+      "type": "a",
+      "osm": "a217cc5",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Izal"
+      ]
+    },
+    {
+      "name": "Uzzen-sheerah",
+      "lat": 31.887821,
+      "lon": 35.045649,
+      "passages": [
+        "1 Chr 7:24"
+      ],
+      "comment": "now Beit Sera",
+      "id": "a57ea5f",
+      "slug": "uzzen-sheerah",
+      "type": "a",
+      "osm": "a57ea5f",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Uzzen Sheerah",
+        "Uzzen-Sheerah",
+        "Uzzen-sherah"
+      ]
+    },
+    {
+      "name": "Valley of Achor",
+      "lat": 31.83689,
+      "lon": 35.399737,
+      "passages": [
+        "Josh 7:24",
+        "Josh 7:26",
+        "Josh 15:7",
+        "Isa 65:10",
+        "Hos 2:15"
+      ],
+      "comment": "",
+      "id": "a31492f",
+      "slug": "valley-of-achor",
+      "type": "a",
+      "osm": "a31492f",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Valley of Disaster",
+        "Valley of Trouble",
+        "valley of Achor"
+      ]
+    },
+    {
+      "name": "Valley of Aven",
+      "lat": 34.006944,
+      "lon": 36.203889,
+      "passages": [
+        "Amos 1:5"
+      ],
+      "comment": "",
+      "id": "a0c71dc",
+      "slug": "valley-of-aven",
+      "type": "a",
+      "osm": "a0c71dc",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Aven",
+        "Wicked Valley",
+        "valley of Aven"
+      ]
+    },
+    {
+      "name": "Valley of Beracah",
+      "lat": 31.61065,
+      "lon": 35.165648,
+      "passages": [
+        "2 Chr 20:26"
+      ],
+      "comment": "",
+      "id": "a71f834",
+      "slug": "valley-of-beracah",
+      "type": "a",
+      "osm": "a71f834",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Berachah",
+        "Valley of Berachah",
+        "Valley of Berakah",
+        "Valley of Blessing"
+      ]
+    },
+    {
+      "name": "Valley of Elah",
+      "lat": 31.690629,
+      "lon": 34.963136,
+      "passages": [
+        "1 Sam 17:2",
+        "1 Sam 17:19",
+        "1 Sam 21:9"
+      ],
+      "comment": "",
+      "id": "ma86896",
+      "slug": "valley-of-elah",
+      "type": "m",
+      "osm": "ma86896",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Valley of Hinnom",
+      "lat": 31.769079,
+      "lon": 35.227994,
+      "passages": [
+        "Josh 15:8",
+        "Josh 18:16",
+        "Neh 11:30"
+      ],
+      "comment": "",
+      "id": "a37c8e6",
+      "slug": "valley-of-hinnom",
+      "type": "a",
+      "osm": "a37c8e6",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Ben Hinnom Valley",
+        "Hinnom Valley",
+        "Slaughter Valley",
+        "The valley of slaughter",
+        "Valley of Ben Hinnom",
+        "Valley of Ben-Hinnom",
+        "Valley of Ben-hinnom",
+        "Valley of Slaughter",
+        "Valley of the Slaughter",
+        "Valley of the Son of Hinnom",
+        "valley of Ben-Hinnom",
+        "valley of Ben-hinnom",
+        "valley of Hinnom",
+        "valley of Slaughter",
+        "valley of the children of Hinnom",
+        "valley of the son of Hinnom"
+      ]
+    },
+    {
+      "name": "Valley of Iphtahel",
+      "lat": 32.832774,
+      "lon": 35.277225,
+      "passages": [
+        "Josh 19:14",
+        "Josh 19:27"
+      ],
+      "comment": "",
+      "id": "a3e0180",
+      "slug": "valley-of-iphtahel",
+      "type": "a",
+      "osm": "a3e0180",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Iphtah-el Valley",
+        "Jiphthah-el",
+        "Valley of Iphtah El",
+        "Valley of Jiphthah El",
+        "valley of Iphtah-el",
+        "valley of Yiptah-El"
+      ]
+    },
+    {
+      "name": "Valley of Mizpeh",
+      "lat": 33.28177,
+      "lon": 35.573371,
+      "passages": [
+        "Josh 11:8"
+      ],
+      "comment": "",
+      "id": "ae32196",
+      "slug": "valley-of-mizpeh",
+      "type": "a",
+      "osm": "ae32196",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Mizpah Valley",
+        "Valley of Mizpah",
+        "valley of Mizpah",
+        "valley of Mizpeh"
+      ]
+    },
+    {
+      "name": "Valley of Rephaim",
+      "lat": 31.756332,
+      "lon": 35.223059,
+      "passages": [
+        "Josh 15:8",
+        "Josh 18:16",
+        "2 Sam 5:18",
+        "2 Sam 5:22",
+        "2 Sam 23:13",
+        "1 Chr 11:15",
+        "1 Chr 14:9",
+        "Isa 17:5"
+      ],
+      "comment": "",
+      "id": "ma24f3f",
+      "slug": "valley-of-rephaim",
+      "type": "m",
+      "osm": "ma24f3f",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Wadi el Ward",
+        "Wady el Werd"
+      ]
+    },
+    {
+      "name": "Valley of Salt",
+      "lat": 31.087328,
+      "lon": 35.38374,
+      "passages": [
+        "2 Sam 8:13",
+        "2 Kgs 14:7",
+        "1 Chr 18:12",
+        "2 Chr 25:11",
+        "Ps 60:1"
+      ],
+      "comment": "from nbd",
+      "id": "af936bd",
+      "slug": "valley-of-salt",
+      "type": "a",
+      "osm": "af936bd",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Salt Valley"
+      ]
+    },
+    {
+      "name": "Valley of Siddim",
+      "lat": 31.235341,
+      "lon": 35.517624,
+      "passages": [
+        "Gen 14:3",
+        "Gen 14:8",
+        "Gen 14:10"
+      ],
+      "comment": "~",
+      "id": "a4a5cce",
+      "slug": "valley-of-siddim",
+      "type": "a",
+      "osm": "a4a5cce",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Siddim",
+        "Siddim Valley",
+        "valley of Siddim",
+        "valley of the Dead Sea"
+      ]
+    },
+    {
+      "name": "Valley of Sorek",
+      "lat": 31.825731,
+      "lon": 34.989013,
+      "passages": [
+        "Judg 16:4"
+      ],
+      "comment": "now Wadi es-Sarar",
+      "id": "a339971",
+      "slug": "valley-of-sorek",
+      "type": "a",
+      "osm": "a339971",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Sorek Valley",
+        "valley of Sorek",
+        "wadi of Sorek"
+      ]
+    },
+    {
+      "name": "Valley of Zeboim",
+      "lat": 31.936283,
+      "lon": 35.424836,
+      "passages": [
+        "1 Sam 13:18"
+      ],
+      "comment": "from tyndale; now Wadi ed Dubba",
+      "id": "a7c5927",
+      "slug": "valley-of-zeboim",
+      "type": "a",
+      "osm": "a7c5927",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Valley of Zeboyim",
+        "Zeboim Valley",
+        "valley of Zeboim",
+        "valley of Zeboyim"
+      ]
+    },
+    {
+      "name": "Valley of Zephathah",
+      "lat": 31.615198,
+      "lon": 34.910085,
+      "passages": [
+        "2 Chr 14:10"
+      ],
+      "comment": "",
+      "id": "a6bf8d4",
+      "slug": "valley-of-zephathah",
+      "type": "a",
+      "osm": "a6bf8d4",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Zephathah Valley",
+        "valley of Zepah",
+        "valley of Zephathah"
+      ]
+    },
+    {
+      "name": "Yiron",
+      "lat": 33.088748,
+      "lon": 35.414111,
+      "passages": [
+        "Josh 19:38"
+      ],
+      "comment": "now Yaroun",
+      "id": "a78b87e",
+      "slug": "yiron",
+      "type": "a",
+      "osm": "a78b87e",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Iron"
+      ]
+    },
+    {
+      "name": "Zanoah 1",
+      "lat": 31.716667,
+      "lon": 35.0,
+      "passages": [
+        "Josh 15:34",
+        "Neh 3:13",
+        "Neh 11:30"
+      ],
+      "comment": "",
+      "id": "a28f432",
+      "slug": "zanoah-1",
+      "type": "a",
+      "osm": "a28f432",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Zanoah"
+      ]
+    },
+    {
+      "name": "Zanoah 2",
+      "lat": 31.366667,
+      "lon": 35.0,
+      "passages": [
+        "Josh 15:56"
+      ],
+      "comment": "",
+      "id": "afe28fe",
+      "slug": "zanoah-2",
+      "type": "a",
+      "osm": "afe28fe",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Zanoah"
+      ]
+    },
+    {
+      "name": "Zaphon",
+      "lat": 32.23771,
+      "lon": 35.585865,
+      "passages": [
+        "Josh 13:27",
+        "Judg 12:1"
+      ],
+      "comment": "~; now Qos",
+      "id": "zaphon",
+      "slug": "zaphon",
+      "type": "a",
+      "osm": "zaphon",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Zarethan",
+      "lat": 32.267821,
+      "lon": 35.576613,
+      "passages": [
+        "Josh 3:16",
+        "1 Kgs 4:12",
+        "1 Kgs 7:46"
+      ],
+      "comment": "now Tell es Saidiyeh; from harper",
+      "id": "afa84ca",
+      "slug": "zarethan",
+      "type": "a",
+      "osm": "afa84ca",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Zaretan",
+        "Zartanah",
+        "Zarthan"
+      ]
+    },
+    {
+      "name": "Zedad",
+      "lat": 34.312571,
+      "lon": 36.925484,
+      "passages": [
+        "Num 34:8",
+        "Ezek 47:15"
+      ],
+      "comment": "",
+      "id": "aab92ca",
+      "slug": "zedad",
+      "type": "a",
+      "osm": "aab92ca",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Zelzah",
+      "lat": 31.717666,
+      "lon": 35.187019,
+      "passages": [
+        "1 Sam 10:2"
+      ],
+      "comment": "",
+      "id": "a44c89d",
+      "slug": "zelzah",
+      "type": "a",
+      "osm": "a44c89d",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Zemaraim",
+      "lat": 31.910999,
+      "lon": 35.45728,
+      "passages": [
+        "Josh 18:22"
+      ],
+      "comment": "",
+      "id": "a811a10",
+      "slug": "zemaraim",
+      "type": "a",
+      "osm": "a811a10",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Zephath",
+      "lat": 30.880918,
+      "lon": 34.63062,
+      "passages": [
+        "Judg 1:17"
+      ],
+      "comment": "",
+      "id": "a6163e0",
+      "slug": "zephath",
+      "type": "a",
+      "osm": "a6163e0",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Zered",
+      "lat": 30.884128,
+      "lon": 35.897633,
+      "passages": [
+        "Deut 2:13",
+        "Deut 2:14"
+      ],
+      "comment": "river",
+      "id": "ab5161f",
+      "slug": "zered",
+      "type": "a",
+      "osm": "ab5161f",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Valley of the Zered",
+        "Wadi Zered",
+        "Zered Brook",
+        "Zered Valley"
+      ]
+    },
+    {
+      "name": "Zereth-shahar",
+      "lat": 31.616962,
+      "lon": 35.567522,
+      "passages": [
+        "Josh 13:19"
+      ],
+      "comment": "",
+      "id": "a31a510",
+      "slug": "zereth-shahar",
+      "type": "a",
+      "osm": "a31a510",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Zareth-shahar",
+        "Zereth Shahar"
+      ]
+    },
+    {
+      "name": "Ziddim",
+      "lat": 32.814279,
+      "lon": 35.435872,
+      "passages": [
+        "Josh 19:35"
+      ],
+      "comment": "~",
+      "id": "a8248e0",
+      "slug": "ziddim",
+      "type": "a",
+      "osm": "a8248e0",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Zior",
+      "lat": 31.589719,
+      "lon": 35.148296,
+      "passages": [
+        "Josh 15:54"
+      ],
+      "comment": "",
+      "id": "ac2907d",
+      "slug": "zior",
+      "type": "a",
+      "osm": "ac2907d",
+      "osm_source": "search-index.json place id",
+      "alt_names": []
+    },
+    {
+      "name": "Ziz",
+      "lat": 31.572903,
+      "lon": 35.406346,
+      "passages": [
+        "2 Chr 20:16"
+      ],
+      "comment": "",
+      "id": "a4446f1",
+      "slug": "ziz",
+      "type": "a",
+      "osm": "a4446f1",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Ascent of Ziz",
+        "Pass of Ziz"
+      ]
+    },
+    {
+      "name": "Zophim",
+      "lat": 31.767811,
+      "lon": 35.725296,
+      "passages": [
+        "Num 23:14"
+      ],
+      "comment": "~",
+      "id": "ae7f7b5",
+      "slug": "zophim",
+      "type": "a",
+      "osm": "ae7f7b5",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Lookout Field"
+      ]
+    },
+    {
+      "name": "Zorah",
+      "lat": 31.762141,
+      "lon": 34.969319,
+      "passages": [
+        "Josh 15:33",
+        "Josh 19:41",
+        "Judg 13:2",
+        "Judg 13:25",
+        "Judg 16:31",
+        "Judg 18:2",
+        "Judg 18:8",
+        "Judg 18:11",
+        "2 Chr 11:10",
+        "Neh 11:29"
+      ],
+      "comment": "",
+      "id": "a08174b",
+      "slug": "zorah",
+      "type": "a",
+      "osm": "a08174b",
+      "osm_source": "search-index.json place id",
+      "alt_names": [
+        "Zareah",
+        "Zareathites",
+        "Zorathites",
+        "Zoreah"
+      ]
+    },
+    {
+      "name": "Hebron",
+      "lat": 31.5326,
+      "lon": 35.0998,
+      "passages": [
+        "Gen 13:18",
+        "Gen 23:2",
+        "Josh 14:13",
+        "2 Sam 2:1",
+        "2 Sam 5:3"
+      ],
+      "comment": "City of the patriarchs; David's first capital",
+      "id": "hebron",
+      "slug": "hebron",
+      "type": "a",
+      "osm": "hebron",
+      "osm_source": "curated (public domain reference)",
+      "alt_names": [
+        "Kiriath-arba",
+        "Mamre"
+      ]
+    },
+    {
+      "name": "Jericho",
+      "lat": 31.8713,
+      "lon": 35.4444,
+      "passages": [
+        "Josh 6:1",
+        "Josh 6:20",
+        "Luke 10:30",
+        "Luke 19:1"
+      ],
+      "comment": "City of palms",
+      "id": "jericho",
+      "slug": "jericho",
+      "type": "a",
+      "osm": "jericho",
+      "osm_source": "curated (public domain reference)",
+      "alt_names": [
+        "City of Palms",
+        "Yeriho"
+      ]
+    },
+    {
+      "name": "Beersheba",
+      "lat": 31.2518,
+      "lon": 34.7913,
+      "passages": [
+        "Gen 21:14",
+        "Gen 21:31",
+        "Gen 26:23",
+        "Gen 46:1",
+        "Josh 15:28",
+        "1 Sam 8:2",
+        "Amos 5:5",
+        "Amos 8:14"
+      ],
+      "comment": "Well of the oath; southern limit of Israel",
+      "id": "beersheba",
+      "slug": "beersheba",
+      "type": "a",
+      "osm": "beersheba",
+      "osm_source": "curated (public domain reference)",
+      "alt_names": [
+        "Beersheba",
+        "Beer-sheba",
+        "Be'er Sheva"
+      ]
+    },
+    {
+      "name": "Nazareth",
+      "lat": 32.7022,
+      "lon": 35.3005,
+      "passages": [
+        "Matt 2:23",
+        "Luke 1:26",
+        "Luke 2:39",
+        "Luke 4:16",
+        "John 1:45",
+        "Acts 10:38"
+      ],
+      "comment": "Childhood home of Jesus",
+      "id": "nazareth",
+      "slug": "nazareth",
+      "type": "a",
+      "osm": "nazareth",
+      "osm_source": "curated (public domain reference)",
+      "alt_names": [
+        "Nazareth",
+        "Natzrat"
+      ]
+    }
+  ],
+  "downloads": [
+    {
+      "format": "osm-kml",
+      "url": "https://a.openbible.info/geo/kmls/all.kmz",
+      "size_bytes": 711465,
+      "status": 200
+    },
+    {
+      "format": "osm-kml",
+      "url": "https://a.openbible.info/geo/kmls/all-books.kmz",
+      "size_bytes": 1415877,
+      "status": 200
+    },
+    {
+      "format": "osm-kml",
+      "url": "https://a.openbible.info/geo/kmls/all-chapters.kmz",
+      "size_bytes": 2038039,
+      "status": 200
+    },
+    {
+      "format": "osm-kml",
+      "url": "https://a.openbible.info/geo/kmls/all-most-likely.kmz",
+      "size_bytes": 262795,
+      "status": 200
+    }
+  ],
+  "skipped": 924
+}

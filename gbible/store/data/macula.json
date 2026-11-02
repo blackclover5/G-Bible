@@ -1,0 +1,26 @@
+{
+  "license": "CC-BY-4.0",
+  "items": [
+    {
+      "id": "macula-greek-sblgnt",
+      "title": "MACULA Greek (SBLGNT) — word-level linguistic data",
+      "category": "OriginalLanguage",
+      "subjects": [
+        "Original Language",
+        "Morphology",
+        "Syntax"
+      ],
+      "lang": "grc",
+      "lang_name": "Greek (Ancient)",
+      "license": "CC-BY-4.0",
+      "attribution": "MACULA Greek Linguistic Datasets by Biblica/Clear Bible — CC BY 4.0",
+      "author": "Clear Bible / Biblica",
+      "year": "2024",
+      "description": "Word-level data for the Greek NT (SBLGNT): text, gloss, lemma, Strong's, morphology, semantic domain, Louw-Nida, frame, participant referent.",
+      "download_url": "https://raw.githubusercontent.com/Clear-Bible/macula-greek/main/SBLGNT/tsv/macula-greek-SBLGNT.tsv",
+      "page_url": "https://github.com/Clear-Bible/macula-greek",
+      "format": "text",
+      "size_bytes": 20843282
+    }
+  ]
+}

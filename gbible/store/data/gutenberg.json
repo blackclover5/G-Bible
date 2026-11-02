@@ -1,0 +1,4765 @@
+{
+ "repository": "gutenberg",
+ "generated": 1791491203,
+ "source": "https://www.gutenberg.org",
+ "feed": "https://www.gutenberg.org/cache/epub/feeds/pg_catalog.csv.gz",
+ "license": "Public Domain",
+ "count": 132,
+ "items": [
+  {
+   "id": "36264",
+   "title": "A Harmony of the Gospels for Students of the Life of Christ Based on the Broadus Harmony in the Revised Version",
+   "author": "Robertson, A. T., 1863-1934; Broadus, John Albert, 1827-1895",
+   "year": "2011-05-29",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Christology",
+    "Gospel",
+    "Education",
+    "Biographies"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Gospels -- Harmonies"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "note": "Harmony of the Gospels; also listed as Book in older feeds",
+   "download_url": "https://www.gutenberg.org/ebooks/36264.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/36264/pg36264.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/36264",
+   "size_bytes": 1011671,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/36264.txt.utf-8",
+     "size_bytes": 1011671
+    }
+   ]
+  },
+  {
+   "id": "40615",
+   "title": "A History of the Reformation (Vol. 1 of 2)",
+   "author": "Lindsay, Thomas M. (Thomas Martin), 1843-1914",
+   "year": "2012-08-29",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Church History"
+   ],
+   "gutenberg_subjects": [
+    "Reformation",
+    "Anabaptists",
+    "Counter-Reformation",
+    "Socinianism"
+   ],
+   "bookshelves": [
+    "Category: History - European",
+    "Category: History - Modern (1750+)",
+    "Category: History - Religious"
+   ],
+   "locc": "BR",
+   "download_url": "https://www.gutenberg.org/ebooks/40615.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/40615/pg40615.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/40615",
+   "size_bytes": 1143747,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/40615.txt.utf-8",
+     "size_bytes": 1143747
+    }
+   ]
+  },
+  {
+   "id": "22017",
+   "title": "A Key to the Knowledge of Church History (Ancient)",
+   "author": "Blunt, John Henry, 1823-1884",
+   "year": "2007-07-07",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Church History",
+    "Ancient History"
+   ],
+   "gutenberg_subjects": [
+    "Church history -- Primitive and early church, ca. 30-600",
+    "Church history -- Middle Ages, 600-1500"
+   ],
+   "bookshelves": [
+    "Category: History - Ancient",
+    "Category: History - Religious"
+   ],
+   "locc": "BR",
+   "download_url": "https://www.gutenberg.org/ebooks/22017.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/22017/pg22017.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/22017",
+   "size_bytes": 290641,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/22017.txt.utf-8",
+     "size_bytes": 290641
+    }
+   ]
+  },
+  {
+   "id": "41500",
+   "title": "A Layman's Life of Jesus",
+   "author": "Byers, S. H. M. (Samuel Hawkins Marshall), 1838-1933",
+   "year": "2012-11-28",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Christology",
+    "Biblical People",
+    "Biographies"
+   ],
+   "gutenberg_subjects": [
+    "Jesus Christ -- Biography"
+   ],
+   "bookshelves": [
+    "Category: History - Ancient",
+    "Category: History - Religious",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BT",
+   "download_url": "https://www.gutenberg.org/ebooks/41500.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/41500/pg41500.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/41500",
+   "size_bytes": 126611,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/41500.txt.utf-8",
+     "size_bytes": 126611
+    }
+   ]
+  },
+  {
+   "id": "24979",
+   "title": "A Source Book for Ancient Church History",
+   "author": "Ayer, Joseph Cullen, 1866-1944",
+   "year": "2008-04-02",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Church History",
+    "Ancient History"
+   ],
+   "gutenberg_subjects": [
+    "Church history -- Primitive and early church, ca. 30-600 -- Sources"
+   ],
+   "bookshelves": [
+    "Category: History - Ancient",
+    "Category: History - Religious"
+   ],
+   "locc": "BR",
+   "download_url": "https://www.gutenberg.org/ebooks/24979.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/24979/pg24979.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/24979",
+   "size_bytes": 1524820,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/24979.txt.utf-8",
+     "size_bytes": 1524820
+    }
+   ]
+  },
+  {
+   "id": "44795",
+   "title": "Aids to Reflection; and, The Confessions of an Inquiring Spirit",
+   "author": "Coleridge, Samuel Taylor, 1772-1834; Marsh, James, 1794-1842 [Contributor]",
+   "year": "2014-01-30",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Biblical Theology",
+    "Creeds & Confessions"
+   ],
+   "gutenberg_subjects": [
+    "Conduct of life",
+    "Bible -- Inspiration",
+    "Aphorisms and apothegms",
+    "Faith",
+    "Bible -- History",
+    "Coleridge, Samuel Taylor, 1772-1834 -- Religion"
+   ],
+   "bookshelves": [
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "PR",
+   "download_url": "https://www.gutenberg.org/ebooks/44795.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/44795/pg44795.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/44795",
+   "size_bytes": 998061,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/44795.txt.utf-8",
+     "size_bytes": 998061
+    }
+   ]
+  },
+  {
+   "id": "34989",
+   "title": "An Examination of the Testimony of the Four Evangelists, by the Rules of Evidence Administered in Courts of Justice With an Account of the Trial of Jesus",
+   "author": "Greenleaf, Simon, 1783-1853",
+   "year": "2011-01-17",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Christology",
+    "Ministry / Leadership",
+    "Apologetics",
+    "Gospel",
+    "Biblical People"
+   ],
+   "gutenberg_subjects": [
+    "Apologetics",
+    "Jesus Christ -- Trial",
+    "Bible. Gospels -- Evidences, authority, etc.",
+    "Authority -- Religious aspects"
+   ],
+   "bookshelves": [
+    "Category: Law & Criminology",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/34989.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/34989/pg34989.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/34989",
+   "size_bytes": 1100788,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/34989.txt.utf-8",
+     "size_bytes": 1100788
+    }
+   ]
+  },
+  {
+   "id": "9912",
+   "title": "An Explanation of Luther's Small Catechism",
+   "author": "Luther, Martin, 1483-1546; Stump, Joseph, 1866-1935",
+   "year": "2006-02-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Creeds & Confessions"
+   ],
+   "gutenberg_subjects": [
+    "Lutheran Church -- Catechisms -- English"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality",
+    "Category: Teaching & Education"
+   ],
+   "locc": "BX",
+   "download_url": "https://www.gutenberg.org/ebooks/9912.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/9912/pg9912.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/9912",
+   "size_bytes": 314441,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/9912.txt.utf-8",
+     "size_bytes": 314441
+    }
+   ]
+  },
+  {
+   "id": "43070",
+   "title": "Archæology and the Bible",
+   "author": "Barton, George A. (George Aaron), 1859-1942",
+   "year": "2013-07-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Ancient History",
+    "Archaeology"
+   ],
+   "gutenberg_subjects": [
+    "Egypt -- Antiquities",
+    "Bible -- Antiquities",
+    "Middle East -- Antiquities"
+   ],
+   "bookshelves": [
+    "Category: Archaeology & Anthropology",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "DS",
+   "download_url": "https://www.gutenberg.org/ebooks/43070.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/43070/pg43070.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/43070",
+   "size_bytes": 1315139,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/43070.txt.utf-8",
+     "size_bytes": 1315139
+    }
+   ]
+  },
+  {
+   "id": "37696",
+   "title": "Arguments of Celsus, Porphyry, and the Emperor Julian, Against the Christians Also Extracts from Diodorus Siculus, Josephus, and Tacitus, Relating to the Jews, Together with an Appendix",
+   "author": "Taylor, Thomas, 1758-1835 [Editor]; Celsus (Platonic philosopher), active 180; Diodorus, Siculus; Josephus, Flavius, 38?-100?; Julian, Emperor of Rome, 331-363; Porphyry, 234?-305?; Tacitus, Cornelius, 56-117",
+   "year": "2011-10-10",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Theological",
+    "Philosophy"
+   ],
+   "gutenberg_subjects": [
+    "Theology -- Early works to 1800",
+    "Christianity -- Controversial literature -- Early works to 1800"
+   ],
+   "bookshelves": [
+    "Category: History - Religious",
+    "Category: Philosophy & Ethics"
+   ],
+   "locc": "BT",
+   "download_url": "https://www.gutenberg.org/ebooks/37696.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/37696/pg37696.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/37696",
+   "size_bytes": 185733,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/37696.txt.utf-8",
+     "size_bytes": 185733
+    }
+   ]
+  },
+  {
+   "id": "65497",
+   "title": "Buried Cities and Bible Countries",
+   "author": "St. Clair, George, 1836-",
+   "year": "2021-06-04",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Archaeology"
+   ],
+   "gutenberg_subjects": [
+    "Palestine -- Description and travel",
+    "Bible -- Antiquities",
+    "Bible -- Geography",
+    "Jerusalem -- History",
+    "Extinct cities"
+   ],
+   "bookshelves": [
+    "Category: History - Ancient",
+    "Category: History - Religious",
+    "Category: Archaeology & Anthropology"
+   ],
+   "locc": "DS",
+   "download_url": "https://www.gutenberg.org/ebooks/65497.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/65497/pg65497.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/65497",
+   "size_bytes": 714240,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/65497.txt.utf-8",
+     "size_bytes": 714240
+    }
+   ]
+  },
+  {
+   "id": "27571",
+   "title": "Christianity and Greek Philosophy or, the relation between spontaneous and reflective thought in Greece and the positive teaching of Christ and His Apostles",
+   "author": "Cocker, B. F. (Benjamin Franklin), 1821-1883",
+   "year": "2008-12-20",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Theological",
+    "Church History",
+    "Philosophy",
+    "Greek",
+    "Ancient History"
+   ],
+   "gutenberg_subjects": [
+    "Christianity",
+    "Church history -- Primitive and early church, ca. 30-600",
+    "Philosophy, Ancient"
+   ],
+   "bookshelves": [
+    "Category: History - Ancient",
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "B",
+   "download_url": "https://www.gutenberg.org/ebooks/27571.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/27571/pg27571.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/27571",
+   "size_bytes": 1206783,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/27571.txt.utf-8",
+     "size_bytes": 1206783
+    }
+   ]
+  },
+  {
+   "id": "51491",
+   "title": "Church History (Volumes 1-3)",
+   "author": "Kurtz, J. H. (Johann Heinrich), 1809-1890; Macpherson, John, 1847-1902 [Translator]",
+   "year": "2016-03-17",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Church History",
+    "Translation"
+   ],
+   "gutenberg_subjects": [
+    "Church history"
+   ],
+   "bookshelves": [
+    "Category: History - Religious"
+   ],
+   "locc": "BR",
+   "download_url": "https://www.gutenberg.org/ebooks/51491.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/51491/pg51491.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/51491",
+   "size_bytes": 4872987,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/51491.txt.utf-8",
+     "size_bytes": 4872987
+    }
+   ]
+  },
+  {
+   "id": "77585",
+   "title": "Confessions of St. Augustine",
+   "author": "Augustine, of Hippo, Saint, 354-430; Haldeman-Julius, E. (Emanuel), 1888-1951 [Editor]; Smith, Lloyd E. (Lloyd Edwin), 1902-1971 [Editor]; Pusey, E. B. (Edward Bouverie), 1800-1882 [Translator]",
+   "year": "2025-12-31",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Creeds & Confessions",
+    "Translation",
+    "Biographies"
+   ],
+   "gutenberg_subjects": [
+    "Augustine, of Hippo, Saint, 354-430",
+    "Christian saints -- Algeria -- Hippo (Extinct city) -- Biography",
+    "Catholic Church -- Bishops -- Biography",
+    "Bishops -- Algeria -- Hippo (Extinct city) -- Biography"
+   ],
+   "bookshelves": [],
+   "locc": "BR",
+   "download_url": "https://www.gutenberg.org/ebooks/77585.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/77585/pg77585.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/77585",
+   "size_bytes": 119163,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/77585.txt.utf-8",
+     "size_bytes": 119163
+    }
+   ]
+  },
+  {
+   "id": "12852",
+   "title": "Creation and Its Records A Brief Statement of Christian Belief with Reference to Modern Facts and Ancient Scripture",
+   "author": "Baden-Powell, B. H. (Baden Henry), 1841-1901",
+   "year": "2004-07-08",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Science & Faith",
+    "Ancient History"
+   ],
+   "gutenberg_subjects": [
+    "Religion and science",
+    "Creation",
+    "Bible and science"
+   ],
+   "bookshelves": [
+    "Category: Science - Biology",
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BL",
+   "download_url": "https://www.gutenberg.org/ebooks/12852.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/12852/pg12852.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/12852",
+   "size_bytes": 371713,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/12852.txt.utf-8",
+     "size_bytes": 371713
+    }
+   ]
+  },
+  {
+   "id": "42614",
+   "title": "English Monastic Life",
+   "author": "Gasquet, Francis Aidan, 1846-1929",
+   "year": "2013-04-29",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History"
+   ],
+   "gutenberg_subjects": [
+    "Monasticism and religious orders -- England"
+   ],
+   "bookshelves": [
+    "Category: History - British",
+    "Category: History - Medieval/Middle Ages",
+    "Category: History - Religious"
+   ],
+   "locc": "BX",
+   "download_url": "https://www.gutenberg.org/ebooks/42614.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/42614/pg42614.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/42614",
+   "size_bytes": 594869,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/42614.txt.utf-8",
+     "size_bytes": 594869
+    }
+   ]
+  },
+  {
+   "id": "45054",
+   "title": "Essentials in Church History A History of the Church from the Birth of Joseph Smith to the Present Time (1922), with Introductory Chapters on the Antiquity of the Gospel and the \"Falling Away\"",
+   "author": "Smith, Joseph Fielding, 1876-1972",
+   "year": "2014-03-03",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Christology",
+    "Church History",
+    "Gospel",
+    "Ancient History",
+    "Archaeology"
+   ],
+   "gutenberg_subjects": [
+    "Church of Jesus Christ of Latter-day Saints -- History"
+   ],
+   "bookshelves": [
+    "Latter Day Saints",
+    "Category: History - Religious"
+   ],
+   "locc": "BX",
+   "download_url": "https://www.gutenberg.org/ebooks/45054.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/45054/pg45054.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/45054",
+   "size_bytes": 1325679,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/45054.txt.utf-8",
+     "size_bytes": 1325679
+    }
+   ]
+  },
+  {
+   "id": "13652",
+   "title": "Exposition of the Apostles' Creed",
+   "author": "Dodds, James, 1831-1907",
+   "year": "2004-10-06",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Creeds & Confessions",
+    "Biblical People"
+   ],
+   "gutenberg_subjects": [
+    "Apostles' Creed"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BT",
+   "download_url": "https://www.gutenberg.org/ebooks/13652.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/13652/pg13652.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/13652",
+   "size_bytes": 232681,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/13652.txt.utf-8",
+     "size_bytes": 232681
+    }
+   ]
+  },
+  {
+   "id": "22400",
+   "title": "Fox's Book of Martyrs Or A History of the Lives, Sufferings, and Triumphant Deaths of the Primitive Protestant Martyrs",
+   "author": "Foxe, John, 1516-1587",
+   "year": "2007-08-25",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Church History"
+   ],
+   "gutenberg_subjects": [
+    "Church history",
+    "Persecution",
+    "Martyrs"
+   ],
+   "bookshelves": [
+    "Category: History - Religious"
+   ],
+   "locc": "BR",
+   "download_url": "https://www.gutenberg.org/ebooks/22400.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/22400/pg22400.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/22400",
+   "size_bytes": 1581058,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/22400.txt.utf-8",
+     "size_bytes": 1581058
+    }
+   ]
+  },
+  {
+   "id": "32883",
+   "title": "Fresh light from the ancient monuments",
+   "author": "Sayce, A. H. (Archibald Henry), 1845-1933",
+   "year": "2010-06-18",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Ancient History",
+    "Archaeology"
+   ],
+   "gutenberg_subjects": [
+    "Bible -- Evidences, authority, etc.",
+    "Bible -- Antiquities",
+    "Cuneiform inscriptions"
+   ],
+   "bookshelves": [
+    "Category: History - Ancient",
+    "Category: History - Religious",
+    "Category: Archaeology & Anthropology"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/32883.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/32883/pg32883.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/32883",
+   "size_bytes": 309164,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/32883.txt.utf-8",
+     "size_bytes": 309164
+    }
+   ]
+  },
+  {
+   "id": "14368",
+   "title": "Hebraic Literature; Translations from the Talmud, Midrashim and Kabbala",
+   "author": "Harris, Maurice H. (Maurice Henry), 1859-1930 [Editor]",
+   "year": "2004-12-16",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Hebrew",
+    "Translation"
+   ],
+   "gutenberg_subjects": [
+    "Hebrew literature -- Translations into English"
+   ],
+   "bookshelves": [
+    "Judaism",
+    "Category: Mythology, Legends & Folklore",
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BM",
+   "download_url": "https://www.gutenberg.org/ebooks/14368.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/14368/pg14368.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/14368",
+   "size_bytes": 867465,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/14368.txt.utf-8",
+     "size_bytes": 867465
+    }
+   ]
+  },
+  {
+   "id": "43056",
+   "title": "History of the Jews, Vol. 1 (of 6)",
+   "author": "Graetz, Heinrich, 1817-1891",
+   "year": "2013-06-29",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History"
+   ],
+   "gutenberg_subjects": [
+    "Jews -- History"
+   ],
+   "bookshelves": [
+    "Category: History - Ancient",
+    "Category: History - Religious"
+   ],
+   "locc": "DS",
+   "download_url": "https://www.gutenberg.org/ebooks/43056.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/43056/pg43056.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/43056",
+   "size_bytes": 1128415,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/43056.txt.utf-8",
+     "size_bytes": 1128415
+    }
+   ]
+  },
+  {
+   "id": "40858",
+   "title": "History of the Reformation in the Sixteenth Century, Volume 1",
+   "author": "Merle d'Aubigné, J. H. (Jean Henri), 1794-1872; Beveridge, Henry, 1837-1929 [Translator]",
+   "year": "2012-09-25",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Church History",
+    "Translation"
+   ],
+   "gutenberg_subjects": [
+    "Reformation"
+   ],
+   "bookshelves": [
+    "Category: History - Early Modern (c. 1450-1750)",
+    "Category: History - Religious"
+   ],
+   "locc": "BR",
+   "download_url": "https://www.gutenberg.org/ebooks/40858.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/40858/pg40858.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/40858",
+   "size_bytes": 897904,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/40858.txt.utf-8",
+     "size_bytes": 897904
+    }
+   ]
+  },
+  {
+   "id": "9793",
+   "title": "Josephus",
+   "author": "Bentwich, Norman, 1883-1971",
+   "year": "2006-01-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Biographies"
+   ],
+   "gutenberg_subjects": [
+    "Josephus, Flavius",
+    "Jewish historians -- Biography"
+   ],
+   "bookshelves": [
+    "Judaism",
+    "Category: Biographies",
+    "Category: History - Ancient"
+   ],
+   "locc": "DS",
+   "download_url": "https://www.gutenberg.org/ebooks/9793.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/9793/pg9793.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/9793",
+   "size_bytes": 409239,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/9793.txt.utf-8",
+     "size_bytes": 409239
+    }
+   ]
+  },
+  {
+   "id": "2030",
+   "title": "Legends of Babylon and Egypt in Relation to Hebrew Tradition",
+   "author": "King, L. W. (Leonard William), 1869-1919",
+   "year": "2006-03-28",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Hebrew",
+    "Ancient History",
+    "Archaeology"
+   ],
+   "gutenberg_subjects": [
+    "Deluge",
+    "Creation",
+    "Cosmogony, Babylonian",
+    "Babylonia -- Antiquities",
+    "Egypt -- Antiquities",
+    "Bible. Old Testament -- Evidences, authority, etc."
+   ],
+   "bookshelves": [
+    "Egypt",
+    "Mythology",
+    "Category: Mythology, Legends & Folklore",
+    "Category: History - Ancient",
+    "Category: Archaeology & Anthropology"
+   ],
+   "locc": "BM",
+   "download_url": "https://www.gutenberg.org/ebooks/2030.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/2030/pg2030.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/2030",
+   "size_bytes": 417672,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/2030.txt.utf-8",
+     "size_bytes": 417672
+    }
+   ]
+  },
+  {
+   "id": "72268",
+   "title": "Legends of Old Testament characters, from the Talmud and other sources",
+   "author": "Baring-Gould, S. (Sabine), 1834-1924",
+   "year": "2023-11-30",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History"
+   ],
+   "gutenberg_subjects": [
+    "Jewish legends",
+    "Bible. Old Testament -- Legends"
+   ],
+   "bookshelves": [
+    "Category: Mythology, Legends & Folklore",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/72268.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/72268/pg72268.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/72268",
+   "size_bytes": 881923,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/72268.txt.utf-8",
+     "size_bytes": 881923
+    }
+   ]
+  },
+  {
+   "id": "15874",
+   "title": "Old Testament legends",
+   "author": "James, M. R. (Montague Rhodes), 1862-1936",
+   "year": "2005-05-21",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History"
+   ],
+   "gutenberg_subjects": [
+    "Apocryphal books (Old Testament) -- Juvenile literature",
+    "Jewish legends -- Juvenile literature"
+   ],
+   "bookshelves": [
+    "Category: Mythology, Legends & Folklore",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/15874.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/15874/pg15874.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/15874",
+   "size_bytes": 212190,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/15874.txt.utf-8",
+     "size_bytes": 212190
+    }
+   ]
+  },
+  {
+   "id": "33341",
+   "title": "Secret Power; or, The Secret of Success in Christian Life and Work",
+   "author": "Moody, Dwight Lyman, 1837-1899",
+   "year": "2010-08-03",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Sanctification",
+    "Discipleship"
+   ],
+   "gutenberg_subjects": [
+    "Christian life",
+    "Holy Spirit",
+    "Baptism in the Holy Spirit"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BT",
+   "download_url": "https://www.gutenberg.org/ebooks/33341.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/33341/pg33341.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/33341",
+   "size_bytes": 190708,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/33341.txt.utf-8",
+     "size_bytes": 190708
+    }
+   ]
+  },
+  {
+   "id": "20578",
+   "title": "Sermons on Biblical Characters",
+   "author": "Chappell, Clovis Gillham, 1882-1972",
+   "year": "2007-02-14",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Preaching",
+    "Biographies"
+   ],
+   "gutenberg_subjects": [
+    "Bible -- Biography",
+    "Sermons, American -- 20th century"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/20578.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/20578/pg20578.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/20578",
+   "size_bytes": 325165,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/20578.txt.utf-8",
+     "size_bytes": 325165
+    }
+   ]
+  },
+  {
+   "id": "14026",
+   "title": "Spiritual Life and the Word of God",
+   "author": "Swedenborg, Emanuel, 1688-1772",
+   "year": "2004-11-11",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Spiritual Formation",
+    "Theological"
+   ],
+   "gutenberg_subjects": [
+    "Spiritual life",
+    "Ten commandments",
+    "Word of God (Christian theology)"
+   ],
+   "bookshelves": [
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BX",
+   "download_url": "https://www.gutenberg.org/ebooks/14026.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/14026/pg14026.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/14026",
+   "size_bytes": 268235,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/14026.txt.utf-8",
+     "size_bytes": 268235
+    }
+   ]
+  },
+  {
+   "id": "53346",
+   "title": "The Analogy of Religion to the Constitution and Course of Nature To which are added two brief dissertations: I. On personal identity. II. On the nature of virtue.",
+   "author": "Butler, Joseph, 1692-1752; Malcolm, Howard, 1799-1879 [Editor]",
+   "year": "2016-10-22",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Theological",
+    "Eschatology",
+    "Apologetics",
+    "Ethics"
+   ],
+   "gutenberg_subjects": [
+    "Revelation",
+    "Natural theology",
+    "Apologetics -- Early works to 1800",
+    "Eschatology",
+    "Analogy (Religion)"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BT",
+   "download_url": "https://www.gutenberg.org/ebooks/53346.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/53346/pg53346.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/53346",
+   "size_bytes": 906542,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/53346.txt.utf-8",
+     "size_bytes": 906542
+    }
+   ]
+  },
+  {
+   "id": "6744",
+   "title": "The Apology of the Augsburg Confession",
+   "author": "Melanchthon, Philipp, 1497-1560",
+   "year": "2004-10-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Creeds & Confessions"
+   ],
+   "gutenberg_subjects": [
+    "Lutheran Church -- Catechisms"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: History - Religious",
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BX",
+   "download_url": "https://www.gutenberg.org/ebooks/6744.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/6744/pg6744.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/6744",
+   "size_bytes": 669657,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/6744.txt.utf-8",
+     "size_bytes": 669657
+    }
+   ]
+  },
+  {
+   "id": "17678",
+   "title": "The Apology of the Church of England",
+   "author": "Jewel, John, 1522-1571; Morley, Henry, 1822-1894 [Editor]; Bacon, Anne Cooke, Lady, 1528?-1610 [Translator]",
+   "year": "2006-02-05",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Worship",
+    "Apologetics",
+    "Translation"
+   ],
+   "gutenberg_subjects": [
+    "Church of England -- Apologetic works",
+    "Anglican Communion -- Apologetic works"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: History - Early Modern (c. 1450-1750)",
+    "Category: History - Religious",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BX",
+   "download_url": "https://www.gutenberg.org/ebooks/17678.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/17678/pg17678.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/17678",
+   "size_bytes": 260159,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/17678.txt.utf-8",
+     "size_bytes": 260159
+    }
+   ]
+  },
+  {
+   "id": "61614",
+   "title": "The Apostolic Tradition of Hippolytus Translated into English with Introduction and Notes",
+   "author": "Hippolytus, Antipope, 170?-236?; Easton, Burton Scott, 1877-1950 [Translator]",
+   "year": "2020-03-14",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Church History",
+    "Translation",
+    "Ancient History"
+   ],
+   "gutenberg_subjects": [
+    "Canon law -- Early church, ca. 30-600",
+    "Church orders, Ancient"
+   ],
+   "bookshelves": [
+    "Category: History - Religious",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BV; KBR",
+   "download_url": "https://www.gutenberg.org/ebooks/61614.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/61614/pg61614.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/61614",
+   "size_bytes": 232782,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/61614.txt.utf-8",
+     "size_bytes": 232782
+    }
+   ]
+  },
+  {
+   "id": "1581",
+   "title": "The Bible, Douay-Rheims, Complete",
+   "year": "1998-12-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Translation"
+   ],
+   "gutenberg_subjects": [
+    "Bible"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "note": "Douay-Rheims Bible, complete text",
+   "download_url": "https://www.gutenberg.org/ebooks/1581.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/1581/pg1581.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/1581",
+   "size_bytes": 5880580,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/1581.txt.utf-8",
+     "size_bytes": 5880580
+    }
+   ]
+  },
+  {
+   "id": "30",
+   "title": "The Bible, King James Version, Complete",
+   "year": "1992-04-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History"
+   ],
+   "gutenberg_subjects": [
+    "Bible"
+   ],
+   "bookshelves": [
+    "Category: Mythology, Legends & Folklore",
+    "Category: History - Ancient",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "note": "King James Version, complete text",
+   "download_url": "https://www.gutenberg.org/ebooks/30.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/30/pg30.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/30",
+   "size_bytes": 4644737,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/30.txt.utf-8",
+     "size_bytes": 4644737
+    }
+   ]
+  },
+  {
+   "id": "38092",
+   "title": "The Book of God : In the Light of the Higher Criticism With Special Reference to Dean Farrar's New Apology",
+   "author": "Foote, G. W. (George William), 1850-1915",
+   "year": "2011-11-22",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History"
+   ],
+   "gutenberg_subjects": [
+    "Bible -- Criticism, interpretation, etc.",
+    "Farrar, F. W. (Frederic William), 1831-1903. New apology"
+   ],
+   "bookshelves": [
+    "Category: History - Religious",
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BL",
+   "download_url": "https://www.gutenberg.org/ebooks/38092.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/38092/pg38092.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/38092",
+   "size_bytes": 182127,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/38092.txt.utf-8",
+     "size_bytes": 182127
+    }
+   ]
+  },
+  {
+   "id": "22366",
+   "title": "The Church and the Barbarians Being an Outline of the History of the Church from A.D. 461 to A.D. 1003",
+   "author": "Hutton, William Holden, 1860-1930",
+   "year": "2007-08-21",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Church History"
+   ],
+   "gutenberg_subjects": [
+    "Church history -- Middle Ages, 600-1500"
+   ],
+   "bookshelves": [
+    "Category: History - European",
+    "Category: History - Medieval/Middle Ages",
+    "Category: History - Religious"
+   ],
+   "locc": "BR",
+   "download_url": "https://www.gutenberg.org/ebooks/22366.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/22366/pg22366.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/22366",
+   "size_bytes": 412543,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/22366.txt.utf-8",
+     "size_bytes": 412543
+    }
+   ]
+  },
+  {
+   "id": "7343",
+   "title": "The Church and the Empire Being an Outline of the History of the Church from A.D. 1003 to A.D. 1304",
+   "author": "Medley, D. J. (Dudley Julius), 1861-1953",
+   "year": "2005-01-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Church History"
+   ],
+   "gutenberg_subjects": [
+    "Church history -- Middle Ages, 600-1500"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: History - European",
+    "Category: History - Medieval/Middle Ages",
+    "Category: History - Religious"
+   ],
+   "locc": "BR",
+   "download_url": "https://www.gutenberg.org/ebooks/7343.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/7343/pg7343.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/7343",
+   "size_bytes": 501252,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/7343.txt.utf-8",
+     "size_bytes": 501252
+    }
+   ]
+  },
+  {
+   "id": "10325",
+   "title": "The Gospel of the Pentateuch: A Set of Parish Sermons",
+   "author": "Kingsley, Charles, 1819-1875",
+   "year": "2003-11-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Preaching",
+    "Gospel",
+    "Pentateuch"
+   ],
+   "gutenberg_subjects": [
+    "Church of England -- Sermons",
+    "Sermons, English -- 19th century",
+    "Bible. Pentateuch -- Criticism, interpretation, etc.",
+    "Bible. Pentateuch -- Sermons"
+   ],
+   "bookshelves": [
+    "Category: Essays, Letters & Speeches",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BX",
+   "download_url": "https://www.gutenberg.org/ebooks/10325.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/10325/pg10325.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/10325",
+   "size_bytes": 325020,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/10325.txt.utf-8",
+     "size_bytes": 325020
+    }
+   ]
+  },
+  {
+   "id": "10955",
+   "title": "The Gospels in the Second Century An Examination of the Critical Part of a Work Entitled 'Supernatural Religion'",
+   "author": "Sanday, W. (William), 1843-1920",
+   "year": "2004-02-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Church History",
+    "Gospel"
+   ],
+   "gutenberg_subjects": [
+    "Church history -- Primitive and early church, ca. 30-600",
+    "Cassels, Walter Richard, 1826-1907. Supernatural religion",
+    "Bible. Gospels -- Evidences, authority, etc.",
+    "Bible. Gospels -- Canon",
+    "Revelation -- Biblical teaching"
+   ],
+   "bookshelves": [
+    "Category: History - Religious",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BT",
+   "download_url": "https://www.gutenberg.org/ebooks/10955.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/10955/pg10955.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/10955",
+   "size_bytes": 747010,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/10955.txt.utf-8",
+     "size_bytes": 747010
+    }
+   ]
+  },
+  {
+   "id": "6038",
+   "title": "The Great Doctrines of the Bible",
+   "author": "Evans, William, 1870-1950",
+   "year": "2004-07-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Theological",
+    "Systematic Theology"
+   ],
+   "gutenberg_subjects": [
+    "Bible -- Theology",
+    "Theology, Doctrinal -- Popular works"
+   ],
+   "bookshelves": [
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BT",
+   "download_url": "https://www.gutenberg.org/ebooks/6038.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/6038/pg6038.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/6038",
+   "size_bytes": 486132,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/6038.txt.utf-8",
+     "size_bytes": 486132
+    }
+   ]
+  },
+  {
+   "id": "16581",
+   "title": "The Life of Jesus",
+   "author": "Renan, Ernest, 1823-1892",
+   "year": "2005-08-22",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Christology",
+    "Biblical People",
+    "Biographies"
+   ],
+   "gutenberg_subjects": [
+    "Jesus Christ -- Biography",
+    "Christian biography -- Palestine"
+   ],
+   "bookshelves": [
+    "Category: History - Ancient",
+    "Category: History - Religious",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BT",
+   "download_url": "https://www.gutenberg.org/ebooks/16581.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/16581/pg16581.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/16581",
+   "size_bytes": 738759,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/16581.txt.utf-8",
+     "size_bytes": 738759
+    }
+   ]
+  },
+  {
+   "id": "64037",
+   "title": "The Life of Jesus Critically Examined (4th ed.)",
+   "author": "Strauss, David Friedrich, 1808-1874; Pfleiderer, Otto, 1839-1908 [Author of introduction, etc.]; Eliot, George, 1819-1880 [Translator]",
+   "year": "2020-12-13",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Theological",
+    "Christology",
+    "Translation",
+    "Biblical People",
+    "Biographies"
+   ],
+   "gutenberg_subjects": [
+    "Jesus Christ -- Biography",
+    "Jesus Christ -- History of doctrines"
+   ],
+   "bookshelves": [
+    "Category: History - Religious",
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BT",
+   "download_url": "https://www.gutenberg.org/ebooks/64037.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/64037/pg64037.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/64037",
+   "size_bytes": 3034811,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/64037.txt.utf-8",
+     "size_bytes": 3034811
+    }
+   ]
+  },
+  {
+   "id": "13228",
+   "title": "The Life of Jesus of Nazareth: A Study",
+   "author": "Rhees, Rush, 1860-1939",
+   "year": "2004-08-20",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Christology",
+    "Biblical People",
+    "Biographies"
+   ],
+   "gutenberg_subjects": [
+    "Jesus Christ -- Biography"
+   ],
+   "bookshelves": [
+    "Category: History - Religious",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BT",
+   "download_url": "https://www.gutenberg.org/ebooks/13228.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/13228/pg13228.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/13228",
+   "size_bytes": 564175,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/13228.txt.utf-8",
+     "size_bytes": 564175
+    }
+   ]
+  },
+  {
+   "id": "43685",
+   "title": "The Literature and History of New Testament Times",
+   "author": "Machen, J. Gresham (John Gresham), 1881-1937",
+   "year": "2013-09-10",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Theological"
+   ],
+   "gutenberg_subjects": [
+    "Bible. New Testament -- Introductions",
+    "Bible. New Testament -- History of Biblical events",
+    "Bible. New Testament -- Theology"
+   ],
+   "bookshelves": [
+    "Category: History - Ancient",
+    "Category: History - Religious",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/43685.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/43685/pg43685.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/43685",
+   "size_bytes": 692144,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/43685.txt.utf-8",
+     "size_bytes": 692144
+    }
+   ]
+  },
+  {
+   "id": "20450",
+   "title": "The Lives of the Fathers, Martyrs, and Other Principal Saints. January, February, March",
+   "author": "Butler, Alban, 1711-1773",
+   "year": "2007-01-26",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Biographies"
+   ],
+   "gutenberg_subjects": [
+    "Christian saints -- Biography",
+    "Christian patron saints -- Biography"
+   ],
+   "bookshelves": [
+    "Category: Biographies",
+    "Category: History - Religious",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BX",
+   "note": "Lives of the Fathers, Martyrs and Saints -- January volume",
+   "download_url": "https://www.gutenberg.org/ebooks/20450.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/20450/pg20450.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/20450",
+   "size_bytes": 2803531,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/20450.txt.utf-8",
+     "size_bytes": 2803531
+    }
+   ]
+  },
+  {
+   "id": "30241",
+   "title": "The Person and Work of The Holy Spirit",
+   "author": "Torrey, R. A. (Reuben Archer), 1856-1928",
+   "year": "2009-10-13",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Sanctification"
+   ],
+   "gutenberg_subjects": [
+    "Holy Spirit"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BT",
+   "download_url": "https://www.gutenberg.org/ebooks/30241.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/30241/pg30241.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/30241",
+   "size_bytes": 419603,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/30241.txt.utf-8",
+     "size_bytes": 419603
+    }
+   ]
+  },
+  {
+   "id": "41704",
+   "title": "The Religion of Ancient Palestine in the Second Millenium B.C.",
+   "author": "Cook, Stanley Arthur, 1873-1949",
+   "year": "2012-12-25",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Ancient History",
+    "Archaeology"
+   ],
+   "gutenberg_subjects": [
+    "Bible -- Antiquities",
+    "Excavations (Archaeology) -- Palestine",
+    "Palestine -- Religion",
+    "Palestine -- Antiquities"
+   ],
+   "bookshelves": [
+    "Category: History - Ancient",
+    "Category: Archaeology & Anthropology",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BL",
+   "download_url": "https://www.gutenberg.org/ebooks/41704.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/41704/pg41704.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/41704",
+   "size_bytes": 180906,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/41704.txt.utf-8",
+     "size_bytes": 180906
+    }
+   ]
+  },
+  {
+   "id": "15011",
+   "title": "The Spirit and the Word A Treatise on the Holy Spirit in the Light of a Rational Interpretation of the Word of Truth",
+   "author": "Sweeney, Z. T. (Zachary Taylor), 1849-1926",
+   "year": "2005-02-10",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Sanctification"
+   ],
+   "gutenberg_subjects": [
+    "Holy Spirit"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BT",
+   "download_url": "https://www.gutenberg.org/ebooks/15011.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/15011/pg15011.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/15011",
+   "size_bytes": 166005,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/15011.txt.utf-8",
+     "size_bytes": 166005
+    }
+   ]
+  },
+  {
+   "id": "621",
+   "title": "The Varieties of Religious Experience: A Study in Human Nature",
+   "author": "James, William, 1842-1910",
+   "year": "1996-08-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Theological",
+    "Philosophy"
+   ],
+   "gutenberg_subjects": [
+    "Religion",
+    "Psychology, Religious",
+    "Philosophy and religion",
+    "Conversion",
+    "Experience (Religion)"
+   ],
+   "bookshelves": [
+    "Category: Psychiatry/Psychology",
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BL",
+   "download_url": "https://www.gutenberg.org/ebooks/621.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/621/pg621.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/621",
+   "size_bytes": 1171335,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/621.txt.utf-8",
+     "size_bytes": 1171335
+    }
+   ]
+  },
+  {
+   "id": "44441",
+   "title": "The World's Great Sermons, Volume 07: Hale to Farrar",
+   "author": "Kleiser, Grenville, 1868-1953 [Editor]",
+   "year": "2013-12-16",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Preaching"
+   ],
+   "gutenberg_subjects": [
+    "Sermons"
+   ],
+   "bookshelves": [
+    "Category: Essays, Letters & Speeches",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BV",
+   "note": "The World's Great Sermons, vol. 7 (Hale to Farrar)",
+   "download_url": "https://www.gutenberg.org/ebooks/44441.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/44441/pg44441.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/44441",
+   "size_bytes": 330712,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/44441.txt.utf-8",
+     "size_bytes": 330712
+    }
+   ]
+  },
+  {
+   "id": "77576",
+   "title": "The writings of the Apostolic Fathers",
+   "author": "Clement I, Pope, -100?; Hermas, active 2nd century; Ignatius, Saint, Bishop of Antioch, -110?; Papias, Saint, Bishop of Hierapolis, -120?; Polycarp, Saint, Bishop of Smyrna, 69-155; Crombie, Frederick, 1827-1889 [Translator]; Donaldson, James, Sir, 1831-1915 [Translator]; Roberts, Alexander, 1826-1901 [Translator]",
+   "year": "2025-12-30",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Translation"
+   ],
+   "gutenberg_subjects": [
+    "Christian literature, Early",
+    "Apostolic Fathers"
+   ],
+   "bookshelves": [],
+   "locc": "BR",
+   "download_url": "https://www.gutenberg.org/ebooks/77576.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/77576/pg77576.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/77576",
+   "size_bytes": 965733,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/77576.txt.utf-8",
+     "size_bytes": 965733
+    }
+   ]
+  },
+  {
+   "id": "18369",
+   "title": "Westminster Sermons with a Preface",
+   "author": "Kingsley, Charles, 1819-1875",
+   "year": "2006-05-10",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [
+    "Biblical History",
+    "Preaching"
+   ],
+   "gutenberg_subjects": [
+    "Sermons, English -- 19th century"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BX",
+   "download_url": "https://www.gutenberg.org/ebooks/18369.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/18369/pg18369.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/18369",
+   "size_bytes": 523084,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/18369.txt.utf-8",
+     "size_bytes": 523084
+    }
+   ]
+  },
+  {
+   "id": "53775",
+   "title": "A Bible School Manual: Studies in the Book of Revelation An introduction, analysis, and notes, containing a concise interpretation according to the symbolic view, numerous references to authorities, and general mention of other interpretations, with the text of the American revised version edited in paragraphs, for the use of Bible students",
+   "author": "Hunter, Stephen Alexander, 1851-",
+   "year": "2016-12-20",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Eschatology",
+    "Education"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Revelation -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality",
+    "Category: Teaching & Education"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/53775.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/53775/pg53775.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/53775",
+   "size_bytes": 687710,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/53775.txt.utf-8",
+     "size_bytes": 687710
+    }
+   ]
+  },
+  {
+   "id": "72761",
+   "title": "A commentary on Ecclesiastes",
+   "author": "Dale, Thomas Pelham, 1821-1892",
+   "year": "2024-01-20",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Wisdom Literature"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Ecclesiastes -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/72761.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/72761/pg72761.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/72761",
+   "size_bytes": 552649,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/72761.txt.utf-8",
+     "size_bytes": 552649
+    }
+   ]
+  },
+  {
+   "id": "77363",
+   "title": "A critical and exegetical commentary on Genesis",
+   "author": "Skinner, John, 1851-1925",
+   "year": "2025-11-29",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Pentateuch"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Genesis -- Commentaries"
+   ],
+   "bookshelves": [],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/77363.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/77363/pg77363.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/77363",
+   "size_bytes": 2253392,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/77363.txt.utf-8",
+     "size_bytes": 2253392
+    }
+   ]
+  },
+  {
+   "id": "75892",
+   "title": "A manual of the book of Psalms",
+   "author": "Luther, Martin, 1483-1546; Cole, Henry, 1792-1858 [Translator]",
+   "year": "2025-04-17",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Poetry & Psalms",
+    "Translation"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Psalms -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/75892.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/75892/pg75892.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/75892",
+   "size_bytes": 619026,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/75892.txt.utf-8",
+     "size_bytes": 619026
+    }
+   ]
+  },
+  {
+   "id": "75543",
+   "title": "An illustrated commentary on the Gospel according to St. John",
+   "author": "Abbott, Lyman, 1835-1922",
+   "year": "2025-03-06",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Gospel"
+   ],
+   "gutenberg_subjects": [
+    "Bible. John -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality",
+    "Category: Teaching & Education"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/75543.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/75543/pg75543.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/75543",
+   "size_bytes": 1353206,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/75543.txt.utf-8",
+     "size_bytes": 1353206
+    }
+   ]
+  },
+  {
+   "id": "35682",
+   "title": "Chapters of Bible Study A Popular Introduction to the Study of the Sacred Scriptures",
+   "author": "Heuser, Herman J. (Herman Joseph), 1851-1933",
+   "year": "2011-03-25",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Education"
+   ],
+   "gutenberg_subjects": [
+    "Bible -- Criticism, interpretation, etc.",
+    "Bible -- Study and teaching -- Catholic Church"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/35682.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/35682/pg35682.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/35682",
+   "size_bytes": 293487,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/35682.txt.utf-8",
+     "size_bytes": 293487
+    }
+   ]
+  },
+  {
+   "id": "48193",
+   "title": "Commentary on Genesis, Vol. 1: Luther on the Creation",
+   "author": "Luther, Martin, 1483-1546; Lenker, John Nicholas, 1858-1929 [Translator]",
+   "year": "2015-02-07",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Pentateuch",
+    "Translation"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Genesis -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/48193.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/48193/pg48193.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/48193",
+   "size_bytes": 998998,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/48193.txt.utf-8",
+     "size_bytes": 998998
+    }
+   ]
+  },
+  {
+   "id": "1549",
+   "title": "Commentary on the Epistle to the Galatians",
+   "author": "Luther, Martin, 1483-1546; Graebner, Theodore, 1876-1950 [Translator]",
+   "year": "1998-12-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Epistles",
+    "Translation"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Galatians -- Commentaries"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/1549.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/1549/pg1549.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/1549",
+   "size_bytes": 504400,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/1549.txt.utf-8",
+     "size_bytes": 504400
+    }
+   ]
+  },
+  {
+   "id": "7351",
+   "title": "Expositions of Holy Scripture : St. Matthew Chaps. IX to XXVIII",
+   "author": "Maclaren, Alexander, 1826-1910",
+   "year": "2005-01-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Gospel"
+   ],
+   "gutenberg_subjects": [
+    "Bible -- Commentaries",
+    "Bible. Matthew IX-XXVIII -- Commentaries"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/7351.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/7351/pg7351.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/7351",
+   "size_bytes": 1399485,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/7351.txt.utf-8",
+     "size_bytes": 1399485
+    }
+   ]
+  },
+  {
+   "id": "8068",
+   "title": "Expositions of Holy Scripture Deuteronomy, Joshua, Judges, Ruth, and First Book of Samuel, Second Samuel, First Kings, and Second Kings chapters I to VII",
+   "author": "Maclaren, Alexander, 1826-1910",
+   "year": "2005-05-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Pentateuch"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Historical Books -- Commentaries",
+    "Bible. Heptateuch -- Commentaries"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/8068.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/8068/pg8068.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/8068",
+   "size_bytes": 1514476,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/8068.txt.utf-8",
+     "size_bytes": 1514476
+    }
+   ]
+  },
+  {
+   "id": "24674",
+   "title": "Expositions of Holy Scripture Ephesians; Epistles of St. Peter and St. John",
+   "author": "Maclaren, Alexander, 1826-1910",
+   "year": "2008-02-23",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Epistles",
+    "Biblical People"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Peter -- Commentaries",
+    "Bible. Epistle of John, 1st -- Commentaries",
+    "Bible. Ephesians -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/24674.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/24674/pg24674.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/24674",
+   "size_bytes": 1364692,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/24674.txt.utf-8",
+     "size_bytes": 1364692
+    }
+   ]
+  },
+  {
+   "id": "15836",
+   "title": "Expositions of Holy Scripture Ezekiel, Daniel, and the Minor Prophets. St. Matthew Chapters I to VIII",
+   "author": "Maclaren, Alexander, 1826-1910",
+   "year": "2005-05-16",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Gospel",
+    "Prophets"
+   ],
+   "gutenberg_subjects": [
+    "Bible -- Commentaries",
+    "Bible. Ezekiel -- Commentaries",
+    "Bible. Minor Prophets -- Commentaries",
+    "Bible. Matthew I-VIII -- Commentaries"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/15836.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/15836/pg15836.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/15836",
+   "size_bytes": 1432346,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/15836.txt.utf-8",
+     "size_bytes": 1432346
+    }
+   ]
+  },
+  {
+   "id": "21190",
+   "title": "Expositions of Holy Scripture Second Corinthians, Galatians, and Philippians Chapters I to End. Colossians, Thessalonians, and First Timothy.",
+   "author": "Maclaren, Alexander, 1826-1910",
+   "year": "2007-04-19",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Epistles",
+    "Biblical People"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Epistles of Paul -- Commentaries"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/21190.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/21190/pg21190.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/21190",
+   "size_bytes": 1413151,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/21190.txt.utf-8",
+     "size_bytes": 1413151
+    }
+   ]
+  },
+  {
+   "id": "7069",
+   "title": "Expositions of Holy Scripture: Genesis, Exodus, Leviticus and Numbers",
+   "author": "Maclaren, Alexander, 1826-1910",
+   "year": "2004-12-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Pentateuch"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Pentateuch -- Criticism, interpretation, etc.",
+    "Bible. Pentateuch -- Commentaries"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/7069.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/7069/pg7069.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/7069",
+   "size_bytes": 1317884,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/7069.txt.utf-8",
+     "size_bytes": 1317884
+    }
+   ]
+  },
+  {
+   "id": "8069",
+   "title": "Expositions of Holy Scripture: Isaiah and Jeremiah",
+   "author": "Maclaren, Alexander, 1826-1910",
+   "year": "2005-05-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Prophets",
+    "Biblical People"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Isaiah -- Commentaries",
+    "Bible. Jeremiah -- Commentaries"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/8069.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/8069/pg8069.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/8069",
+   "size_bytes": 1317376,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/8069.txt.utf-8",
+     "size_bytes": 1317376
+    }
+   ]
+  },
+  {
+   "id": "7925",
+   "title": "Expositions of Holy Scripture: Psalms",
+   "author": "Maclaren, Alexander, 1826-1910",
+   "year": "2005-04-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Poetry & Psalms"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Psalms -- Commentaries"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/7925.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/7925/pg7925.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/7925",
+   "size_bytes": 1377271,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/7925.txt.utf-8",
+     "size_bytes": 1377271
+    }
+   ]
+  },
+  {
+   "id": "8381",
+   "title": "Expositions of Holy Scripture: St. John Chaps. XV to XXI",
+   "author": "Maclaren, Alexander, 1826-1910",
+   "year": "2005-06-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Gospel"
+   ],
+   "gutenberg_subjects": [
+    "Bible. John -- Commentaries"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/8381.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/8381/pg8381.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/8381",
+   "size_bytes": 731719,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/8381.txt.utf-8",
+     "size_bytes": 731719
+    }
+   ]
+  },
+  {
+   "id": "8200",
+   "title": "Expositions of Holy Scripture: St. Luke",
+   "author": "Maclaren, Alexander, 1826-1910",
+   "year": "2005-05-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Gospel"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Luke -- Commentaries"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/8200.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/8200/pg8200.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/8200",
+   "size_bytes": 1442926,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/8200.txt.utf-8",
+     "size_bytes": 1442926
+    }
+   ]
+  },
+  {
+   "id": "8397",
+   "title": "Expositions of Holy Scripture: the Acts",
+   "author": "Maclaren, Alexander, 1826-1910",
+   "year": "2005-06-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Acts -- Commentaries"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/8397.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/8397/pg8397.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/8397",
+   "size_bytes": 1427251,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/8397.txt.utf-8",
+     "size_bytes": 1427251
+    }
+   ]
+  },
+  {
+   "id": "41893",
+   "title": "Expositor's Bible: The Book of Jeremiah, Chapters XXI.-LII.",
+   "author": "Bennett, W. H. (William Henry), 1855-1920; Nicoll, W. Robertson (William Robertson), Sir, 1851-1923 [Editor]",
+   "year": "2013-01-21",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Prophets",
+    "Biblical People"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Jeremiah -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: History - Ancient",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/41893.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/41893/pg41893.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/41893",
+   "size_bytes": 662676,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/41893.txt.utf-8",
+     "size_bytes": 662676
+    }
+   ]
+  },
+  {
+   "id": "40470",
+   "title": "Expositor's Bible: The Book of Job",
+   "author": "Watson, Robert A. (Robert Alexander), 1845-1921",
+   "year": "2012-08-10",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Wisdom Literature"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Job -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/40470.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/40470/pg40470.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/40470",
+   "size_bytes": 692311,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/40470.txt.utf-8",
+     "size_bytes": 692311
+    }
+   ]
+  },
+  {
+   "id": "9782",
+   "title": "Female Scripture Biography, Volume I",
+   "author": "Cox, F. A. (Francis Augustus), 1783-1853",
+   "year": "2006-01-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Theological",
+    "Family",
+    "Biographies"
+   ],
+   "gutenberg_subjects": [
+    "Bible -- Biography",
+    "Women in the Bible",
+    "Women -- Religious life"
+   ],
+   "bookshelves": [
+    "Category: Biographies",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS; HQ",
+   "note": "Female Scripture Biography, vol. I",
+   "download_url": "https://www.gutenberg.org/ebooks/9782.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/9782/pg9782.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/9782",
+   "size_bytes": 713730,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/9782.txt.utf-8",
+     "size_bytes": 713730
+    }
+   ]
+  },
+  {
+   "id": "14485",
+   "title": "Notes on the Apocalypse",
+   "author": "Steele, David, 1803-1887",
+   "year": "2004-12-27",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Eschatology",
+    "Biblical History",
+    "Biblical People"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Revelation -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: History - Religious",
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/14485.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/14485/pg14485.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/14485",
+   "size_bytes": 620962,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/14485.txt.utf-8",
+     "size_bytes": 620962
+    }
+   ]
+  },
+  {
+   "id": "41571",
+   "title": "Notes on the Book of Deuteronomy, Volume I",
+   "author": "Mackintosh, Charles Henry, 1820-1896",
+   "year": "2012-12-06",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Pentateuch"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Deuteronomy -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/41571.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/41571/pg41571.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/41571",
+   "size_bytes": 701424,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/41571.txt.utf-8",
+     "size_bytes": 701424
+    }
+   ]
+  },
+  {
+   "id": "40596",
+   "title": "Notes on the book of Exodus",
+   "author": "Mackintosh, Charles Henry, 1820-1896",
+   "year": "2012-08-27",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Pentateuch"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Exodus -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/40596.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/40596/pg40596.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/40596",
+   "size_bytes": 609520,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/40596.txt.utf-8",
+     "size_bytes": 609520
+    }
+   ]
+  },
+  {
+   "id": "37915",
+   "title": "Notes on the Book of Genesis",
+   "author": "Mackintosh, Charles Henry, 1820-1896",
+   "year": "2011-11-03",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Pentateuch"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Genesis -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/37915.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/37915/pg37915.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/37915",
+   "size_bytes": 550164,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/37915.txt.utf-8",
+     "size_bytes": 550164
+    }
+   ]
+  },
+  {
+   "id": "55228",
+   "title": "Notes on the New Testament, Explanatory and Practical: Revelation",
+   "author": "Barnes, Albert, 1798-1870; Frew, Robert, 1812-1910 [Editor]",
+   "year": "2017-07-30",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Biblical History"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Revelation -- Commentaries",
+    "Bible. New Testament -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/55228.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/55228/pg55228.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/55228",
+   "size_bytes": 2331066,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/55228.txt.utf-8",
+     "size_bytes": 2331066
+    }
+   ]
+  },
+  {
+   "id": "32016",
+   "title": "St. Paul's Epistle to the Ephesians: A Practical Exposition",
+   "author": "Gore, Charles, 1853-1932",
+   "year": "2010-04-17",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Epistles",
+    "Biblical People"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Ephesians -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/32016.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/32016/pg32016.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/32016",
+   "size_bytes": 387110,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/32016.txt.utf-8",
+     "size_bytes": 387110
+    }
+   ]
+  },
+  {
+   "id": "32673",
+   "title": "St. Paul's Epistle to the Romans: A Practical Exposition. Vol. I",
+   "author": "Gore, Charles, 1853-1932",
+   "year": "2010-06-03",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Epistles",
+    "Biblical People"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Romans -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/32673.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/32673/pg32673.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/32673",
+   "size_bytes": 430077,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/32673.txt.utf-8",
+     "size_bytes": 430077
+    }
+   ]
+  },
+  {
+   "id": "50857",
+   "title": "St. Paul's Epistles to the Colossians and Philemon A revised text with introductions, notes and dissertations",
+   "author": "Lightfoot, J. B. (Joseph Barber), 1828-1889",
+   "year": "2016-01-06",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Epistles",
+    "Biblical People"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Colossians -- Commentaries",
+    "Bible. Philemon -- Commentaries",
+    "Bible. Colossians -- Criticism, interpretation, etc.",
+    "Bible. Philemon -- Criticism, interpretation, etc."
+   ],
+   "bookshelves": [
+    "Category: History - Religious",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/50857.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/50857/pg50857.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/50857",
+   "size_bytes": 1511460,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/50857.txt.utf-8",
+     "size_bytes": 1511460
+    }
+   ]
+  },
+  {
+   "id": "15771",
+   "title": "The Bible Period by Period A Manual for the Study of the Bible by Periods",
+   "author": "Tidwell, Josiah Blake, 1870-1946",
+   "year": "2005-05-05",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Biblical History"
+   ],
+   "gutenberg_subjects": [
+    "Bible -- Commentaries",
+    "Bible -- History of Biblical events",
+    "Bible -- Introductions"
+   ],
+   "bookshelves": [
+    "Category: History - Religious",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/15771.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/15771/pg15771.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/15771",
+   "size_bytes": 282765,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/15771.txt.utf-8",
+     "size_bytes": 282765
+    }
+   ]
+  },
+  {
+   "id": "39727",
+   "title": "The Expositor's Bible: Judges and Ruth",
+   "author": "Watson, Robert A. (Robert Alexander), 1845-1921",
+   "year": "2012-05-18",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Judges -- Commentaries",
+    "Bible. Ruth -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: History - Ancient",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/39727.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/39727/pg39727.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/39727",
+   "size_bytes": 740359,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/39727.txt.utf-8",
+     "size_bytes": 740359
+    }
+   ]
+  },
+  {
+   "id": "42258",
+   "title": "The Expositor's Bible: The Acts of the Apostles, Vol. 1",
+   "author": "Stokes, George Thomas, 1843-1898; Nicoll, W. Robertson (William Robertson), Sir, 1851-1923 [Editor]",
+   "year": "2013-03-04",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Biblical People"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Acts -- Commentaries",
+    "Bible. Acts -- Criticism, interpretation, etc."
+   ],
+   "bookshelves": [
+    "Category: History - Religious",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/42258.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/42258/pg42258.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/42258",
+   "size_bytes": 836275,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/42258.txt.utf-8",
+     "size_bytes": 836275
+    }
+   ]
+  },
+  {
+   "id": "42303",
+   "title": "The Expositor's Bible: The Acts of the Apostles, Vol. 2",
+   "author": "Stokes, George Thomas, 1843-1898; Nicoll, W. Robertson (William Robertson), Sir, 1851-1923 [Editor]",
+   "year": "2013-03-10",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Biblical People"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Acts -- Commentaries",
+    "Bible. Acts -- Criticism, interpretation, etc."
+   ],
+   "bookshelves": [
+    "Category: History - Religious",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/42303.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/42303/pg42303.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/42303",
+   "size_bytes": 962265,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/42303.txt.utf-8",
+     "size_bytes": 962265
+    }
+   ]
+  },
+  {
+   "id": "42334",
+   "title": "The Expositor's Bible: The Book of Leviticus",
+   "author": "Kellogg, Samuel H. (Samuel Henry), 1839-1899; Nicoll, W. Robertson (William Robertson), Sir, 1851-1923 [Editor]",
+   "year": "2013-03-16",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Pentateuch"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Leviticus -- Criticism, interpretation, etc.",
+    "Bible. Leviticus -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: History - Religious",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/42334.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/42334/pg42334.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/42334",
+   "size_bytes": 1039240,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/42334.txt.utf-8",
+     "size_bytes": 1039240
+    }
+   ]
+  },
+  {
+   "id": "37345",
+   "title": "The Expositor's Bible: The Epistles of St. Paul to the Colossians and Philemon",
+   "author": "Maclaren, Alexander, 1826-1910; Nicoll, W. Robertson (William Robertson), Sir, 1851-1923 [Editor]",
+   "year": "2011-09-07",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Epistles",
+    "Biblical People"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Colossians -- Commentaries",
+    "Bible. Philemon -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/37345.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/37345/pg37345.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/37345",
+   "size_bytes": 833090,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/37345.txt.utf-8",
+     "size_bytes": 833090
+    }
+   ]
+  },
+  {
+   "id": "47337",
+   "title": "The Expositor's Bible: The General Epistles of St. James and St. Jude",
+   "author": "Plummer, Alfred, 1841-1926; Nicoll, W. Robertson (William Robertson), Sir, 1851-1923 [Editor]",
+   "year": "2014-11-12",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Epistles"
+   ],
+   "gutenberg_subjects": [
+    "Bible. James -- Commentaries",
+    "Bible. Jude -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: History - Religious",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/47337.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/47337/pg47337.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/47337",
+   "size_bytes": 873813,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/47337.txt.utf-8",
+     "size_bytes": 873813
+    }
+   ]
+  },
+  {
+   "id": "39941",
+   "title": "The Expositor's Bible: The Song of Solomon and the Lamentations of Jeremiah",
+   "author": "Adeney, Walter F. (Walter Frederic), 1849-1920; Nicoll, W. Robertson (William Robertson), Sir, 1851-1923 [Editor]",
+   "year": "2012-06-07",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Prophets",
+    "Biblical History",
+    "Biblical People"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Song of Solomon -- Commentaries",
+    "Bible. Lamentations -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/39941.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/39941/pg39941.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/39941",
+   "size_bytes": 605841,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/39941.txt.utf-8",
+     "size_bytes": 605841
+    }
+   ]
+  },
+  {
+   "id": "58767",
+   "title": "The Preacher's Complete Homiletic Commentary on the Books of the Bible, Volume 13 (of 32) The Preacher's Complete Homiletic Commentary on the Book of the Proverbs",
+   "author": "Harris, W., Rev.",
+   "year": "2019-01-25",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Preaching",
+    "Wisdom Literature"
+   ],
+   "gutenberg_subjects": [
+    "Bible -- Commentaries",
+    "Preaching",
+    "Bible. Proverbs -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/58767.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/58767/pg58767.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/58767",
+   "size_bytes": 3152295,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/58767.txt.utf-8",
+     "size_bytes": 3152295
+    }
+   ]
+  },
+  {
+   "id": "58062",
+   "title": "The Preacher's Complete Homiletic Commentary on the Books of the Bible, Volume 15 (of 32) The Preacher's Complete Homiletic Commentary on the Book of the Prophet Isaiah, Volume I",
+   "author": "Bertram, Robert Aitkin, 1836-1886; Tucker, Alfred, 1849-1914",
+   "year": "2018-10-09",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Preaching",
+    "Prophets",
+    "Biblical People"
+   ],
+   "gutenberg_subjects": [
+    "Bible -- Commentaries",
+    "Preaching",
+    "Bible. Isaiah -- Commentaries"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/58062.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/58062/pg58062.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/58062",
+   "size_bytes": 2670174,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/58062.txt.utf-8",
+     "size_bytes": 2670174
+    }
+   ]
+  },
+  {
+   "id": "12420",
+   "title": "The three additions to Daniel, a study",
+   "author": "Daubney, William Heaford, 1851-1927",
+   "year": "2004-05-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Commentary",
+   "subjects": [
+    "Biblical Theology",
+    "Prophets",
+    "Family"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Daniel -- Criticism, interpretation, etc.",
+    "Bible. Apocrypha. Song of the Three Children -- Criticism, interpretation, etc.",
+    "Bible. Apocrypha. History of Susanna -- Criticism, interpretation, etc.",
+    "Bible. Apocrypha. Bel and the Dragon -- Criticism, interpretation, etc."
+   ],
+   "bookshelves": [
+    "Category: History - Ancient",
+    "Category: Archaeology & Anthropology",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/12420.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/12420/pg12420.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/12420",
+   "size_bytes": 338156,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/12420.txt.utf-8",
+     "size_bytes": 338156
+    }
+   ]
+  },
+  {
+   "id": "57218",
+   "title": "A Book of Jewish Thoughts",
+   "author": "Hertz, Joseph H. (Joseph Herman), 1872-1946 [Editor]",
+   "year": "2018-05-27",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Prayer",
+    "Spiritual Formation",
+    "Biblical History"
+   ],
+   "gutenberg_subjects": [
+    "Judaism -- Prayers and devotions",
+    "Jewish literature",
+    "Judaism -- Quotations, maxims, etc.",
+    "Jews -- Quotations",
+    "Jews -- Public opinion",
+    "Fasts and feasts -- Judaism -- Meditations"
+   ],
+   "bookshelves": [
+    "Category: Essays, Letters & Speeches",
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BM; DS",
+   "download_url": "https://www.gutenberg.org/ebooks/57218.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/57218/pg57218.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/57218",
+   "size_bytes": 540640,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/57218.txt.utf-8",
+     "size_bytes": 540640
+    }
+   ]
+  },
+  {
+   "id": "77163",
+   "title": "A Lent in earnest",
+   "author": "Guernsey, Lucy Ellen, 1826-1899",
+   "year": "2025-11-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Prayer"
+   ],
+   "gutenberg_subjects": [
+    "Devotional literature",
+    "Prayers",
+    "Lent -- Prayers and devotions"
+   ],
+   "bookshelves": [],
+   "locc": "BV",
+   "download_url": "https://www.gutenberg.org/ebooks/77163.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/77163/pg77163.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/77163",
+   "size_bytes": 237737,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/77163.txt.utf-8",
+     "size_bytes": 237737
+    }
+   ]
+  },
+  {
+   "id": "52057",
+   "title": "Abandonment; or, Absolute Surrender to Divine Providence",
+   "author": "Caussade, Jean Pierre de, -1751; McMahon, Ella [Translator]; Ramière, Henri, 1821-1884 [Editor]",
+   "year": "2016-05-13",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Spiritual Formation",
+    "Providence",
+    "Translation"
+   ],
+   "gutenberg_subjects": [
+    "Spiritual life -- Catholic Church",
+    "Mysticism -- Catholic Church"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BV",
+   "download_url": "https://www.gutenberg.org/ebooks/52057.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/52057/pg52057.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/52057",
+   "size_bytes": 222404,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/52057.txt.utf-8",
+     "size_bytes": 222404
+    }
+   ]
+  },
+  {
+   "id": "18507",
+   "title": "Angelic Wisdom about Divine Providence",
+   "author": "Swedenborg, Emanuel, 1688-1772; Wunsch, William F. (William Frederic), 1882-1969 [Translator]",
+   "year": "2006-06-05",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Theological",
+    "Providence",
+    "Wisdom Literature",
+    "Translation"
+   ],
+   "gutenberg_subjects": [
+    "Providence and government of God -- Christianity"
+   ],
+   "bookshelves": [
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BX",
+   "download_url": "https://www.gutenberg.org/ebooks/18507.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/18507/pg18507.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/18507",
+   "size_bytes": 766766,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/18507.txt.utf-8",
+     "size_bytes": 766766
+    }
+   ]
+  },
+  {
+   "id": "16627",
+   "title": "Angelic Wisdom Concerning the Divine Love and the Divine Wisdom",
+   "author": "Swedenborg, Emanuel, 1688-1772; Ager, John C. (John Curtis), 1835-1913 [Translator]",
+   "year": "2005-08-31",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Theological",
+    "Wisdom Literature",
+    "Translation"
+   ],
+   "gutenberg_subjects": [
+    "God (Christianity) -- Love",
+    "God (Christianity) -- Wisdom"
+   ],
+   "bookshelves": [
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BX",
+   "download_url": "https://www.gutenberg.org/ebooks/16627.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/16627/pg16627.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/16627",
+   "size_bytes": 558732,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/16627.txt.utf-8",
+     "size_bytes": 558732
+    }
+   ]
+  },
+  {
+   "id": "12311",
+   "title": "Christ: The Way, the Truth, and the Life",
+   "author": "Brown, John, 1610?-1679",
+   "year": "2004-05-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Theological",
+    "Christology",
+    "Soteriology",
+    "Sanctification",
+    "Biblical People"
+   ],
+   "gutenberg_subjects": [
+    "Sanctification",
+    "Jesus Christ",
+    "Bible. John XIV, 6 -- Criticism, interpretation, etc.",
+    "Justification (Christian theology)"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BT",
+   "download_url": "https://www.gutenberg.org/ebooks/12311.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/12311/pg12311.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/12311",
+   "size_bytes": 708373,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/12311.txt.utf-8",
+     "size_bytes": 708373
+    }
+   ]
+  },
+  {
+   "id": "13439",
+   "title": "Divine Songs",
+   "author": "Watts, Isaac, 1674-1748",
+   "year": "2004-09-11",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Sacred Music"
+   ],
+   "gutenberg_subjects": [
+    "Children's songs, English -- Early works to 1800",
+    "Hymns, English -- Early works to 1800",
+    "Children's songs -- Texts -- Early works to 1800",
+    "Hymns, English -- Texts -- Early works to 1800"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: Children & Young Adult Reading",
+    "Category: Poetry",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "PR; PZ",
+   "download_url": "https://www.gutenberg.org/ebooks/13439.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/13439/pg13439.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/13439",
+   "size_bytes": 65467,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/13439.txt.utf-8",
+     "size_bytes": 65467
+    }
+   ]
+  },
+  {
+   "id": "37867",
+   "title": "Divine Songs and Meditacions (1653)",
+   "author": "Collins, An, active 17th century; Stewart, Stanley, 1931- [Editor]",
+   "year": "2011-10-27",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Spiritual Formation",
+    "Theological",
+    "Poetry & Psalms",
+    "Family"
+   ],
+   "gutenberg_subjects": [
+    "Meditations",
+    "Christian women -- Religious life -- Poetry",
+    "Christian poetry, English -- Early modern, 1500-1700"
+   ],
+   "bookshelves": [
+    "Category: Poetry",
+    "Category: British Literature",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "PR",
+   "download_url": "https://www.gutenberg.org/ebooks/37867.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/37867/pg37867.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/37867",
+   "size_bytes": 85591,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/37867.txt.utf-8",
+     "size_bytes": 85591
+    }
+   ]
+  },
+  {
+   "id": "50916",
+   "title": "Evening Incense",
+   "author": "Macduff, John R. (John Ross), 1818-1895",
+   "year": "2016-01-14",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Prayer",
+    "Spiritual Formation",
+    "Theological"
+   ],
+   "gutenberg_subjects": [
+    "Devotional literature",
+    "Devotional exercises",
+    "Spiritual life -- Christianity",
+    "Prayers"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BV",
+   "download_url": "https://www.gutenberg.org/ebooks/50916.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/50916/pg50916.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/50916",
+   "size_bytes": 128429,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/50916.txt.utf-8",
+     "size_bytes": 128429
+    }
+   ]
+  },
+  {
+   "id": "27852",
+   "title": "Gold Dust: A Collection of Golden Counsels for the Sanctification of Daily Life",
+   "author": "Sylvain, Adrien, 1826-1914; Yonge, Charlotte M. (Charlotte Mary), 1823-1901 [Editor]; E. L. E. B. [Translator]",
+   "year": "2009-01-20",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Spiritual Formation",
+    "Sanctification",
+    "Counselling",
+    "Translation"
+   ],
+   "gutenberg_subjects": [
+    "Devotional literature",
+    "Meditations",
+    "Devotional exercises"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BV",
+   "download_url": "https://www.gutenberg.org/ebooks/27852.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/27852/pg27852.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/27852",
+   "size_bytes": 157389,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/27852.txt.utf-8",
+     "size_bytes": 157389
+    }
+   ]
+  },
+  {
+   "id": "654",
+   "title": "Grace Abounding to the Chief of Sinners",
+   "author": "Bunyan, John, 1628-1688; Copping, Harold, 1863-1932 [Illustrator]",
+   "year": "1996-09-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Biographies"
+   ],
+   "gutenberg_subjects": [
+    "Bunyan, John, 1628-1688",
+    "Authors, English -- Early modern, 1500-1700 -- Biography",
+    "Puritans -- England -- Biography",
+    "Christian biography -- England"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: Biographies",
+    "Category: British Literature",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "PR",
+   "download_url": "https://www.gutenberg.org/ebooks/654.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/654/pg654.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/654",
+   "size_bytes": 336361,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/654.txt.utf-8",
+     "size_bytes": 336361
+    }
+   ]
+  },
+  {
+   "id": "14849",
+   "title": "Leaves of life, for daily inspiration",
+   "author": "Steinmetz, Margaret Bird, 1865-1960",
+   "year": "2005-01-31",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Spiritual Formation",
+    "Biblical Theology"
+   ],
+   "gutenberg_subjects": [
+    "Devotional literature",
+    "Meditations",
+    "Calendars",
+    "Devotional exercises"
+   ],
+   "bookshelves": [
+    "Category: Essays, Letters & Speeches",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BV",
+   "download_url": "https://www.gutenberg.org/ebooks/14849.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/14849/pg14849.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/14849",
+   "size_bytes": 444678,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/14849.txt.utf-8",
+     "size_bytes": 444678
+    }
+   ]
+  },
+  {
+   "id": "34994",
+   "title": "Morning and Evening Prayers for All Days of the Week Together With Confessional, Communion, and Other Prayers and Hymns for Mornings and Evenings, and Other Occasions",
+   "author": "Habermann, Johann, 1516-1590; Rausch, Emil H. [Translator]",
+   "year": "2011-01-17",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Prayer",
+    "Worship",
+    "Sacred Music",
+    "Translation"
+   ],
+   "gutenberg_subjects": [
+    "Hymns, English",
+    "Lutheran Church -- Prayers and devotions"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BV",
+   "download_url": "https://www.gutenberg.org/ebooks/34994.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/34994/pg34994.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/34994",
+   "size_bytes": 173310,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/34994.txt.utf-8",
+     "size_bytes": 173310
+    }
+   ]
+  },
+  {
+   "id": "29971",
+   "title": "Old Groans and New Songs Being Meditations on the Book of Ecclesiastes",
+   "author": "Jennings, Frederick Charles, 1847-1948",
+   "year": "2009-09-13",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Spiritual Formation",
+    "Wisdom Literature"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Ecclesiastes -- Meditations"
+   ],
+   "bookshelves": [
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/29971.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/29971/pg29971.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/29971",
+   "size_bytes": 277315,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/29971.txt.utf-8",
+     "size_bytes": 277315
+    }
+   ]
+  },
+  {
+   "id": "70657",
+   "title": "Prayer and praying men",
+   "author": "Bounds, Edward M. (Edward McKendree), 1835-1913; Hodge, Homer W. (Homer Werle), 1859- [Author of introduction, etc.]",
+   "year": "2023-04-28",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Prayer",
+    "Theological"
+   ],
+   "gutenberg_subjects": [
+    "Prayer -- Christianity",
+    "Bible -- Prayers"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS; BV",
+   "download_url": "https://www.gutenberg.org/ebooks/70657.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/70657/pg70657.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/70657",
+   "size_bytes": 220831,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/70657.txt.utf-8",
+     "size_bytes": 220831
+    }
+   ]
+  },
+  {
+   "id": "52274",
+   "title": "Sanctification",
+   "author": "Hoare, Edward, 1812-1894",
+   "year": "2016-06-08",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Sanctification",
+    "Preaching"
+   ],
+   "gutenberg_subjects": [
+    "Church of England -- Sermons",
+    "Sanctification",
+    "Sermons, English -- 19th century"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BT",
+   "download_url": "https://www.gutenberg.org/ebooks/52274.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/52274/pg52274.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/52274",
+   "size_bytes": 228213,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/52274.txt.utf-8",
+     "size_bytes": 228213
+    }
+   ]
+  },
+  {
+   "id": "21024",
+   "title": "The Angels' Song",
+   "author": "Guthrie, Thomas, 1803-1873",
+   "year": "2007-04-10",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Spiritual Formation",
+    "Preaching",
+    "Gospel"
+   ],
+   "gutenberg_subjects": [
+    "Christmas sermons",
+    "Bible. Luke II, 14 -- Meditations"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BR",
+   "download_url": "https://www.gutenberg.org/ebooks/21024.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/21024/pg21024.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/21024",
+   "size_bytes": 135168,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/21024.txt.utf-8",
+     "size_bytes": 135168
+    }
+   ]
+  },
+  {
+   "id": "4544",
+   "title": "The Cell of Self-Knowledge : seven early English mystical treatises printed by Henry Pepwell in 1521",
+   "author": "Pepwell, Henry, -1540? [Compiler]; Gardner, Edmund G., 1869-1935 [Editor]",
+   "year": "2003-10-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Theological"
+   ],
+   "gutenberg_subjects": [
+    "Devotional literature",
+    "Mysticism -- Great Britain",
+    "Mysticism -- History -- Middle Ages, 600-1500",
+    "Religious thought -- Middle Ages, 600-1500"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: British Literature",
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BV",
+   "download_url": "https://www.gutenberg.org/ebooks/4544.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/4544/pg4544.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/4544",
+   "size_bytes": 211542,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/4544.txt.utf-8",
+     "size_bytes": 211542
+    }
+   ]
+  },
+  {
+   "id": "10866",
+   "title": "The Dolorous Passion of Our Lord Jesus Christ",
+   "author": "Emmerich, Anna Katharina, 1774-1824",
+   "year": "2004-01-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Christology",
+    "Biblical People"
+   ],
+   "gutenberg_subjects": [
+    "Jesus Christ -- Passion -- Devotional literature"
+   ],
+   "bookshelves": [
+    "Category: Biographies",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BT",
+   "download_url": "https://www.gutenberg.org/ebooks/10866.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/10866/pg10866.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/10866",
+   "size_bytes": 734356,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/10866.txt.utf-8",
+     "size_bytes": 734356
+    }
+   ]
+  },
+  {
+   "id": "33290",
+   "title": "The Door of Heaven: A Manual for Holy Communion",
+   "author": "Burgett, Arthur Edward, 1869-1942",
+   "year": "2010-07-30",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Prayer",
+    "Worship"
+   ],
+   "gutenberg_subjects": [
+    "Anglican Communion -- Prayers and devotions",
+    "Anglican Communion -- Liturgy",
+    "Eucharistic prayers -- Anglican Communion"
+   ],
+   "bookshelves": [
+    "Category: Children & Young Adult Reading",
+    "Category: How To ...",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BV",
+   "download_url": "https://www.gutenberg.org/ebooks/33290.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/33290/pg33290.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/33290",
+   "size_bytes": 72995,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/33290.txt.utf-8",
+     "size_bytes": 72995
+    }
+   ]
+  },
+  {
+   "id": "60377",
+   "title": "The Following of Christ, in Four Books Translated from the Original Latin of Thomas a Kempis",
+   "author": "Thomas, à Kempis, 1380-1471; Challoner, Richard, 1691-1781 [Translator]",
+   "year": "2019-09-29",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Spiritual Formation",
+    "Theological",
+    "Latin",
+    "Translation"
+   ],
+   "gutenberg_subjects": [
+    "Catholic Church -- Doctrines -- Early works to 1800",
+    "Spiritual life -- Catholic Church -- Early works to 1800",
+    "Meditations -- Early works to 1800"
+   ],
+   "bookshelves": [
+    "Category: Classics of Literature",
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BV",
+   "download_url": "https://www.gutenberg.org/ebooks/60377.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/60377/pg60377.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/60377",
+   "size_bytes": 388388,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/60377.txt.utf-8",
+     "size_bytes": 388388
+    }
+   ]
+  },
+  {
+   "id": "3270",
+   "title": "The Jerusalem Sinner Saved; or, Good News for the Vilest of Men",
+   "author": "Bunyan, John, 1628-1688",
+   "year": "2002-06-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Soteriology",
+    "Preaching",
+    "Gospel"
+   ],
+   "gutenberg_subjects": [
+    "Sin",
+    "Salvation",
+    "Bible. Luke XXIV, 47 -- Sermons -- Early works to 1800",
+    "Sermons, English -- 17th century",
+    "Forgiveness of sin -- Sermons -- Early works to 1800"
+   ],
+   "bookshelves": [
+    "Category: British Literature",
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BR",
+   "download_url": "https://www.gutenberg.org/ebooks/3270.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/3270/pg3270.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/3270",
+   "size_bytes": 213315,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/3270.txt.utf-8",
+     "size_bytes": 213315
+    }
+   ]
+  },
+  {
+   "id": "1378",
+   "title": "The Land of Footprints",
+   "author": "White, Stewart Edward, 1873-1946",
+   "year": "1998-07-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional"
+   ],
+   "gutenberg_subjects": [
+    "Africa, East -- Description and travel",
+    "Hunting -- Africa, East"
+   ],
+   "bookshelves": [
+    "Category: Travel Writing"
+   ],
+   "locc": "SK",
+   "download_url": "https://www.gutenberg.org/ebooks/1378.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/1378/pg1378.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/1378",
+   "size_bytes": 572186,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/1378.txt.utf-8",
+     "size_bytes": 572186
+    }
+   ]
+  },
+  {
+   "id": "38144",
+   "title": "The Mistress of Bonaventure",
+   "author": "Bindloss, Harold, 1866-1945",
+   "year": "2011-11-26",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional"
+   ],
+   "gutenberg_subjects": [
+    "Adventure stories",
+    "Police -- Canada -- Fiction"
+   ],
+   "bookshelves": [
+    "Category: Romance",
+    "Category: Adventure",
+    "Category: Novels"
+   ],
+   "locc": "PR",
+   "note": "Martyrdom of Polycarp and the Church in Asia Minor",
+   "download_url": "https://www.gutenberg.org/ebooks/38144.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/38144/pg38144.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/38144",
+   "size_bytes": 672621,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/38144.txt.utf-8",
+     "size_bytes": 672621
+    }
+   ]
+  },
+  {
+   "id": "40216",
+   "title": "The Patriarchs Being Meditations upon Enoch, Noah, Abraham, Isaac, Jacob, Joseph, Job; The Canticles, Heaven and Earth.",
+   "author": "Bellett, J. G. (John Gifford), 1795-1864",
+   "year": "2012-07-11",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Spiritual Formation",
+    "Biblical People",
+    "Biographies"
+   ],
+   "gutenberg_subjects": [
+    "Bible -- Biography",
+    "Patriarchs (Bible)"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/40216.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/40216/pg40216.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/40216",
+   "size_bytes": 761688,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/40216.txt.utf-8",
+     "size_bytes": 761688
+    }
+   ]
+  },
+  {
+   "id": "131",
+   "title": "The Pilgrim's Progress from this world to that which is to come Delivered under the similitude of a dream, by John Bunyan",
+   "author": "Bunyan, John, 1628-1688",
+   "year": "1994-05-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional"
+   ],
+   "gutenberg_subjects": [
+    "Christian fiction",
+    "Christian pilgrims and pilgrimages -- Fiction"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Harvard Classics",
+    "Category: Novels",
+    "Category: Classics of Literature",
+    "Category: British Literature",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "PR",
+   "download_url": "https://www.gutenberg.org/ebooks/131.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/131/pg131.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/131",
+   "size_bytes": 331509,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/131.txt.utf-8",
+     "size_bytes": 331509
+    }
+   ]
+  },
+  {
+   "id": "30389",
+   "title": "The Prayers of St. Paul",
+   "author": "Thomas, W. H. Griffith (William Henry Griffith), 1861-1924",
+   "year": "2009-11-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Prayer",
+    "Epistles",
+    "Biblical People"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Epistles of Paul -- Prayers"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/30389.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/30389/pg30389.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/30389",
+   "size_bytes": 146767,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/30389.txt.utf-8",
+     "size_bytes": 146767
+    }
+   ]
+  },
+  {
+   "id": "13166",
+   "title": "The Psalms of David Imitated in the Language of the New Testament and Applied to the Christian State and Worship",
+   "author": "Watts, Isaac, 1674-1748",
+   "year": "2004-08-12",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Worship",
+    "Poetry & Psalms",
+    "Sacred Music",
+    "Biblical History",
+    "Biblical People"
+   ],
+   "gutenberg_subjects": [
+    "Hymns, English",
+    "Bible. Psalms -- Paraphrases, English"
+   ],
+   "bookshelves": [
+    "Christianity",
+    "Category: Poetry",
+    "Category: British Literature",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/13166.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/13166/pg13166.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/13166",
+   "size_bytes": 383205,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/13166.txt.utf-8",
+     "size_bytes": 383205
+    }
+   ]
+  },
+  {
+   "id": "13267",
+   "title": "The Threshold Grace: Meditations in the Psalms",
+   "author": "Ainsworth, Percy C. (Percy Clough), 1873-1909",
+   "year": "2004-08-24",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Spiritual Formation",
+    "Poetry & Psalms"
+   ],
+   "gutenberg_subjects": [
+    "Bible. Psalms -- Meditations"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BS",
+   "download_url": "https://www.gutenberg.org/ebooks/13267.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/13267/pg13267.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/13267",
+   "size_bytes": 102756,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/13267.txt.utf-8",
+     "size_bytes": 102756
+    }
+   ]
+  },
+  {
+   "id": "10740",
+   "title": "The Way of Peace",
+   "author": "Allen, James, 1864-1912",
+   "year": "2004-01-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Devotional",
+   "subjects": [
+    "Devotional",
+    "Spiritual Formation"
+   ],
+   "gutenberg_subjects": [
+    "Conduct of life",
+    "Meditations",
+    "New Thought"
+   ],
+   "bookshelves": [
+    "Category: Philosophy & Ethics",
+    "Category: Religion/Spirituality"
+   ],
+   "locc": "BF",
+   "download_url": "https://www.gutenberg.org/ebooks/10740.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/10740/pg10740.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/10740",
+   "size_bytes": 121971,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/10740.txt.utf-8",
+     "size_bytes": 121971
+    }
+   ]
+  },
+  {
+   "id": "53884",
+   "title": "A Biblical and Theological Dictionary explanatory of the history, manners, and customs of the Jews, and neighbouring nations",
+   "author": "Watson, Richard, 1781-1833; Bangs, Nathan, 1778-1862 [Editor]",
+   "year": "2017-01-04",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Dictionary",
+   "subjects": [
+    "Linguistics",
+    "Theological"
+   ],
+   "gutenberg_subjects": [
+    "Theology -- Dictionaries",
+    "Bible -- Dictionaries"
+   ],
+   "bookshelves": [
+    "Category: Religion/Spirituality",
+    "Category: Encyclopedias/Dictionaries/Reference"
+   ],
+   "locc": "BR",
+   "download_url": "https://www.gutenberg.org/ebooks/53884.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/53884/pg53884.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/53884",
+   "size_bytes": 6305774,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/53884.txt.utf-8",
+     "size_bytes": 6305774
+    }
+   ]
+  },
+  {
+   "id": "74523",
+   "title": "A church dictionary",
+   "author": "Hook, Walter Farquhar, 1798-1875",
+   "year": "2024-10-06",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Dictionary",
+   "subjects": [
+    "Linguistics",
+    "Theological"
+   ],
+   "gutenberg_subjects": [
+    "Episcopal Church -- Dictionaries",
+    "Theology -- Dictionaries",
+    "Church of England -- Dictionaries"
+   ],
+   "bookshelves": [],
+   "locc": "BR",
+   "download_url": "https://www.gutenberg.org/ebooks/74523.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/74523/pg74523.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/74523",
+   "size_bytes": 4197452,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/74523.txt.utf-8",
+     "size_bytes": 4197452
+    }
+   ]
+  },
+  {
+   "id": "30888",
+   "title": "The American Church Dictionary and Cyclopedia",
+   "author": "Miller, William James, 1850-",
+   "year": "2010-01-07",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Dictionary",
+   "subjects": [
+    "Linguistics",
+    "Theological"
+   ],
+   "gutenberg_subjects": [
+    "Episcopal Church -- Dictionaries",
+    "Theology -- Dictionaries"
+   ],
+   "bookshelves": [
+    "Category: History - American",
+    "Category: Religion/Spirituality",
+    "Category: Encyclopedias/Dictionaries/Reference"
+   ],
+   "locc": "BX",
+   "download_url": "https://www.gutenberg.org/ebooks/30888.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/30888/pg30888.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/30888",
+   "size_bytes": 486490,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/30888.txt.utf-8",
+     "size_bytes": 486490
+    }
+   ]
+  },
+  {
+   "id": "31165",
+   "title": "The Church Handy Dictionary",
+   "author": "Anonymous",
+   "year": "2010-02-03",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Dictionary",
+   "subjects": [
+    "Linguistics",
+    "Theological"
+   ],
+   "gutenberg_subjects": [
+    "Theology -- Dictionaries",
+    "Church of England -- Dictionaries"
+   ],
+   "bookshelves": [
+    "Category: History - Religious",
+    "Category: Religion/Spirituality",
+    "Category: Encyclopedias/Dictionaries/Reference"
+   ],
+   "locc": "BR",
+   "download_url": "https://www.gutenberg.org/ebooks/31165.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/31165/pg31165.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/31165",
+   "size_bytes": 331736,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/31165.txt.utf-8",
+     "size_bytes": 331736
+    }
+   ]
+  },
+  {
+   "id": "65909",
+   "title": "A Smaller Dictionary of Greek and Roman Antiquities",
+   "author": "Smith, William, 1813-1893",
+   "year": "2021-07-24",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Lexicon",
+   "subjects": [
+    "Linguistics",
+    "Greek",
+    "Archaeology"
+   ],
+   "gutenberg_subjects": [
+    "Rome -- Antiquities",
+    "Greece -- Antiquities",
+    "Classical dictionaries"
+   ],
+   "bookshelves": [
+    "Category: History - Ancient",
+    "Category: Encyclopedias/Dictionaries/Reference"
+   ],
+   "locc": "DE",
+   "download_url": "https://www.gutenberg.org/ebooks/65909.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/65909/pg65909.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/65909",
+   "size_bytes": 2270637,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/65909.txt.utf-8",
+     "size_bytes": 2270637
+    }
+   ]
+  },
+  {
+   "id": "2848",
+   "title": "Antiquities of the Jews by Flavius Josephus",
+   "author": "Josephus, Flavius, 38?-100?; Whiston, William, 1667-1752 [Translator]",
+   "year": "2001-10-01",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [],
+   "gutenberg_subjects": [],
+   "bookshelves": [],
+   "locc": "DS",
+   "download_url": "https://www.gutenberg.org/ebooks/2848.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/2848/pg2848.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/2848",
+   "size_bytes": 3067150,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/2848.txt.utf-8",
+     "size_bytes": 3067150
+    }
+   ]
+  },
+  {
+   "id": "2850",
+   "title": "The Wars of the Jews; Or, The History of the Destruction of Jerusalem by Josephus",
+   "author": "Josephus, Flavius, 38?-100?; Whiston, William, 1667-1752 [Translator]",
+   "year": "2009-01-10",
+   "lang": "eng",
+   "lang_name": "English",
+   "license": "Public Domain",
+   "category": "Book",
+   "subjects": [],
+   "gutenberg_subjects": [],
+   "bookshelves": [],
+   "locc": "DS",
+   "download_url": "https://www.gutenberg.org/ebooks/2850.txt.utf-8",
+   "download_url_final": "https://www.gutenberg.org/cache/epub/2850/pg2850.txt",
+   "page_url": "https://www.gutenberg.org/ebooks/2850",
+   "size_bytes": 1342785,
+   "size_source": "http-head",
+   "downloads": [
+    {
+     "format": "text",
+     "url": "https://www.gutenberg.org/ebooks/2850.txt.utf-8",
+     "size_bytes": 1342785
+    }
+   ]
+  }
+ ],
+ "skipped": []
+}
