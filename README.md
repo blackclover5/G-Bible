@@ -1,91 +1,220 @@
 # G-Bible
+### Your Bible. Your Library. Your Study.
 
-**G-Bible** is a free, offline Bible study app that runs entirely on your
-own computer. No account, no cloud, no tracking — your notes, highlights and
-reading stay on your machine unless you choose to sync them yourself.
+**A complete Bible study workspace that lives on your computer.**
 
-Current version: **0.9.6 (beta)**.
+G-Bible is a free, open-source Bible study application designed to bring Scripture, study tools, reference materials, and personal notes together in one place.
 
+Read the Bible, explore its meaning, compare translations, research historical context, and build your own personal study library — all through a single, customizable workspace.
+
+No account required. No subscription. No cloud dependency. Just you, your Bible, and the tools to study it more deeply.
+
+---
+
+## Explore Scripture. Build Your Understanding.
+
+Whether you're reading a daily passage, researching a difficult verse, preparing a lesson, or exploring the original languages, G-Bible gives you a flexible environment for studying Scripture.
+
+### A Workspace Built for Bible Study
+
+Go beyond a single Bible window. Arrange your study materials side by side, open multiple passages in separate panes, and link your resources together so they follow your reading.
+
+Read a passage in one pane while consulting a commentary, lexicon, or reference book in another. Resize your workspace, organize your tabs, and save layouts that fit the way you study.
+
+### A Library That Grows With You
+
+Build a personal collection of Bibles, commentaries, dictionaries, maps, and other study resources.
+
+G-Bible includes a Store of freely redistributable study materials that you can install directly into your library. You can also import your own EPUBs and compatible Bible modules.
+
+Your library is yours to organize, expand, and use.
+
+### Search Beyond the Page
+
+Find passages, words, and topics across your installed resources with G-Bible's powerful search tools.
+
+Search Scripture and reference materials, use filters to narrow your results, and explore Strong's numbers to help investigate biblical words and their meanings.
+
+### Study With Context
+
+Explore Scripture through a collection of study guides and reference tools, including:
+
+- Biblical timelines and maps
+- Genealogies and Gospel harmonies
+- Outlines and other study resources
+- Concordance and word-reference tools
+
+G-Bible brings these tools together so you can move from reading a passage to exploring its context without losing your place.
+
+### Make Your Study Personal
+
+Your study doesn't have to end when you close the app.
+
+Create notes, highlight verses, save clips, and organize your discoveries with tags. Build reading plans, maintain prayer lists, and practice Scripture memorization with a spaced-repetition system.
+
+Your personal study materials stay on your computer.
+
+---
+
+## Everything in One Place
+
+G-Bible brings together the tools you need for a more organized and meaningful study experience.
+
+| Feature | What it does |
+|---|---|
+| Home | Today's reading, reading plans, prayer list, notes, and highlights |
+| Workspace | Multi-pane Bible reading, linked resources, tabs, and saved layouts |
+| Search | Search installed resources, with filters and Strong's number support |
+| Guides | Timelines, maps, genealogies, Gospel harmonies, and outlines |
+| Library | Manage your installed Bibles, books, and reference materials |
+| Notes & Highlights | Keep personal study notes and highlights connected to Scripture |
+| Memorization | Practice verses using spaced repetition |
+| Sync | Synchronize notes and progress through a folder, WebDAV, or Nextcloud |
+| AI Assistant | Optional AI assistance using a provider you configure |
+| Read Aloud | Listen to Scripture with an optional voice installation |
+
+---
+
+## Get Started
+
+G-Bible is designed to be easy to run on your own computer.
+
+### Requirements
+
+- Python 3.11 or newer
+- A modern web browser
+- Internet access for the initial download of study materials, if desired
+
+No Python package installation or separate build step is required for the standard launch.
+
+### 1. Download G-Bible
+
+Download the project and extract the ZIP file, or clone the repository:
+
+```bash
+git clone https://github.com/YOUR-USERNAME/G-Bible.git
+cd G-Bible
 ```
+
+Replace `YOUR-USERNAME/G-Bible` with the actual repository address.
+
+If you downloaded the ZIP file instead, open a terminal inside the extracted project folder.
+
+### 2. Launch the App
+
+Run:
+
+```bash
 python3 run.py
 ```
 
-Then open the address it prints (usually `http://127.0.0.1:8777`).
+G-Bible will start its local server. Open the address printed in your terminal, usually:
+
+```text
+http://127.0.0.1:8777
+```
+
+You can now use G-Bible in your browser.
+
+### 3. Set Up Your Library
+
+On the first launch, G-Bible offers a recommended collection of Bibles, commentaries, maps, and reference materials.
+
+Accept the recommended collection to download the resources, or skip this step and install materials later through the Store.
+
+Once your resources are installed, you can study offline.
+
+### 4. Start Studying
+
+Open Workspace to begin reading Scripture. Use Search to explore your library, Guides to investigate biblical context, and the other tools to organize your study.
+
+Your personal notes, highlights, and reading progress will be available the next time you launch G-Bible.
 
 ---
 
-## Getting started
+## Designed for Your Computer
 
-1. Run `python3 run.py`.
-2. Open the printed address in your browser.
-3. On first launch you will be offered a **recommended set** of Bibles,
-   commentaries, maps and reference works. Accept it (needs internet) or skip.
-4. Start reading in **Workspace**, search in **Search**, and install more
-   material from **Modules** (under Library).
+G-Bible is built around local-first Bible study.
 
-Python 3.11+ is all you need. No pip install, no build step. The optional
-read-aloud voice is one extra: `python3 tools/install_voice.py`.
+Your library, notes, highlights, and reading progress are stored on your own machine. You don't need to create an account or rely on a cloud service to use the application.
 
----
+Once you have installed your resources, G-Bible can work offline.
 
-## Main screens
+Network access is used when you choose to download library materials, synchronize your data, or use an AI provider that you configure.
 
-- **Home** — today's date, today's reading, your reading plans, prayer list,
-  highlights, notes and tags.
-- **Workspace** — the reading area. Panes tile side by side; tabs inside
-  panes. Link panes (A–F) so a Bible and a commentary scroll together.
-- **Search** — search every installed resource with a powerful query language.
-- **Guides** — timelines, maps, genealogy, gospel harmony, outlines and more.
-- **AI Assistant** — optional; off until you add your own provider.
+### Optional Features
 
-Menus give you **Concordance, Maps, Notes, Organise, Clips, Reading plans,
-Prayer, Memorization, My Library** and **Settings**.
+**Read Aloud:** Install the optional voice support with:
+
+```bash
+python3 tools/install_voice.py
+```
+
+**AI Assistant:** The AI Assistant is optional and disabled until you configure your own provider.
+
+**Synchronization:** If you want to use G-Bible across multiple computers, you can configure synchronization through a folder, WebDAV, or Nextcloud.
 
 ---
 
-## Key features
+## Privacy and Ownership
 
-- **Multi-pane reading** with link sets, resizing and saved layouts.
-- **Store** of freely-redistributable Bibles, commentaries, lexica, maps
-  and books — install with one click.
-- **Search** across your whole library, with filters and Strong's numbers.
-- **Notes, highlights, clips and tags** that stay with your verses.
-- **Reading plans and prayer lists** to keep a daily rhythm.
-- **Memorization** with spaced repetition (SM-2).
-- **Sync** your notes and progress to a folder, WebDAV or Nextcloud.
-- **Import** your own EPUBs and modules.
-- **Appearance, read-aloud and passage settings** to make it yours.
+G-Bible is designed to keep your personal study personal.
 
-Everything works offline once material is installed.
+- No account is required.
+- No telemetry or analytics are built into the app.
+- Your personal study data stays on your computer unless you choose to synchronize it.
+- Network connections are used for features you explicitly choose to use.
 
----
-
-## Privacy
-
-G-Bible never phones home. There is no account, no telemetry, no analytics.
-Network is used only when *you* ask it to — installing from the Store,
-syncing, or using an AI provider you configure yourself.
-
----
-
-## Resetting
-
-To wipe the library and start over: **About → Reset G-Bible** in the app,
-or run `./reset-gbible` from the project folder. Then restart the app.
+Your Bible study should belong to you.
 
 ---
 
 ## Troubleshooting
 
-- **Port already in use** — run `python3 run.py --port 8899`.
-- **Nothing shows after install** — restart the app; the index updates on
-  launch.
-- **Offline use** — installed modules read fully offline; only the Store
-  needs internet.
+**The app won't start**
+
+Make sure Python 3.11 or newer is installed. Run `python3 run.py` from the project folder and check the terminal for error messages.
+
+**The default port is already in use**
+
+Launch G-Bible on another port:
+
+```bash
+python3 run.py --port 8899
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8899
+```
+
+**Newly installed resources aren't appearing**
+
+Restart G-Bible. The library index is updated when the application launches.
+
+**Can I use G-Bible without internet access?**
+
+Yes. Once your Bible translations and reference materials are installed, you can use them offline. Downloading additional materials, synchronization, and AI features may require an internet connection.
+
+**How do I start over?**
+
+Use About → Reset G-Bible inside the application, or run:
+
+```bash
+./reset-gbible
+```
+
+from the project folder.
 
 ---
 
-## License
+## Built for Bible Study. Open to Everyone.
 
-G-Bible is free and open source, released under the **MIT License**.
-You may use, study, modify and share it freely.
+G-Bible is free and open source, released under the MIT License.
+
+You are free to use, study, modify, and share the application under the terms of that license.
+
+Whether you are a new reader, a lifelong student of Scripture, or someone building a personal reference library, G-Bible is designed to give you the tools to explore the Bible on your own terms.
+
+**G-Bible — Your Bible. Your Library. Your Study.**
