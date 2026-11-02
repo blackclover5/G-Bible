@@ -92,11 +92,9 @@ No Python package installation or separate build step is required for the standa
 Download the project and extract the ZIP file, or clone the repository:
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/G-Bible.git
+git clone https://github.com/blackclover5/G-Bible.git
 cd G-Bible
 ```
-
-Replace `YOUR-USERNAME/G-Bible` with the actual repository address.
 
 If you downloaded the ZIP file instead, open a terminal inside the extracted project folder.
 
