@@ -71,7 +71,7 @@ G-Bible brings together the tools you need for a more organized and meaningful s
 | Memorization | Practice verses using spaced repetition |
 | Sync | Synchronize notes and progress through a folder, WebDAV, or Nextcloud |
 | AI Assistant | Optional AI assistance using a provider you configure |
-| Read Aloud | Listen to Scripture with an optional voice installation |
+| Read Aloud | Listen to Scripture with optional voice installation |
 
 ---
 
@@ -92,7 +92,7 @@ Want to get started with G-Bible on Linux without installing Python or setting u
    chmod +x "G-Bible 0.9.6.AppImage"
    ```
 
-3. Double-click the AppImage to launch G-Bible, or run it from the terminal.
+3. Double-click the AppImage to launch G-Bible, or run it from the terminal:
 
    ```bash
    ./"G-Bible 0.9.6.AppImage"
@@ -112,9 +112,9 @@ Once installed, you're ready to listen to Scripture using G-Bible's Read Aloud f
 
 That's it! No Python setup, no dependency hunting, and no complicated installation process. Just download, launch, and start studying.
 
-### Everyone else
+### Everyone Else
 
-### Requirements
+#### Requirements
 
 - Python 3.11 or newer
 - A modern web browser
@@ -122,7 +122,7 @@ That's it! No Python setup, no dependency hunting, and no complicated installati
 
 No Python package installation or separate build step is required for the standard launch.
 
-### 1. Download G-Bible
+#### 1. Download G-Bible
 
 Download the project and extract the ZIP file, or clone the repository:
 
@@ -133,7 +133,7 @@ cd G-Bible
 
 If you downloaded the ZIP file instead, open a terminal inside the extracted project folder.
 
-### 2. Launch the App
+#### 2. Launch the App
 
 Run:
 
@@ -149,7 +149,7 @@ http://127.0.0.1:8777
 
 You can now use G-Bible in your browser.
 
-### 3. Set Up Your Library
+#### 3. Set Up Your Library
 
 On the first launch, G-Bible offers a recommended collection of Bibles, commentaries, maps, and reference materials.
 
@@ -157,7 +157,7 @@ Accept the recommended collection to download the resources, or skip this step a
 
 Once your resources are installed, you can study offline.
 
-### 4. Start Studying
+#### 4. Start Studying
 
 Open Workspace to begin reading Scripture. Use Search to explore your library, Guides to investigate biblical context, and the other tools to organize your study.
 
@@ -177,7 +177,11 @@ Network access is used when you choose to download library materials, synchroniz
 
 ### Optional Features
 
-**Read Aloud:** Install the optional voice support with:
+**Read Aloud:** Install the voice directly within G-Bible by going to **Settings → Read Aloud Settings → Install**.
+
+This works for both the Python version and the Linux AppImage.
+
+If you need to install the voice manually, you can also run:
 
 ```bash
 python3 tools/install_voice.py
@@ -199,6 +203,18 @@ G-Bible is designed to keep your personal study personal.
 - Network connections are used for features you explicitly choose to use.
 
 Your Bible study should belong to you.
+
+---
+
+## Coming Soon: Android & Windows
+
+G-Bible is growing!
+
+I'm planning to bring G-Bible to Android and Windows, making it possible to enjoy your personal Bible study workspace on even more devices.
+
+The goal is to bring the same powerful study tools, personal library, and customizable experience to these new platforms.
+
+More details coming soon!
 
 ---
 
