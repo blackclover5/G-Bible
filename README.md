@@ -79,6 +79,41 @@ G-Bible brings together the tools you need for a more organized and meaningful s
 
 G-Bible is designed to be easy to run on your own computer.
 
+### Linux: The Easiest Way to Get Started
+
+Want to get started with G-Bible on Linux without installing Python or setting up dependencies?
+
+**Download the G-Bible 0.9.6 AppImage.** It comes with everything you need to run the application, so there's no complicated setup required.
+
+1. Download the G-Bible 0.9.6 AppImage.
+2. Make the file executable in your file manager, or run:
+
+   ```bash
+   chmod +x "G-Bible 0.9.6.AppImage"
+   ```
+
+3. Double-click the AppImage to launch G-Bible, or run it from the terminal.
+
+   ```bash
+   ./"G-Bible 0.9.6.AppImage"
+   ```
+
+#### Enable Read Aloud
+
+The AppImage includes the Read Aloud voice installation files, so you don't need to download them separately.
+
+To install the voice:
+
+1. Open G-Bible.
+2. Go to **Settings → Read Aloud Settings**.
+3. Click **Install** and allow the installation to finish.
+
+Once installed, you're ready to listen to Scripture using G-Bible's Read Aloud feature.
+
+That's it! No Python setup, no dependency hunting, and no complicated installation process. Just download, launch, and start studying.
+
+### Everyone else
+
 ### Requirements
 
 - Python 3.11 or newer
