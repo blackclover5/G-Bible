@@ -11,6 +11,16 @@ No account required. No subscription. No cloud dependency. Just you, your Bible,
 
 ---
 
+> **⚠️ Beta Notice**
+>
+> G-Bible is currently in beta. Most features are functional, but some may not work as expected, and others are still under development.
+>
+> This is a hobby project developed in my spare time, so updates and new features may take a little while. Your patience and understanding are greatly appreciated!
+>
+> Feedback, bug reports, and suggestions are always welcome and help make G-Bible better for everyone. Thank you for your support!
+
+---
+
 ## Explore Scripture. Build Your Understanding.
 
 Whether you're reading a daily passage, researching a difficult verse, preparing a lesson, or exploring the original languages, G-Bible gives you a flexible environment for studying Scripture.
