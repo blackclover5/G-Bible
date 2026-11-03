@@ -1,14 +1,6 @@
 # G-Bible
 ### Your Bible. Your Library. Your Study.
 
-**A complete Bible study workspace that lives on your computer.**
-
-G-Bible is a free, open-source Bible study application designed to bring Scripture, study tools, reference materials, and personal notes together in one place.
-
-Read the Bible, explore its meaning, compare translations, research historical context, and build your own personal study library — all through a single, customizable workspace.
-
-No account required. No subscription. No cloud dependency. Just you, your Bible, and the tools to study it more deeply.
-
 ---
 
 > **⚠️ Beta Notice**
@@ -18,6 +10,16 @@ No account required. No subscription. No cloud dependency. Just you, your Bible,
 > This is a hobby project developed in my spare time, so updates and new features may take a little while. Your patience and understanding are greatly appreciated!
 >
 > Feedback, bug reports, and suggestions are always welcome and help make G-Bible better for everyone. Thank you for your support!
+
+---
+
+**A complete Bible study workspace that lives on your computer.**
+
+G-Bible is a free, open-source Bible study application designed to bring Scripture, study tools, reference materials, and personal notes together in one place.
+
+Read the Bible, explore its meaning, compare translations, research historical context, and build your own personal study library — all through a single, customizable workspace.
+
+No account required. No subscription. No cloud dependency. Just you, your Bible, and the tools to study it more deeply.
 
 ---
 
