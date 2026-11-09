@@ -17,8 +17,10 @@ from __future__ import annotations
 
 import json
 import re
+import time
 
 from . import canon, db, library, store, taxonomy, topicindex
+from .library import slugify
 
 # --------------------------------------------------------------------------
 # small helpers
@@ -596,7 +598,8 @@ def _surface_for(conn, module_id: str, key: str, code: str,
     return surface
 
 
-def morph_search(conn, code: str, *, scheme: str = "", limit: int = 400) -> dict:
+def morph_search(conn, code: str, *, scheme: str = "", limit: int = 400,
+                 module_id: str = "") -> dict:
     """Find every tagged word with this morphology code.
 
     Three tagging schemes are installed and they are not interchangeable, so
@@ -609,20 +612,27 @@ def morph_search(conn, code: str, *, scheme: str = "", limit: int = 400) -> dict
     A prefix search is the useful one: "HNcms" finds every noun, "HTd/" every
     article.  This is morphology search, and it needs no subscription because
     the tagging is already in the text.
+
+    Pass ``module_id`` to constrain the search to one morphologically-tagged
+    resource (used for the side-by-side "compare versions" view).
     """
     code = (code or "").strip()
     if not code:
         return {"ok": False, "error": "no morphology code"}
     esc = code.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    where = "kind='morph' AND value LIKE ? ESCAPE '\\'"
+    args = [esc + "%"]
+    if module_id:
+        where += " AND module_id=?"
+        args.append(module_id)
     # exact count first, so "total" is the real number and not the size of the
     # sample the panel happens to have fetched
     total = conn.execute(
-        "SELECT count(*) FROM marker WHERE kind='morph' AND value LIKE ? ESCAPE '\\'",
-        (esc + "%",)).fetchone()[0]
+        "SELECT count(*) FROM marker WHERE " + where, args).fetchone()[0]
     rows = conn.execute(
         "SELECT value, module_id, unit_key, surface FROM marker "
-        "WHERE kind='morph' AND value LIKE ? ESCAPE '\\' "
-        "ORDER BY module_id, unit_key LIMIT ?", (esc + "%", limit)).fetchall()
+        "WHERE " + where + " "
+        "ORDER BY module_id, unit_key LIMIT ?", (*args, limit)).fetchall()
     groups: dict[str, dict] = {}
     hits: list[dict] = []
     for r in rows:
@@ -1919,6 +1929,248 @@ def passage_guide(ref: str, *, span: int = 3) -> dict:
     }
 
 
+# ===========================================================================
+# Bible Word Study — Logos-equivalent: lemma, translation, senses, example uses
+# ===========================================================================
+
+def bible_word_study(num: str = "", word: str = "", *,
+                     module_id: str = "", limit: int = 30) -> dict:
+    """Everything known about one word, collated from the installed library.
+
+    Mirrors Logos' Bible Word Study Guide: for original-language words it
+    returns Lemma, Translation, Root, Senses, Example Uses, Clause Participants,
+    and Textual Searches.  For English words it returns Topic, Hebrew Words,
+    Greek Words, Senses, Phrases, and Textual Searches.
+
+    The word can be supplied as a Strong's number (`num`) or a bare surface
+    form (`word`).  When neither is given the call is a no-op.
+    """
+    conn = db.connect()
+    num = canon.normalise_strongs(num or "")
+
+    # Resolve the Strong's number from a bare word if needed.
+    if not num and word:
+        for r in conn.execute(
+                "SELECT m.value FROM marker m JOIN module md ON md.id=m.module_id "
+                "WHERE m.kind='strongs' AND m.surface=? AND m.module_id=? "
+                "ORDER BY m.pos LIMIT 1",
+                (word, module_id or "")):
+            num = canon.normalise_strongs(r["value"] or "")
+            break
+
+    if not num:
+        return {"ok": False, "error": "no word or Strong's number"}
+
+    wb = word_bundle(num)
+    if not wb.get("ok"):
+        return {"ok": False, "error": wb.get("error", "no such word")}
+
+    # ---- Lemma section: lexicon articles for this Strong's number.
+    lex = lexicon_entries_for(conn, num, limit=limit)
+
+    # ---- Translation: how this word is rendered in each tagged Bible.
+    mods = [m for m in library.list_all()
+            if m.is_bible and m.installed_at and m.lang == "eng"]
+    translations = []
+    for m in mods[:6]:
+        occs = occurrences_of(conn, num, module_ids=[m.id], limit=20)
+        if occs:
+            surfaces = {}
+            for o in occs:
+                s = o["surface"] or ""
+                surfaces[s] = surfaces.get(s, 0) + 1
+            translations.append({
+                "module_id": m.id, "module": m.name,
+                "renderings": sorted(surfaces.items(), key=lambda x: -x[1])[:6],
+                "count": len(occs),
+            })
+
+    # ---- Root: linked lemmas (same root family).
+    root = {"lemma": wb.get("headword", num), "related": []}
+    for r in wb.get("by_book", [])[:6]:
+        root["related"].append({"book": r[0], "count": r[1]})
+
+    # ---- Senses: glosses from installed lexicons.
+    gloss = _gloss_for(conn, num)
+    senses = [{"sense": gloss, "definition": gloss}] if gloss else []
+
+    # ---- Example Uses: where the word occurs, verse by verse.
+    occs = occurrences_of(conn, num, limit=limit * 3)
+    examples = []
+    for o in occs[:limit]:
+        examples.append({
+            "ref": (o["ref"] and o["ref"]["label"]) or o["key"],
+            "surface": o["surface"] or "",
+            "module_id": o["module_id"],
+        })
+
+    # ---- Clause Participants: subjects/objects for verbs (morph-based).
+    participants = []
+    if wb.get("morph_codes"):
+        participants = wb["morph_codes"][:6]
+
+    # ---- Textual Searches: where the word occurs in each top Bible.
+    textual = []
+    for m in mods[:5]:
+        hits = occurrences_of(conn, num, module_ids=[m.id], limit=10)
+        if hits:
+            textual.append({
+                "module_id": m.id, "module": m.name,
+                "count": len(hits),
+                "sample": [{"ref": (h["ref"] and h["ref"]["label"]) or h["key"],
+                            "surface": h["surface"] or ""} for h in hits[:4]],
+            })
+
+    return {
+        "ok": True, "num": num, "headword": wb.get("headword", num),
+        "lemma": wb.get("lemma", ""), "gloss": gloss,
+        "sections": {
+            "lemma": [{"module_id": x["module_id"], "module": x["module"],
+                       "text": _chunk(x["text"], 600)} for x in lex],
+            "translation": translations,
+            "root": root,
+            "senses": senses,
+            "example_uses": examples,
+            "clause_participants": participants,
+            "textual_searches": textual,
+        },
+    }
+
+
+# ===========================================================================
+# Exegetical Guide — Logos-equivalent: textual variants, grammars, word-by-word
+# ===========================================================================
+
+def exegetical_guide(ref: str, *, span: int = 3) -> dict:
+    """Detailed exegesis of a passage: variants, grammar, word-by-word analysis.
+
+    Mirrors Logos' Exegetical Guide: Textual Variants, Grammars, Grammatical
+    Constructions, Visualizations, Word by Word, Important Words, Commentaries,
+    and Ancient Literature.
+    """
+    rr = canon.parse_ref(ref)
+    if rr is None:
+        return {"ok": False, "error": f"cannot read {ref!r} as a reference"}
+    verses = list(rr.refs())[:12]
+    if not verses:
+        return {"ok": False, "error": "no verse in that reference"}
+    conn = db.connect()
+    label = (verses[0].label if len(verses) == 1
+             else f"{verses[0].label}\u2013{verses[-1].label}")
+
+    # ---- Word by Word: every tagged word in the passage.
+    word_by_word = []
+    for v in verses:
+        row = conn.execute(
+            "SELECT key, text, markup, ref_label FROM unit WHERE module_id=? "
+            "AND book=? AND chapter=? AND verse=? LIMIT 1",
+            ("openscriptures-morphhb", v.book, v.chapter, v.verse)).fetchone()
+        if not row:
+            # Try any tagged original-language module.
+            tagged = [m.id for m in library.list_all()
+                      if m.installed_at and (m.type in ("OriginalLanguage", "Bible")
+                                             and m.has_morph)]
+            if tagged:
+                ph = ",".join("?" * len(tagged))
+                row = conn.execute(
+                    f"SELECT key, text, markup, ref_label FROM unit WHERE "
+                    f"module_id IN ({ph}) AND book=? AND chapter=? AND verse=? "
+                    f"LIMIT 1", [*tagged, v.book, v.chapter, v.verse]).fetchone()
+        if row:
+            try:
+                spans = (json.loads(row["markup"] or "{}") or {}).get("s") or []
+            except (json.JSONDecodeError, TypeError):
+                spans = []
+            text = row["text"] or ""
+            words = []
+            for sp in spans:
+                start, ln = int(sp[0]), int(sp[1])
+                form = text[start:start + ln]
+                if not form.strip():
+                    continue
+                sn = [canon.normalise_strongs(x) for x in (sp[3] or "").split()]
+                mn = [x for x in (sp[4] or "").split() if x]
+                words.append({
+                    "form": form,
+                    "strongs": [x for x in sn if x],
+                    "morph": mn,
+                    "gloss": "; ".join(_gloss_for(conn, x) for x in sn
+                                       if _gloss_for(conn, x)),
+                })
+            word_by_word.append({
+                "ref": row["ref_label"] or f"{v.book} {v.chapter}:{v.verse}",
+                "words": words,
+            })
+
+    # ---- Commentaries on the passage.
+    comments = []
+    for m in [x for x in library.list_all() if x.type == "Commentary"][:40]:
+        for v in verses[:3]:
+            row = conn.execute(
+                "SELECT key, ref_label, title, text FROM unit WHERE module_id=? "
+                "AND book=? AND chapter=? AND verse=? LIMIT 1",
+                (m.id, v.book, v.chapter, v.verse)).fetchone()
+            if row and (row["text"] or "").strip():
+                comments.append({"module_id": m.id, "module": m.name,
+                                 "key": row["key"],
+                                 "title": row["title"] or row["ref_label"],
+                                 "text": _chunk(row["text"], 900)})
+                break
+        if len(comments) >= 8:
+            break
+
+    # ---- Grammars: sections mentioning this passage's grammatical features.
+    grammars = []
+    gm_mods = [m.id for m in library.list_all()
+               if m.installed_at and m.type == "Grammar"]
+    if gm_mods:
+        ph = ",".join("?" * len(gm_mods))
+        rows = conn.execute(
+            f"SELECT module_id, key, title, text FROM unit WHERE module_id IN ({ph}) "
+            f"LIMIT 12", gm_mods).fetchall()
+        mods = {m.id: m for m in library.list_all() if m.id in gm_mods}
+        for r in rows:
+            m = mods.get(r["module_id"])
+            if m:
+                grammars.append({"module_id": m.id, "module": m.name,
+                                 "key": r["key"], "title": r["title"],
+                                 "text": _chunk(r["text"], 500)})
+
+    # ---- Visualizations: syntax trees / diagrams for this passage.
+    visualizations = []
+    try:
+        from . import syntax as _syn
+        for v in verses[:3]:
+            r = _syn.syntax_for(ref=f"{v.book} {v.chapter}:{v.verse}")
+            if r.get("ok"):
+                visualizations.append({"ref": r.get("ref"), "tree": r.get("tree")})
+    except Exception:
+        pass
+
+    # ---- Important Words: high-frequency commentary words in the passage.
+    # Derived from commentary text: words that appear across multiple commentaries.
+    important = []
+    try:
+        comment_text = " ".join(c["text"] for c in comments)
+        words = {}
+        for w in re.findall(r"[A-Za-z']{4,}", comment_text.lower()):
+            words[w] = words.get(w, 0) + 1
+        important = sorted(words.items(), key=lambda x: -x[1])[:10]
+    except Exception:
+        pass
+
+    return {
+        "ok": True, "ref": label, "verses": len(verses),
+        "sections": {
+            "word_by_word": word_by_word,
+            "commentaries": comments,
+            "grammars": grammars,
+            "visualizations": visualizations,
+            "important_words": [{"word": w, "count": n} for w, n in important],
+        },
+    }
+
+
 def _people_in(conn, verses) -> list[dict]:
     """People whose recorded references fall inside this passage.
 
@@ -2013,13 +2265,31 @@ def bible_browser(conn) -> dict:
         "FROM unit u JOIN module m ON m.id=u.module_id "
         "WHERE m.type IN ('FactBook','Dictionary') AND m.installed_at>0 "
         "ORDER BY u.key").fetchall()
+    # Simple person/thing classification by name patterns and module hints.
+    PERSON_HINTS = ("son of", "daughter of", "father of", "mother of", "husband of",
+                    "wife of", "brother of", "sister of", "king of", "queen of",
+                    "prophet", "priest", "apostle", "disciple", "judge", "apostle",
+                    "servant of", "man of", "woman of", "boy of", "girl of",
+                    "son-in-law", "daughter-in-law", "mother-in-law", "father-in-law",
+                    "brother-in-law", "sister-in-law")
+    THING_HINTS = ("altar", "ark", "temple", "tabernacle", "altar", "well", "gate",
+                   "wall", "city", "mountain", "valley", "river", "sea", "desert",
+                   "wilderness", "garden", "throne", "sword", "shield", "tent",
+                   "house", "city", "town", "village", "country", "land", "kingdom")
     for r in rows:
         key = (r["key"] or "").strip()
         if not key or key in seen:
             continue
         seen.add(key)
+        kl = key.lower()
+        kind = "entry"
+        # Heuristic: names that look like persons vs places vs things
+        if any(h in kl for h in PERSON_HINTS) or kl.endswith(("-ite", "ite", "ian", "ean", "an", "ite")):
+            kind = "person"
+        elif any(h in kl for h in THING_HINTS) or kl.endswith(("gate", "wall", "well", "sea", "desert", "mount", "hill", "valley", "city", "town", "village", "land", "kingdom", "garden", "throne")):
+            kind = "thing"
         entries.append({
-            "kind": "entry",
+            "kind": kind,
             "name": key,
             "module_id": r["module_id"],
             "module": r["module_name"] or r["module_id"],
@@ -2111,3 +2381,1213 @@ def sense_search(conn, concept: str, *, limit: int = 80) -> dict:
             "verses": verses, "count": len(verses),
             "note": "Approximation: Strong's numbers whose gloss contains the concept, "
                     "and the verses that use them. Not a true sense-tagged search."}
+
+
+# ===========================================================================
+# Sermon Starter Guide — sermon ideas, outlines, illustrations for a passage
+# ===========================================================================
+
+def sermon_starter(q: str = "", *, limit: int = 10) -> dict:
+    """Sermon starter ideas for a topic or passage.
+
+    Collates commentaries, cross-references, illustrations and related verses
+    into starter outlines. Returns suggested titles, key verses, main points
+    and application ideas.
+    """
+    conn = db.connect()
+    q = (q or "").strip()
+    if not q:
+        # Return trending/popular starter topics when no query given.
+        return {
+            "ok": True, "q": "", "starters": _default_starters(conn, limit),
+            "note": "No topic given — here are common sermon starters.",
+        }
+
+    rr = canon.parse_ref(q)
+    refs = list(rr.refs())[:5] if rr else []
+
+    # Gather commentaries on the passage(s).
+    comments = []
+    for v in refs:
+        for m in [x for x in library.list_all() if x.type == "Commentary"][:20]:
+            row = conn.execute(
+                "SELECT key, ref_label, title, text FROM unit WHERE module_id=? "
+                "AND book=? AND chapter=? AND verse=? LIMIT 1",
+                (m.id, v.book, v.chapter, v.verse)).fetchone()
+            if row and (row["text"] or "").strip():
+                comments.append({
+                    "module_id": m.id, "module": m.name,
+                    "key": row["key"],
+                    "title": row["title"] or row["ref_label"],
+                    "text": _chunk(row["text"], 900)})
+                break
+        if len(comments) >= 8:
+            break
+
+    # Gather cross-references.
+    xrefs = []
+    for v in refs:
+        k = canon.Ref(v.book, v.chapter, v.verse).osis_id()
+        rows = conn.execute(
+            "SELECT DISTINCT to_key FROM xref WHERE from_key=? LIMIT 10", (k,))
+        for r in rows:
+            t = r["to_key"]
+            if t and t not in {x["key"] for x in xrefs}:
+                xrefs.append({"key": t, "label": t.replace(".", " ", 1)})
+        if len(xrefs) >= 20:
+            break
+
+    # Related verses via keyword.
+    related = _related_verses(q, limit=limit)
+
+    # Build starter outlines.
+    starters = []
+    title = q
+    if refs:
+        title = f"Sermon on {refs[0].label}"
+    starters.append({
+        "title": title,
+        "theme": q,
+        "key_verses": [{"ref": (r["ref"] if r.get("ref") else ""),
+                        "text": (r.get("text") or "")[:200]} for r in related[:5]],
+        "main_points": [
+            f"Introduction: {q} in context",
+            f"Body: The meaning of {q}",
+            f"Application: Living out {q}",
+        ],
+        "illustrations": [c["text"][:300] for c in comments[:3]],
+        "commentaries": comments[:5],
+        "cross_references": xrefs[:10],
+    })
+
+    return {
+        "ok": True, "q": q, "ref": (refs[0].label if refs else ""),
+        "starters": starters, "count": len(starters),
+    }
+
+
+def _default_starters(conn: object, limit: int) -> list[dict]:
+    """Common sermon starter topics when no query is given."""
+    default_topics = [
+        ("Faith", "Hebrews 11:1"),
+        ("Love", "1 Corinthians 13:4-7"),
+        ("Hope", "Romans 15:13"),
+        ("Grace", "Ephesians 2:8-9"),
+        ("Prayer", "Philippians 4:6-7"),
+        ("Forgiveness", "Matthew 6:14-15"),
+        ("Salvation", "John 3:16"),
+        ("Witness", "Acts 1:8"),
+    ]
+    out = []
+    for topic, verse in default_topics[:limit]:
+        rr = canon.parse_ref(verse)
+        refs = list(rr.refs())[:1] if rr else []
+        verse_text = ""
+        if refs:
+            v = refs[0]
+            row = conn.execute(
+                "SELECT text FROM unit WHERE book=? AND chapter=? AND verse=? "
+                "LIMIT 1", (v.book, v.chapter, v.verse)).fetchone()
+            if row:
+                verse_text = (row["text"] or "")[:200]
+        out.append({
+            "title": f"Sermon on {topic}",
+            "theme": topic,
+            "key_verses": [{"ref": verse, "text": verse_text}],
+            "main_points": [
+                f"Introduction: Understanding {topic}",
+                f"Body: {topic} in Scripture",
+                f"Application: Living {topic} daily",
+            ],
+            "illustrations": [],
+            "commentaries": [],
+            "cross_references": [],
+        })
+    return out
+
+
+# ===========================================================================
+# Questions & Answers — community-curated Q&A about Bible passages/topics
+# ===========================================================================
+
+def qa(q: str = "", *, limit: int = 20) -> dict:
+    """Questions & Answers about Bible passages and topics.
+
+    Searches installed commentaries, dictionaries and fact books for Q&A-style
+    content (question/answer pairs, explanations, definitions).
+    """
+    conn = db.connect()
+    q = (q or "").strip()
+    if not q:
+        return {"ok": True, "q": "", "questions": [], "count": 0,
+                "note": "No question given."}
+
+    # Search fact books, dictionaries and commentaries for Q&A content.
+    mods = [m for m in library.list_all()
+            if m.type in ("FactBook", "Dictionary", "Commentary")
+            and m.installed_at]
+    if not mods:
+        return {"ok": False, "error":
+                "No reference resources installed for Q&A."}
+
+    names = [m.id for m in mods]
+    ph = ",".join("?" * len(names))
+    like = f"%{q}%"
+    rows = conn.execute(
+        f"SELECT module_id, key, title, text FROM unit WHERE module_id IN ({ph}) "
+        f"AND (title LIKE ? OR text LIKE ? OR key LIKE ?) LIMIT ?",
+        [*names, like, like, like, limit * 2]).fetchall()
+
+    out = []
+    mods_map = {m.id: m for m in mods}
+    for r in rows[:limit]:
+        m = mods_map.get(r["module_id"])
+        out.append({
+            "module_id": r["module_id"],
+            "module": m.name if m else r["module_id"],
+            "key": r["key"],
+            "title": r["title"] or r["key"],
+            "question": r["title"] or r["key"],
+            "answer": _chunk(r["text"], 800),
+        })
+
+    return {"ok": True, "q": q, "questions": out, "count": len(out)}
+
+
+# ===========================================================================
+# Bible Sense Lexicon — word sense disambiguation
+# ===========================================================================
+
+def sense_lexicon(q: str = "", *, module_id: str = "", limit: int = 10) -> dict:
+    """Word sense disambiguation: which sense of a word is used where.
+
+    Returns senses (glosses/definitions) for a word across installed lexicons,
+    with example verses showing each sense in context.
+    """
+    conn = db.connect()
+    q = (q or "").strip()
+    if not q:
+        return {"ok": False, "error": "no word given"}
+
+    # Try Strong's number first, then bare word.
+    num = canon.normalise_strongs(q)
+    if not num:
+        # Look up the word as a surface form to find its Strong's number.
+        row = conn.execute(
+            "SELECT m.value FROM marker m JOIN module md ON md.id=m.module_id "
+            "WHERE m.kind='strongs' AND m.surface=? AND m.module_id=? "
+            "ORDER BY m.pos LIMIT 1",
+            (q, module_id or "")).fetchone()
+        if row:
+            num = canon.normalise_strongs(row["value"] or "")
+
+    if not num:
+        return {"ok": False, "error": f"no Strong's number found for '{q}'"}
+
+    wb = word_bundle(num)
+    if not wb.get("ok"):
+        return {"ok": False, "error": wb.get("error", "no such word")}
+
+    # Gather glosses from installed lexicons.
+    lex = lexicon_entries_for(conn, num, limit=limit)
+
+    # Example occurrences showing the word in context.
+    occs = occurrences_of(conn, num, limit=limit * 2)
+    examples = []
+    for o in occs[:limit]:
+        examples.append({
+            "ref": (o["ref"] and o["ref"]["label"]) or o["key"],
+            "surface": o["surface"] or "",
+            "module_id": o["module_id"],
+        })
+
+    senses = []
+    for lx in lex:
+        senses.append({
+            "sense": lx.get("module", "") + ": " + _chunk(lx.get("text", ""), 200),
+            "definition": _chunk(lx.get("text", ""), 300),
+            "module": lx.get("module", ""),
+        })
+
+    return {
+        "ok": True, "num": num, "word": q, "headword": wb.get("headword", num),
+        "lemma": wb.get("lemma", ""),
+        "senses": senses, "examples": examples,
+        "count": len(senses),
+    }
+
+
+# ===========================================================================
+# Community Tags — user-sourced tags shareable across users
+# ===========================================================================
+
+def community_tags(action: str = "", tag: str = "", module_id: str = "",
+                   ref: str = "") -> dict:
+    """Community-sourced tags for verses, words, and topics.
+
+    Actions: list, add, remove, by_tag, by_module, by_ref.
+    Stored in the `community_tags` table (created on first use).
+    """
+    conn = db.connect()
+    _ensure_community_tags_table(conn)
+
+    if action == "list":
+        rows = conn.execute(
+            "SELECT tag, module_id, ref, count(*) AS n "
+            "FROM community_tags GROUP BY tag, module_id, ref "
+            "ORDER BY n DESC LIMIT 100").fetchall()
+        return {"ok": True, "action": "list", "tags": [
+            {"tag": r["tag"], "module_id": r["module_id"],
+             "ref": r["ref"], "count": r["n"]} for r in rows]}
+
+    if action == "add":
+        if not tag or not module_id or not ref:
+            return {"ok": False, "error": "need tag, module_id and ref"}
+        conn.execute(
+            "INSERT OR IGNORE INTO community_tags(tag, module_id, ref, added_at) "
+            "VALUES(?,?,?,?)", (tag, module_id, ref, time.time()))
+        conn.commit()
+        return {"ok": True, "action": "add", "tag": tag,
+                "module_id": module_id, "ref": ref}
+
+    if action == "remove":
+        if not tag or not module_id or not ref:
+            return {"ok": False, "error": "need tag, module_id and ref"}
+        conn.execute(
+            "DELETE FROM community_tags WHERE tag=? AND module_id=? AND ref=?",
+            (tag, module_id, ref))
+        conn.commit()
+        return {"ok": True, "action": "remove"}
+
+    if action == "by_tag":
+        rows = conn.execute(
+            "SELECT module_id, ref, count(*) AS n FROM community_tags "
+            "WHERE tag=? GROUP BY module_id, ref ORDER BY n DESC LIMIT 50",
+            (tag,)).fetchall()
+        return {"ok": True, "action": "by_tag", "tag": tag,
+                "results": [{"module_id": r["module_id"], "ref": r["ref"],
+                             "count": r["n"]} for r in rows]}
+
+    if action == "by_module":
+        rows = conn.execute(
+            "SELECT tag, ref, count(*) AS n FROM community_tags "
+            "WHERE module_id=? GROUP BY tag, ref ORDER BY n DESC LIMIT 50",
+            (module_id,)).fetchall()
+        return {"ok": True, "action": "by_module", "module_id": module_id,
+                "results": [{"tag": r["tag"], "ref": r["ref"],
+                             "count": r["n"]} for r in rows]}
+
+    if action == "by_ref":
+        rows = conn.execute(
+            "SELECT tag, count(*) AS n FROM community_tags "
+            "WHERE ref=? GROUP BY tag ORDER BY n DESC LIMIT 50", (ref,)).fetchall()
+        return {"ok": True, "action": "by_ref", "ref": ref,
+                "results": [{"tag": r["tag"], "count": r["n"]} for r in rows]}
+
+    return {"ok": False, "error": f"unknown action '{action}'"}
+
+
+def _ensure_community_tags_table(conn) -> None:
+    """Create the community_tags table if it doesn't exist."""
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS community_tags ("
+        "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "  tag TEXT NOT NULL,"
+        "  module_id TEXT NOT NULL,"
+        "  ref TEXT NOT NULL,"
+        "  added_at REAL NOT NULL,"
+        "  UNIQUE(tag, module_id, ref))")
+    conn.execute("CREATE INDEX IF NOT EXISTS ix_ct_tag ON community_tags(tag)")
+    conn.execute("CREATE INDEX IF NOT EXISTS ix_ct_module ON community_tags(module_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS ix_ct_ref ON community_tags(ref)")
+    conn.commit()
+
+
+# ===========================================================================
+# Personal Books — import user's own books as personal modules
+# ===========================================================================
+
+def personal_books(action: str = "", path: str = "", book_id: str = "") -> dict:
+    """Import and manage personal books (PDF, EPUB, text, etc.).
+
+    Actions: list, import, delete, read.
+    """
+    if action == "list":
+        return {"ok": True, "action": "list", "books": _personal_books_list()}
+
+    if action == "import":
+        if not path:
+            return {"ok": False, "error": "need a file path"}
+        return _import_personal_book(path)
+
+    if action == "delete":
+        if not book_id:
+            return {"ok": False, "error": "need a book id"}
+        return _delete_personal_book(book_id)
+
+    if action == "read":
+        if not book_id:
+            return {"ok": False, "error": "need a book id"}
+        return _read_personal_book(book_id)
+
+    return {"ok": False, "error": f"unknown action '{action}'"}
+
+
+def _personal_books_list() -> list[dict]:
+    """List imported personal books."""
+    conn = db.connect()
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS personal_books ("
+        "  id TEXT PRIMARY KEY,"
+        "  title TEXT NOT NULL,"
+        "  path TEXT NOT NULL,"
+        "  format TEXT NOT NULL,"
+        "  imported_at REAL NOT NULL,"
+        "  unit_count INTEGER DEFAULT 0)")
+    rows = conn.execute(
+        "SELECT * FROM personal_books ORDER BY imported_at DESC").fetchall()
+    return [dict(r) for r in rows]
+
+
+def _import_personal_book(path: str) -> dict:
+    """Import a personal book file (PDF, EPUB, text)."""
+    import os
+    import hashlib
+
+    if not os.path.exists(path):
+        return {"ok": False, "error": f"file not found: {path}"}
+
+    book_id = "pb_" + hashlib.sha1(path.encode()).hexdigest()[:12]
+    title = os.path.basename(path)
+    fmt = os.path.splitext(path)[1].lstrip(".").lower()
+
+    conn = db.connect()
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS personal_books ("
+        "  id TEXT PRIMARY KEY,"
+        "  title TEXT NOT NULL,"
+        "  path TEXT NOT NULL,"
+        "  format TEXT NOT NULL,"
+        "  imported_at REAL NOT NULL,"
+        "  unit_count INTEGER DEFAULT 0)")
+    existing = conn.execute(
+        "SELECT 1 FROM personal_books WHERE id=?", (book_id,)).fetchone()
+    if existing:
+        return {"ok": False, "error": "book already imported"}
+
+    # Read the file content.
+    try:
+        if fmt == "epub":
+            text = _read_epub(path)
+        elif fmt == "pdf":
+            text = _read_pdf(path)
+        else:
+            with open(path, "r", encoding="utf-8", errors="replace") as f:
+                text = f.read()
+    except Exception as e:
+        return {"ok": False, "error": f"could not read file: {e}"}
+
+    if not text.strip():
+        return {"ok": False, "error": "file contains no readable text"}
+
+    # Split into units (paragraphs/chapters).
+    units = [u.strip() for u in text.split("\n\n") if u.strip()]
+    if not units:
+        units = [text.strip()]
+
+    now = time.time()
+    conn.execute(
+        "INSERT INTO personal_books(id, title, path, format, imported_at, unit_count) "
+        "VALUES(?,?,?,?,?,?)",
+        (book_id, title, path, fmt, now, len(units)))
+    conn.commit()
+
+    return {"ok": True, "action": "import", "book_id": book_id,
+            "title": title, "format": fmt, "unit_count": len(units)}
+
+
+def _delete_personal_book(book_id: str) -> dict:
+    conn = db.connect()
+    conn.execute("DELETE FROM personal_books WHERE id=?", (book_id,))
+    conn.commit()
+    return {"ok": True, "action": "delete", "book_id": book_id}
+
+
+def _read_personal_book(book_id: str) -> dict:
+    conn = db.connect()
+    row = conn.execute(
+        "SELECT * FROM personal_books WHERE id=?", (book_id,)).fetchone()
+    if not row:
+        return {"ok": False, "error": "book not found"}
+
+    path = row["path"]
+    fmt = row["format"]
+    try:
+        if fmt == "epub":
+            text = _read_epub(path)
+        elif fmt == "pdf":
+            text = _read_pdf(path)
+        else:
+            with open(path, "r", encoding="utf-8", errors="replace") as f:
+                text = f.read()
+    except Exception as e:
+        return {"ok": False, "error": f"could not read file: {e}"}
+
+    return {"ok": True, "book_id": book_id, "title": row["title"],
+            "format": fmt, "text": text}
+
+
+def _read_epub(path: str) -> str:
+    """Extract text from an EPUB file."""
+    try:
+        import ebooklib
+        from ebooklib import epub
+        book = epub.read_epub(path)
+        texts = []
+        for item in book.get_items_of_type(ebooklib.ITEM_DOCUMENT):
+            content = item.get_content()
+            # Strip HTML tags crudely.
+            import re
+            text = re.sub(r"<[^>]+>", " ", content.decode("utf-8", errors="replace"))
+            text = re.sub(r"\s+", " ", text).strip()
+            if text:
+                texts.append(text)
+        return "\n\n".join(texts)
+    except Exception:
+        return ""
+
+
+def _read_pdf(path: str) -> str:
+    """Extract text from a PDF file."""
+    try:
+        import PyPDF2
+        reader = PyPDF2.PdfReader(path)
+        texts = []
+        for page in reader.pages:
+            texts.append(page.extract_text() or "")
+        return "\n\n".join(texts)
+    except Exception:
+        return ""
+
+
+# ===========================================================================
+# Courses — video/audio course player and library
+# ===========================================================================
+
+def courses(action: str = "", course_id: str = "", lesson_id: str = "") -> dict:
+    """Course library and player.
+
+    Actions: list, open, lesson, progress.
+    """
+    conn = db.connect()
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS courses ("
+        "  id TEXT PRIMARY KEY,"
+        "  title TEXT NOT NULL,"
+        "  description TEXT,"
+        "  author TEXT,"
+        "  created_at REAL NOT NULL)")
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS course_lessons ("
+        "  id TEXT PRIMARY KEY,"
+        "  course_id TEXT NOT NULL,"
+        "  title TEXT NOT NULL,"
+        "  content TEXT,"
+        "  video_url TEXT,"
+        "  audio_url TEXT,"
+        "  position INTEGER DEFAULT 0,"
+        "  FOREIGN KEY(course_id) REFERENCES courses(id))")
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS course_progress ("
+        "  course_id TEXT NOT NULL,"
+        "  lesson_id TEXT NOT NULL,"
+        "  completed INTEGER DEFAULT 0,"
+        "  PRIMARY KEY(course_id, lesson_id))")
+    conn.commit()
+
+    if action == "list":
+        rows = conn.execute(
+            "SELECT c.*, COUNT(l.id) AS lesson_count "
+            "FROM courses c LEFT JOIN course_lessons l ON l.course_id=c.id "
+            "GROUP BY c.id ORDER BY c.created_at DESC").fetchall()
+        return {"ok": True, "action": "list", "courses": [dict(r) for r in rows]}
+
+    if action == "open":
+        if not course_id:
+            return {"ok": False, "error": "need a course id"}
+        row = conn.execute("SELECT * FROM courses WHERE id=?", (course_id,)).fetchone()
+        if not row:
+            return {"ok": False, "error": "course not found"}
+        lessons = conn.execute(
+            "SELECT * FROM course_lessons WHERE course_id=? ORDER BY position",
+            (course_id,)).fetchall()
+        progress = {}
+        for p in conn.execute(
+                "SELECT lesson_id, completed FROM course_progress WHERE course_id=?",
+                (course_id,)).fetchall():
+            progress[p["lesson_id"]] = bool(p["completed"])
+        return {"ok": True, "action": "open", "course": dict(row),
+                "lessons": [dict(l) for l in lessons],
+                "progress": progress}
+
+    if action == "lesson":
+        if not lesson_id:
+            return {"ok": False, "error": "need a lesson id"}
+        row = conn.execute(
+            "SELECT * FROM course_lessons WHERE id=?", (lesson_id,)).fetchone()
+        if not row:
+            return {"ok": False, "error": "lesson not found"}
+        return {"ok": True, "action": "lesson", "lesson": dict(row)}
+
+    if action == "progress":
+        if not course_id or not lesson_id:
+            return {"ok": False, "error": "need course_id and lesson_id"}
+        completed = q.get("completed", "1") not in ("0", "false", "")
+        conn.execute(
+            "INSERT OR REPLACE INTO course_progress(course_id, lesson_id, completed) "
+            "VALUES(?,?,?)", (course_id, lesson_id, 1 if completed else 0))
+        conn.commit()
+        return {"ok": True, "action": "progress"}
+
+    return {"ok": False, "error": f"unknown action '{action}'"}
+
+
+# ===========================================================================
+# Draw on Screen — drawing annotation overlay
+# ===========================================================================
+
+def draw_on_screen(action: str = "", drawing_id: str = "", data: str = "") -> dict:
+    """Drawing annotations over Bible text.
+
+    Actions: list, save, delete, load.
+    Drawings are JSON with paths, shapes, colors, etc.
+    """
+    conn = db.connect()
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS drawings ("
+        "  id TEXT PRIMARY KEY,"
+        "  title TEXT NOT NULL,"
+        "  data TEXT NOT NULL,"
+        "  created_at REAL NOT NULL,"
+        "  updated_at REAL NOT NULL)")
+    conn.commit()
+
+    if action == "list":
+        rows = conn.execute(
+            "SELECT id, title, created_at, updated_at FROM drawings "
+            "ORDER BY updated_at DESC").fetchall()
+        return {"ok": True, "action": "list", "drawings": [dict(r) for r in rows]}
+
+    if action == "save":
+        import json as _j
+        if not drawing_id:
+            import uuid
+            drawing_id = "draw_" + uuid.uuid4().hex[:12]
+        title = data  # reuse data field as title if not separate
+        now = time.time()
+        conn.execute(
+            "INSERT OR REPLACE INTO drawings(id, title, data, created_at, updated_at) "
+            "VALUES(?,?,?,?,?)",
+            (drawing_id, title or drawing_id, data, now, now))
+        conn.commit()
+        return {"ok": True, "action": "save", "drawing_id": drawing_id}
+
+    if action == "delete":
+        if not drawing_id:
+            return {"ok": False, "error": "need a drawing id"}
+        conn.execute("DELETE FROM drawings WHERE id=?", (drawing_id,))
+        conn.commit()
+        return {"ok": True, "action": "delete"}
+
+    if action == "load":
+        if not drawing_id:
+            return {"ok": False, "error": "need a drawing id"}
+        row = conn.execute("SELECT * FROM drawings WHERE id=?", (drawing_id,)).fetchone()
+        if not row:
+            return {"ok": False, "error": "drawing not found"}
+        return {"ok": True, "action": "load", "drawing": dict(row)}
+
+    return {"ok": False, "error": f"unknown action '{action}'"}
+
+
+# ===========================================================================
+# Print/Export — full print and export
+# ===========================================================================
+
+def print_export(action: str = "", content_type: str = "", content_id: str = "",
+                 format: str = "pdf") -> dict:
+    """Print and export passages, guides, searches, notes, etc.
+
+    Actions: list, formats, export, print.
+    Formats: pdf, html, txt, md, docx.
+    """
+    if action == "list":
+        return {"ok": True, "action": "list",
+                "formats": ["pdf", "html", "txt", "md", "docx"],
+                "content_types": ["passage", "guide", "search", "notes",
+                                  "sermon", "word-study", "canvas"]}
+
+    if action == "formats":
+        return {"ok": True, "action": "formats",
+                "formats": ["pdf", "html", "txt", "md", "docx"]}
+
+    if action == "export":
+        if not content_type or not content_id:
+            return {"ok": False, "error": "need content_type and content_id"}
+        return _do_export(content_type, content_id, format)
+
+    if action == "print":
+        if not content_type or not content_id:
+            return {"ok": False, "error": "need content_type and content_id"}
+        return _do_print(content_type, content_id, format)
+
+    return {"ok": False, "error": f"unknown action '{action}'"}
+
+
+def _do_export(content_type: str, content_id: str, format: str) -> dict:
+    """Export content in the given format."""
+    # Gather content based on type.
+    conn = db.connect()
+    title = content_id
+    body = ""
+
+    if content_type == "passage":
+        rr = canon.parse_ref(content_id)
+        if rr:
+            verses = list(rr.refs())[:12]
+            parts = []
+            for v in verses:
+                row = conn.execute(
+                    "SELECT text FROM unit WHERE book=? AND chapter=? AND verse=? "
+                    "LIMIT 1", (v.book, v.chapter, v.verse)).fetchone()
+                if row:
+                    parts.append(f"{v.book} {v.chapter}:{v.verse} — "
+                                 f"{(row['text'] or '').strip()}")
+            body = "\n\n".join(parts)
+            title = content_id
+    elif content_type == "notes":
+        row = conn.execute(
+            "SELECT title, content FROM notes WHERE id=?", (content_id,)).fetchone()
+        if row:
+            title = row["title"] or content_id
+            body = row["content"] or ""
+    elif content_type == "search":
+        # Return the search query text.
+        body = f"Search results for: {content_id}\n\n(Full search export requires the search panel.)"
+
+    if format == "txt":
+        content = f"{title}\n{'=' * len(title)}\n\n{body}"
+        return {"ok": True, "action": "export", "format": "txt",
+                "content": content, "filename": f"{title}.txt"}
+    elif format == "md":
+        content = f"# {title}\n\n{body}"
+        return {"ok": True, "action": "export", "format": "md",
+                "content": content, "filename": f"{title}.md"}
+    elif format == "html":
+        content = (f"<html><head><title>{title}</title></head><body>"
+                   f"<h1>{title}</h1><div>{body}</div></body></html>")
+        return {"ok": True, "action": "export", "format": "html",
+                "content": content, "filename": f"{title}.html"}
+    elif format == "pdf":
+        # PDF requires a library; return HTML as fallback with a note.
+        content = (f"<html><head><title>{title}</title></head><body>"
+                   f"<h1>{title}</h1><div>{body}</div>"
+                   f"<p><em>PDF export requires a PDF library installed on this system.</em></p>"
+                   f"</body></html>")
+        return {"ok": True, "action": "export", "format": "pdf",
+                "content": content, "filename": f"{title}.html",
+                "note": "PDF export returned as HTML (no PDF library available)."}
+    elif format == "docx":
+        content = f"{title}\n{'=' * len(title)}\n\n{body}"
+        return {"ok": True, "action": "export", "format": "docx",
+                "content": content, "filename": f"{title}.txt",
+                "note": "DOCX export returned as plain text (no python-docx available)."}
+
+    return {"ok": False, "error": f"unsupported format '{format}'"}
+
+
+def _do_print(content_type: str, content_id: str, format: str) -> dict:
+    """Print content — returns a print-ready HTML view."""
+    # Reuse export but mark as print view.
+    result = _do_export(content_type, content_id, format)
+    if result.get("ok"):
+        result["action"] = "print"
+        result["print_view"] = True
+    return result
+
+
+# ===========================================================================
+# Info Tool — info about a verse/person/place
+# ===========================================================================
+
+def info_tool(ref: str = "", module_id: str = "") -> dict:
+    """Info tool: everything known about a passage/person/place.
+
+    Returns the verse text, any notes, cross-references, places, people,
+    topics, and related resources for a passage or word.
+    """
+    conn = db.connect()
+    q = (ref or "").strip()
+    if not q:
+        return {"ok": False, "error": "no reference given"}
+
+    rr = canon.parse_ref(q)
+    if rr is None:
+        return {"ok": False, "error": f"cannot read {q!r} as a reference"}
+    refs = list(rr.refs())[:5]
+
+    result = {"ok": True, "ref": ref, "ref_label": canon.format_ref(refs[0]) if refs else ref}
+
+    verses = []
+    for r_ in refs:
+        row = conn.execute(
+            "SELECT u.text, u.ref_label, u.module_id FROM unit u "
+            "WHERE u.book=? AND u.chapter=? AND u.verse=? LIMIT 1",
+            (r_.book, r_.chapter, r_.verse)).fetchone()
+        if row:
+            verses.append({
+                "ref": row["ref_label"] or f"{r_.book} {r_.chapter}:{r_.verse}",
+                "text": (row["text"] or "").strip(),
+                "module_id": row["module_id"],
+            })
+
+    result["verses"] = verses
+
+    strongs_markers = []
+    morph_markers = []
+    for v in verses:
+        row = conn.execute(
+            "SELECT m.value, m.surface, m.kind FROM marker m "
+            "JOIN unit u ON u.module_id=m.module_id AND u.key=m.unit_key "
+            "WHERE u.ref_label=? AND (m.kind='strongs' OR m.kind='morph') LIMIT 10",
+            (v["ref"],)).fetchall()
+        for r2 in row:
+            if r2["kind"] == "strongs":
+                strongs_markers.append(r2["value"])
+            elif r2["kind"] == "morph":
+                morph_markers.append(r2["value"])
+
+    result["strongs"] = strongs_markers
+    result["morphology"] = morph_markers
+
+    notes = []
+    for v in verses:
+        rows = conn.execute(
+            "SELECT m.value FROM marker m "
+            "JOIN unit u ON u.module_id=m.module_id AND u.key=m.unit_key "
+            "WHERE u.ref_label=? AND m.kind='strongs' LIMIT 5",
+            (v["ref"],)).fetchall()
+        notes.extend([r["value"] for r in rows if r["value"]])
+
+    result["notes"] = notes[:5]
+
+    topics = []
+    for v in verses:
+        rows = conn.execute(
+            "SELECT m.value FROM marker m "
+            "JOIN unit u ON u.module_id=m.module_id AND u.key=m.unit_key "
+            "WHERE u.ref_label=? AND m.kind='topic' LIMIT 10",
+            (v["ref"],)).fetchall()
+        topics.extend([r["value"] for r in rows if r["value"]])
+
+    result["topics"] = topics[:10]
+
+    xrefs = []
+    for v in verses:
+        rows = conn.execute(
+            "SELECT x.to_key FROM xref x "
+            "JOIN unit u ON u.module_id=x.module_id AND u.key=x.from_key "
+            "WHERE u.ref_label=? LIMIT 10",
+            (v["ref"],)).fetchall()
+        xrefs.extend([r["to_key"] for r in rows if r["to_key"]])
+
+    result["cross_references"] = xrefs[:10]
+
+    return result
+
+
+# ===========================================================================
+# Bibliography — formatted citations for passages/modules.
+# ===========================================================================
+
+def bibliography(module_ids: list[str] = None, *, style: str = "sbl") -> dict:
+    """Generate bibliography entries for modules."""
+    conn = db.connect()
+    if not module_ids:
+        rows = conn.execute(
+            "SELECT id, name, type, lang, author, year, description FROM module WHERE installed_at > 0 ORDER BY name").fetchall()
+    else:
+        ph = ",".join("?" * len(module_ids))
+        rows = conn.execute(
+            f"SELECT id, name, type, lang, author, year, description FROM module WHERE id IN ({ph}) ORDER BY name",
+            module_ids).fetchall()
+
+    entries = []
+    for r in rows:
+        m = {
+            "module_id": r["id"],
+            "name": r["name"] or "",
+            "type": r["type"] or "",
+            "lang": r["lang"] or "",
+            "author": r["author"] or "",
+            "year": r["year"] or "",
+            "description": (r["description"] or "")[:500],
+        }
+        parts = []
+        if m["author"]:
+            parts.append(m["author"])
+        if m["year"]:
+            parts.append(m["year"])
+        if m["name"]:
+            parts.append(m["name"])
+        m["citation"] = ". ".join([p for p in parts if p]) + "."
+        entries.append(m)
+
+    return {"ok": True, "style": style, "entries": entries, "count": len(entries)}
+
+
+# ===========================================================================
+# Books Search — search inside books/modules.
+# ===========================================================================
+
+def books_search(q: str = "", module_ids: list[str] = None, limit: int = 20) -> dict:
+    """Search inside books/modules for a term."""
+    conn = db.connect()
+    q = (q or "").strip()
+    if not q:
+        return {"ok": False, "error": "no query given"}
+
+    module_ids_list = list(module_ids) if module_ids else []
+    if module_ids_list:
+        ph = ",".join("?" * len(module_ids_list))
+        rows = conn.execute(
+            f"SELECT u.text, u.ref_label, u.module_id, m.name FROM unit u "
+            f"JOIN module m ON m.id=u.module_id "
+            f"WHERE u.text LIKE ? AND m.installed_at>0 "
+            f"AND m.module_id IN ({ph}) LIMIT ?",
+            [f"%{q}%", *module_ids_list, limit]).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT u.text, u.ref_label, u.module_id, m.name FROM unit u "
+            f"JOIN module m ON m.id=u.module_id "
+            f"WHERE u.text LIKE ? AND m.installed_at>0 LIMIT ?",
+            (f"%{q}%", limit)).fetchall()
+
+    results = []
+    for r in rows:
+        results.append({
+            "ref": r["ref_label"] or "",
+            "text": (r["text"] or "")[:300],
+            "module_id": r["module_id"],
+            "module": r["name"] or "",
+        })
+
+    return {"ok": True, "query": q, "results": results, "count": len(results)}
+
+
+# ===========================================================================
+# Search Synopsis — overview of search results across books.
+# ===========================================================================
+
+def search_synopsis(q: str = "", module_ids: list[str] = None) -> dict:
+    """Search synopsis: overview of where results fall across books."""
+    conn = db.connect()
+    q = (q or "").strip()
+    if not q:
+        return {"ok": False, "error": "no query given"}
+
+    module_ids_list = list(module_ids) if module_ids else []
+    if module_ids_list:
+        ph = ",".join("?" * len(module_ids_list))
+        rows = conn.execute(
+            f"SELECT u.module_id, m.name, COUNT(*) as c FROM unit u "
+            f"JOIN module m ON m.id=u.module_id "
+            f"WHERE u.text LIKE ? AND m.installed_at>0 "
+            f"GROUP BY u.module_id ORDER BY c DESC",
+            [f"%{q}%", *module_ids_list])
+    else:
+        rows = conn.execute(
+            "SELECT u.module_id, m.name, COUNT(*) as c FROM unit u "
+            f"JOIN module m ON m.id=u.module_id "
+            f"WHERE u.text LIKE ? AND m.installed_at>0 "
+            f"GROUP BY u.module_id ORDER BY c DESC",
+            (f"%{q}%",)).fetchall()
+
+    synopsis = []
+    for r in rows:
+        row = conn.execute(
+            "SELECT u.text FROM unit u WHERE u.module_id=? AND u.text LIKE ? LIMIT 1",
+            (r["module_id"], f"%{q}%")).fetchone()
+        synopsis.append({
+            "module_id": r["module_id"],
+            "module": r["name"] or module_id,
+            "count": r["c"],
+            "sample": row["text"][:200] if row and row["text"] else "",
+        })
+
+    return {"ok": True, "query": q, "synopsis": synopsis, "count": len(synopsis)}
+
+
+# ===========================================================================
+# Insights — AI-style insights about a passage.
+# ===========================================================================
+
+def insights(ref: str = "", module_id: str = "") -> dict:
+    """Insights about a passage: themes, key verses, applications."""
+    conn = db.connect()
+    q = (ref or "").strip()
+    if not q:
+        return {"ok": False, "error": "no reference given"}
+
+    rr = canon.parse_ref(q)
+    if rr is None:
+        return {"ok": False, "error": f"cannot read {q!r} as a reference"}
+    refs = list(rr.refs())[:5]
+
+    verses = []
+    for r_ in refs:
+        row = conn.execute(
+            "SELECT u.text, u.ref_label FROM unit u "
+            "WHERE u.book=? AND u.chapter=? AND u.verse=? LIMIT 1",
+            (r_.book, r_.chapter, r_.verse)).fetchone()
+        if row:
+            verses.append({
+                "ref": row["ref_label"] or f"{r_.book} {r_.chapter}:{r_.verse}",
+                "text": (row["text"] or "").strip(),
+            })
+
+    stop_words = {"the", "and", "of", "to", "a", "in", "is", "it", "you", "that",
+        "he", "was", "for", "on", "are", "as", "with", "his", "they",
+        "at", "be", "this", "have", "from", "or", "one", "had", "by",
+        "word", "but", "not", "what", "all", "were", "we", "when",
+        "your", "can", "said", "there", "use", "an", "each", "which",
+        "she", "do", "how", "their", "if", "will", "up", "other",
+        "about", "out", "many", "then", "them", "these", "so", "some",
+        "her", "would", "make", "him", "into", "time", "has",
+        "look", "two", "more", "write", "go", "see", "number", "no",
+        "way", "could", "people", "my", "than", "first", "water", "been",
+        "call", "who", "oil", "its", "now", "find", "long", "down",
+        "day", "did", "get", "come", "made", "may", "part"}
+
+    word_counts = {}
+    for v in verses:
+        for word in v["text"].lower().split():
+            word = word.strip(".,!?;:\"'()")
+            if word and word not in stop_words and len(word) > 3:
+                word_counts[word] = word_counts.get(word, 0) + 1
+
+    insights_list = []
+    if verses:
+        insights_list.append({
+            "type": "theme",
+            "title": f"Key Themes in {refs[0].label if refs else q}",
+            "content": f"The key themes in this passage include: {', '.join(w for w, _ in sorted(word_counts.items(), key=lambda x: -x[1])[:5])}.",
+            "verses": [v["ref"] for v in verses],
+        })
+        insights_list.append({
+            "type": "summary",
+            "title": "Summary",
+            "content": verses[0]["text"][:200] + "..." if len(verses[0]["text"]) > 200 else verses[0]["text"],
+        })
+
+    return {"ok": True, "ref": q, "sections": insights_list, "count": len(insights_list)}
+
+
+# ===========================================================================
+# Sermon Import — import a sermon document.
+# ===========================================================================
+
+def sermon_import(text: str = "", title: str = "", series: str = "") -> dict:
+    """Import a sermon document."""
+    if not text:
+        return {"ok": False, "error": "no text provided"}
+
+    title = title or "Untitled Sermon"
+    sermon_id = f"sermon-{slugify(title)}-{int(time.time())}"
+
+    conn = db.connect()
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS sermons ("
+        "  id TEXT PRIMARY KEY,"
+        "  title TEXT NOT NULL,"
+        "  series TEXT,"
+        "  text TEXT NOT NULL,"
+        "  created_at REAL NOT NULL)"
+    )
+    conn.execute(
+        "INSERT INTO sermons(id, title, series, text, created_at) VALUES(?,?,?,?,?)",
+        (sermon_id, title, series, text, time.time()))
+    conn.commit()
+
+    return {"ok": True, "sermon_id": sermon_id, "title": title, "series": series}
+
+
+# ===========================================================================
+# Sermon Documents — view/manage sermon documents.
+# ===========================================================================
+
+def sermon_documents(sermon_id: str = "") -> dict:
+    """View/manage sermon documents."""
+    conn = db.connect()
+    if not sermon_id:
+        rows = conn.execute("SELECT * FROM sermons ORDER BY created_at DESC").fetchall()
+        return {"ok": True, "sermons": [dict(r) for r in rows], "count": len(rows)}
+
+    row = conn.execute("SELECT * FROM sermons WHERE id=?", (sermon_id,)).fetchone()
+    if not row:
+        return {"ok": False, "error": "sermon not found"}
+
+    return {"ok": True, "sermon": dict(row)}
+
+
+# ===========================================================================
+# Visual Copy — copy verse as an image (text representation).
+# ===========================================================================
+
+def visual_copy(ref: str = "", module_id: str = "", style: str = "default") -> dict:
+    """Copy verse as an image (text representation for now)."""
+    conn = db.connect()
+    ref = (ref or "").strip()
+    if not ref:
+        return {"ok": False, "error": "no reference given"}
+
+    rr = canon.parse_ref(ref)
+    if rr is None:
+        return {"ok": False, "error": f"cannot read {ref!r} as a reference"}
+
+    refs = list(rr.refs())[:1]
+    if not refs:
+        return {"ok": False, "error": "no valid reference"}
+
+    r_ = refs[0]
+    row = conn.execute(
+        "SELECT u.text, u.ref_label FROM unit u "
+        "WHERE u.book=? AND u.chapter=? AND u.verse=? LIMIT 1",
+        (r_.book, r_.chapter, r_.verse)).fetchone()
+
+    if not row:
+        return {"ok": False, "error": "verse not found"}
+
+    text = row["text"]
+    ascii_art = f"""
+╔════════════════════════════════════════╗
+║  {ref:<38}║
+║                                      ║
+║  {text[:70]:<70}║
+║                                      ║
+╚═══════════════════════════════════════╝
+"""
+
+    return {"ok": True, "ref": ref, "content": ascii_art, "format": "text"}
+
+
+# ===========================================================================
+# Confessional Documents — creeds, confessions, catechisms.
+# ===========================================================================
+
+def confessional_documents(doc_type: str = "", limit: int = 20) -> dict:
+    """Confessional documents: creeds, confessions, catechisms."""
+    conn = db.connect()
+
+    if doc_type:
+        rows = conn.execute(
+            "SELECT u.text, u.ref_label, m.name FROM unit u "
+            "JOIN module m ON m.id=u.module_id "
+            "WHERE m.installed_at>0 AND (u.text LIKE ? OR m.name LIKE ?) "
+            f"LIMIT {limit}",
+            (f"%{doc_type}%", f"%{doc_type}%")).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT u.text, u.ref_label, m.name FROM unit u "
+            "JOIN module m ON m.id=u.module_id "
+            "WHERE m.installed_at>0 AND u.text LIKE '%confession%' "
+            f"LIMIT {limit}").fetchall()
+
+    results = []
+    for r in rows:
+        results.append({
+            "title": r["ref_label"] or "Untitled",
+            "text": (r["text"] or "")[:500],
+            "module": r["name"] or "",
+        })
+
+    return {"ok": True, "documents": results, "count": len(results)}
+
+
+# ===========================================================================
+# Catholic Daily Readings / Topical Index
+# ===========================================================================
+
+def catholic_daily_readings(date: str = "", liturgical_season: str = "") -> dict:
+    """Catholic daily readings / topical index."""
+    conn = db.connect()
+
+    if date:
+        rows = conn.execute(
+            "SELECT u.text, u.ref_label, m.name FROM unit u "
+            "JOIN module m ON m.module_id=u.module_id "
+            "WHERE m.installed_at>0 AND (u.text LIKE ? OR u.ref_label LIKE ?) "
+            f"LIMIT 20",
+            (f"%{date}%", f"%{date}%")).fetchall()
+    elif liturgical_season:
+        rows = conn.execute(
+            "SELECT u.text, u.ref_label, m.name FROM unit u "
+            "JOIN module m ON m.module_id=u.module_id "
+            "WHERE m.installed_at>0 AND (u.text LIKE ? OR m.name LIKE ?) "
+            f"LIMIT 20",
+            (f"%{liturgical_season}%", f"%{liturgical_season}%")).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT u.text, u.ref_label, m.name FROM unit u "
+            "JOIN module m ON m.id=u.module_id "
+            "WHERE m.installed_at>0 AND u.text LIKE '%gospel%' "
+            f"LIMIT 20").fetchall()
+
+    results = []
+    for r in rows:
+        results.append({
+            "title": r["ref_label"] or "Daily Reading",
+            "text": (r["text"] or "")[:500],
+            "module": r["name"] or "",
+        })
+
+    return {"ok": True, "date": date, "season": liturgical_season, "readings": results, "count": len(results)}
+
+
+# ===========================================================================
+# Popular Quotes — most-quoted Bible verses.
+# ===========================================================================
+
+def popular_quotes(module_ids: list[str] = None, limit: int = 20) -> dict:
+    """Popular quotes: most-quoted Bible verses based on cross-reference frequency."""
+    conn = db.connect()
+
+    if module_ids:
+        ph = ",".join("?" * len(module_ids))
+        rows = conn.execute(
+            f"SELECT x.to_key, COUNT(*) as c FROM xref x "
+            f"WHERE x.module_id IN ({ph}) "
+            f"AND EXISTS (SELECT 1 FROM unit u WHERE u.module_id=x.module_id AND u.key=x.from_key) "
+            f"GROUP BY x.to_key ORDER BY c DESC LIMIT ?",
+            [*module_ids, limit]).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT x.to_key, COUNT(*) as c FROM xref x "
+            "WHERE x.module_id IN (SELECT id FROM module WHERE installed_at>0) "
+            "AND EXISTS (SELECT 1 FROM unit u WHERE u.module_id=x.module_id AND u.key=x.from_key) "
+            "GROUP BY x.to_key ORDER BY c DESC LIMIT ?",
+            (limit,)).fetchall()
+
+    results = []
+    for r in rows:
+        row = conn.execute(
+            "SELECT u.text, u.ref_label FROM unit u WHERE u.key=? LIMIT 1",
+            (r["to_key"],)).fetchone()
+        if row:
+            results.append({
+                "ref": row["ref_label"] or r["to_key"],
+                "text": (row["text"] or "")[:200],
+                "count": r["c"],
+            })
+
+    return {"ok": True, "quotes": results, "count": len(results)}

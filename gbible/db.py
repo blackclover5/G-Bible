@@ -26,7 +26,7 @@ import threading
 import time
 from pathlib import Path
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 _local = threading.local()
 
@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS module (
     format        TEXT,
     license       TEXT,
     rights        TEXT,                      -- attribution string
+    attribution   TEXT,                      -- attribution string
     description   TEXT,
     about         TEXT,
     author        TEXT,
@@ -168,7 +169,7 @@ CREATE INDEX IF NOT EXISTS ix_unit_chap ON unit(module_id, book, chapter);
 -- Strong's" are both primary-key lookups with nothing duplicated.
 CREATE TABLE IF NOT EXISTS marker (
     module_id  TEXT NOT NULL,
-    kind       TEXT NOT NULL,     -- strongs | lemma | morph | topic | sense
+    kind       TEXT NOT NULL,     -- strongs | lemma | morph | field | topic | sense
     value      TEXT NOT NULL,     -- H0430, the lemma, the topic key
     unit_key   TEXT NOT NULL,
     pos        INTEGER,           -- word ordinal within the unit
@@ -257,6 +258,17 @@ CREATE TABLE IF NOT EXISTS setting (
     key   TEXT PRIMARY KEY,
     value TEXT
 );
+
+-- Named Morph Query documents belong to this library, not to one browser's
+-- local storage, so they remain available after clearing browser data.
+CREATE TABLE IF NOT EXISTS saved_morph_query (
+    id          TEXT PRIMARY KEY,
+    name        TEXT NOT NULL UNIQUE,
+    query_json  TEXT NOT NULL,
+    created_at  REAL NOT NULL,
+    updated_at  REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_saved_morph_updated ON saved_morph_query(updated_at DESC);
 
 CREATE TABLE IF NOT EXISTS highlight (
     id         TEXT PRIMARY KEY,
@@ -780,6 +792,9 @@ _ADDED_COLUMNS = {
     "repo": [
         ("item_count", "INTEGER DEFAULT 0"),
     ],
+    "module": [
+        ("attribution", "TEXT"),
+    ],
 }
 
 
@@ -792,7 +807,15 @@ def _migrate_to_2(conn: sqlite3.Connection) -> None:
     _backfill_highlight_refs(conn)
 
 
-_MIGRATIONS = {2: _migrate_to_2}
+def _migrate_to_3(conn: sqlite3.Connection) -> None:
+    for table, cols in _ADDED_COLUMNS.items():
+        have = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+        for name, decl in cols:
+            if name not in have:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
+
+
+_MIGRATIONS = {2: _migrate_to_2, 3: _migrate_to_3}
 
 
 def _run_migrations(conn: sqlite3.Connection) -> None:

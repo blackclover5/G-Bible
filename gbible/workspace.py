@@ -328,6 +328,7 @@ def sync(pane_id: str, cursor: dict, opts: dict | None = None
     src = library.get(p.module_id)
     if src is None:
         return []
+    conn = db.connect()
     out: list[dict] = []
     for other in link_group(p.layout_id, p.link_set):
         if other.id == pane_id:
@@ -337,7 +338,8 @@ def sync(pane_id: str, cursor: dict, opts: dict | None = None
         # A passage-guide pane carries no module, so it has no milestone types
         # of its own.  It is treated as a consumer of bibleVerse: when a linked
         # Bible or commentary moves, the guide re-renders for the new reference.
-        # A word-study pane is not verse-keyed, so it is left alone.
+        # A word-study pane consumes strongs/lemma: when a linked Bible moves
+        # onto a word with a Strong's number, the word study re-renders for it.
         if other.view == "guide":
             if src is None or taxonomy.INDEX_BIBLE_VERSE not in src.link_types():
                 out.append({"pane_id": other.id, "module_id": other.module_id,
@@ -356,6 +358,34 @@ def sync(pane_id: str, cursor: dict, opts: dict | None = None
                         "cursor": {"ref": ref, "span": cursor.get("span", "chapter"),
                                    "guide": (other.cursor or {}).get("guide", "passage")},
                         "shared": ["bibleVerse"], "reader": "guide"})
+            continue
+        # A word-study pane follows Strong's numbers: when a linked Bible lands
+        # on a verse that carries a Strong's number, the word study opens it.
+        if other.view == "wordstudy":
+            strongs = cursor.get("strongs") or (cursor.get("selected_strongs"))
+            if not strongs:
+                # Try to pick the first Strong's from the verse's spans.
+                try:
+                    from . import study as _study
+                    src_mod = library.get(p.module_id)
+                    if src_mod and src_mod.reader == "verse":
+                        row = conn.execute(
+                            "SELECT key FROM unit WHERE module_id=? AND book=? "
+                            "AND chapter=? AND verse=? LIMIT 1",
+                            (p.module_id, cursor.get("book", ""),
+                             int(cursor.get("chapter") or 0),
+                             int(cursor.get("verse") or 0))).fetchone()
+                        if row:
+                            spans_marks = study.strongs_in_unit(conn, p.module_id, row["key"])
+                            if spans_marks:
+                                strongs = spans_marks[0]["number"]
+                except Exception:
+                    pass
+            if strongs:
+                out.append({"pane_id": other.id, "module_id": other.module_id,
+                            "module_name": "Word study", "action": "position",
+                            "cursor": {"number": strongs, "strongs": strongs},
+                            "shared": ["strongs"], "reader": "wordstudy"})
             continue
         if not other.module_id:
             continue
@@ -564,13 +594,21 @@ QUICKSTARTS: dict[str, str] = {
     "Bible + Commentary":
         "Top Bible beside the largest linkable English commentary, link set A.",
     "Passage Study":
-        "Up to three top Bibles + best commentary + notes pane, all linked A.",
+        "Up to three top Bibles + best commentary, all linked A.",
+    "Passage Guide":
+        "Passage Guide pane beside the Top Bible, linked A.",
+    "Exegetical Guide":
+        "Exegetical Guide pane beside the Top Bible, linked A.",
     "Study Bible":
         "Top Bible beside a study-Bible-type text where one is installed.",
     "Topic Study":
         "Factbook + Topic/encyclopaedia beside the Top Bible passage.",
     "Daily Devotional":
         "Today's devotional beside the Top Bible.",
+    "Greek Word Study":
+        "Top Bible linked A with a Word Study pane; click any Greek word.",
+    "Hebrew Word Study":
+        "Top Bible linked A with a Word Study pane; click any Hebrew word.",
     "Word Study":
         "Top Bible beside the largest lexicon/dictionary/concordance.",
     "Lectionary Reading":
@@ -908,6 +946,20 @@ def build_quickstart(name: str) -> dict:
         if commentary:
             plan.append((commentary, "t0_1", "A",
                          {"ref": "John 1", "span": "chapter"}))
+    elif name == "Passage Guide":
+        plan = [(bible, "t0_0", "A", {"ref": "John 1", "span": "chapter"}),
+                (None, "t0_1", "A", {"ref": "John 1", "guide": "passage",
+                                     "view": "guide"})]
+    elif name == "Exegetical Guide":
+        plan = [(bible, "t0_0", "A", {"ref": "John 1", "span": "chapter"}),
+                (None, "t0_1", "A", {"ref": "John 1", "guide": "exegetical",
+                                     "view": "guide"})]
+    elif name == "Greek Word Study":
+        plan = [(bible, "t0_0", "A", {"ref": "John 1", "span": "chapter"}),
+                (None, "t0_1", "A", {"number": "", "view": "wordstudy"})]
+    elif name == "Hebrew Word Study":
+        plan = [(bible, "t0_0", "A", {"ref": "John 1", "span": "chapter"}),
+                (None, "t0_1", "A", {"number": "", "view": "wordstudy"})]
     elif name == "Bible + Tools":
         # The plan below files panes into t0_0, t0_1 and t0_2, so the shape has
         # to put three tiles in the first row.  "Bible Top / 3 Bottom" puts one
@@ -935,6 +987,7 @@ def build_quickstart(name: str) -> dict:
     lay = create_layout(name if name in QUICKSTARTS else "Study",
                         arrangement=shape)
     for mod, tile, link, cursor in plan:
-        add_pane(lay["id"], mod.id, tile_id=tile, link_set=link,
-                 cursor=cursor)
+        view = cursor.pop("view", "normal") if cursor else "normal"
+        add_pane(lay["id"], mod.id if mod else None, tile_id=tile,
+                 link_set=link, cursor=cursor or {}, view=view)
     return get_layout(lay["id"]) or {}

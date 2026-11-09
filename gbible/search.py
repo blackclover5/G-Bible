@@ -2024,6 +2024,8 @@ def _evaluate(candidates: dict[str, dict], query: Query, opts: SearchOpts,
                     continue
             matched = sorted({w for t in query.terms for w in t.words
                               if w} | {s for t in query.terms for s in t.strongs}
+                              | {t.morph for t in query.terms
+                                 if t.is_morph and t.morph}
                               | {db.fold(t.topic) for t in query.terms
                                  if t.topic})
             strongs = sorted({s for t in query.terms for s in t.strongs})

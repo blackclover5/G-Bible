@@ -165,11 +165,12 @@ class Indexer:
         starts = [cs for _w, cs, _ce in db.words(text)]
         char_i = 0
         for s in segs:
+            seg_start = char_i
             if s.is_text():
                 chunk = s.text
                 if not chunk:
                     continue
-                if s.kind == "red":
+                if s.kind == "red" or s.attrs.get("wj"):
                     n_red += len(chunk.split())
                 if s.kind in ("title", "heading"):
                     n_head += 1
@@ -185,10 +186,19 @@ class Indexer:
                         xrefs.append(tgt)
             elif s.kind == "heading":
                 n_head += 1
-            if s.kind == "strongs" and s.value:
-                span_s, span_e = _span_for(char_i, len(s.text))
-                widx = bisect.bisect_right(starts, char_i)
-                for n in s.value.split():
+            if s.kind == "strongs":
+                # Positions are one-based word ordinals.  Capture the segment's
+                # start before advancing char_i above; using its end shifted all
+                # tagged words to the following token in sequence searches.
+                widx = bisect.bisect_right(starts, seg_start)
+                attrs = s.attrs or {}
+                if s.value or s.lemma:
+                    search_field = str(attrs.get("search_field") or attrs.get("field") or
+                                       ("red-letter" if attrs.get("wj") else "main-text")).strip().lower()
+                    if search_field:
+                        markers.append((self.mid, "field", search_field, unit_key,
+                                        widx, s.text or search_field))
+                for n in (s.value or "").split():
                     ns = canon.normalise_strongs(n)
                     if not ns:
                         continue
@@ -196,13 +206,21 @@ class Indexer:
                                     s.text or ns))
                     n_strongs += 1
                 if s.lemma:
-                    for lm in s.lemma.split():
-                        lm = lm.strip()
-                        if not lm:
+                    for morph in s.lemma.split():
+                        morph = morph.strip()
+                        if not morph:
                             continue
-                        markers.append((self.mid, "morph", lm, unit_key, widx,
-                                        lm))
+                        markers.append((self.mid, "morph", morph, unit_key,
+                                        widx, s.text or morph))
                         n_morph += 1
+                lexical = (s.attrs or {}).get("lemma", "")
+                for lemma in re.split(r"[|;,]", str(lexical)):
+                    lemma = lemma.strip()
+                    if not lemma:
+                        continue
+                    markers.append((self.mid, "lemma", lemma, unit_key,
+                                    widx, s.text or lemma))
+                    n_lemma += 1
         return markers, n_strongs, n_lemma, n_morph, n_notes, xrefs, n_red, n_head
 
     # A dead branch used to sit here.  `_topic_markers` returned `[]`, so the loop

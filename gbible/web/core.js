@@ -260,11 +260,25 @@ window.addEventListener('unhandledrejection', (e) => {
  * that never called wire() -- so a Bible reference is never a dead link. */
 document.addEventListener('click', (e) => {
   const r = e.target && e.target.closest ? e.target.closest('a[data-ref]') : null;
-  if (!r) return;
-  e.preventDefault();
-  try { closeModal(); } catch (err) { /* not in a modal */ }
-  if (typeof Reader !== 'undefined' && Reader.openRefAnywhere) {
-    Reader.openRefAnywhere((r.dataset.ref || '').replace(/\./g, ' '));
+  if (r) {
+    e.preventDefault();
+    try { closeModal(); } catch (err) { /* not in a modal */ }
+    if (typeof Reader !== 'undefined' && Reader.openRefAnywhere) {
+      Reader.openRefAnywhere((r.dataset.ref || '').replace(/\./g, ' '));
+    }
+    return;
+  }
+  /* Power Lookup: click a Strong's number or lemma in verse text to open
+   * a Word Study pane for that word.  Works anywhere a tagged word appears. */
+  const snum = e.target && e.target.closest ? e.target.closest('a.snum') : null;
+  const morph = e.target && e.target.closest ? e.target.closest('.morphs') : null;
+  if (snum || morph) {
+    e.preventDefault();
+    try { closeModal(); } catch (err) { /* not in a modal */ }
+    const num = snum ? snum.dataset.s || snum.textContent : (morph.textContent || '').trim();
+    if (num && typeof Reader !== 'undefined' && Reader.openWordStudyPane) {
+      Reader.openWordStudyPane(num);
+    }
   }
 });
 
@@ -1963,11 +1977,14 @@ const Organise = {
       h += '<div class="empty">No collections yet.</div>';
     } else {
       this.collections.forEach(c => {
+        const hasRule = !!(c.rule && c.rule.trim());
         h += '<div class="org-card"><div class="org-h"><b>' + esc(c.name) + '</b>'
-          + '<span class="muted tiny"> · ' + (c.count || 0) + ' resources</span>'
+          + '<span class="muted tiny"> · ' + (c.count || 0) + ' resources'
+          + (hasRule ? ' · dynamic' : '') + '</span>'
           + '<span class="org-a">'
           + '<a href="#" data-csearch="' + esc(c.id) + '">search these</a>'
           + '<a href="#" data-copen="' + esc(c.id) + '">open</a>'
+          + (hasRule ? '<a href="#" data-crule="' + esc(c.id) + '">edit rule</a>' : '')
           + '<a href="#" data-cdel="' + esc(c.id) + '" class="danger">delete</a>'
           + '</span></div>'
           + '<div class="tiny muted">' + (c.modules || []).map(x =>
@@ -1975,6 +1992,10 @@ const Organise = {
       });
     }
     main.innerHTML = h + '</div>';
+    /* Wire rule editor buttons. */
+    main.querySelectorAll('a[data-crule]').forEach(a => {
+      a.onclick = (e) => { e.preventDefault(); this.editCollectionRule(a.dataset.crule); };
+    });
   },
 
   async listsView(main) {
@@ -2010,6 +2031,51 @@ const Organise = {
       h += '</div>';
     }
     main.innerHTML = h + '</div>';
+  },
+
+  /* Edit a collection's dynamic rule.  A rule like `type:commentary lang:eng`
+   * auto-matches installed modules; plus/minus lists add or remove specific
+   * modules regardless of the rule. */
+  async editCollectionRule(id) {
+    const c = this.collections.find(x => x.id === id);
+    if (!c) return;
+    const cur = await api('collection', { id });
+    const rule = cur.rule || '';
+    const plus = (cur.plus || []).map(m => m.module_id || m).join(', ');
+    const minus = (cur.minus || []).map(m => m.module_id || m).join(', ');
+    modal('Edit collection rule — ' + esc(c.name),
+      '<div class="tiny muted" style="margin-bottom:8px">Match modules by field, '
+      + 'e.g. <code>type:commentary lang:eng</code>. Bare words match name, '
+      + 'author or type. Use ANDNOT to exclude. Plus/minus add or remove '
+      + 'specific modules by id.</div>'
+      + '<div class="row wrap" style="margin-bottom:8px">'
+      + '<label style="width:90px">Rule</label>'
+      + '<input id="crule-rule" style="flex:1" value="' + esc(rule) + '">'
+      + '</div>'
+      + '<div class="row wrap" style="margin-bottom:8px">'
+      + '<label style="width:90px">Always include</label>'
+      + '<input id="crule-plus" placeholder="module ids, comma-separated" '
+      + 'value="' + esc(plus) + '">'
+      + '</div>'
+      + '<div class="row wrap" style="margin-bottom:8px">'
+      + '<label style="width:90px">Always exclude</label>'
+      + '<input id="crule-minus" placeholder="module ids, comma-separated" '
+      + 'value="' + esc(minus) + '">'
+      + '</div>'
+      + '<div class="tiny muted">Saving applies the rule live — new installs '
+      + 'that match will appear automatically.</div>',
+      [{ label: 'Cancel', cls: 'btn' },
+       { label: 'Save rule', cls: 'btn primary', close: false, fn: async () => {
+         const rule = $('#crule-rule').value.trim();
+         const plus = $('#crule-plus').value.split(',').map(s => s.trim()).filter(Boolean);
+         const minus = $('#crule-minus').value.split(',').map(s => s.trim()).filter(Boolean);
+         const r = await post('collection', {
+           action: 'rule', id, rule, plus: JSON.stringify(plus), minus: JSON.stringify(minus) });
+         if (!r.ok) { toast(r.error || 'Could not save rule.', 'err'); return; }
+         closeModal();
+         toast('Rule saved — ' + (r.members || []).length + ' matching resources.');
+         this.load();
+       } }]);
   },
 
   /* A notebook is a saved filter over your notes, not a folder of copies:
@@ -2327,6 +2393,359 @@ const Organise = {
       + '</div>';
   },
 
+  /* ------------------------------------------------------------- Sermon Starter */
+  async sermonStarterView(main) {
+    let h = '<div class="dash-card"><div class="dash-h">Sermon Starter Guide</div>'
+      + '<div class="tiny muted" style="margin-bottom:10px">Get sermon ideas, '
+      + 'outlines, illustrations and related verses for any passage or topic.</div>'
+      + '<div class="org-new" style="margin-bottom:10px">'
+      + '<input id="ss-q" placeholder="Passage or topic, e.g. John 3:16 or faith" style="flex:1">'
+      + '<button class="btn primary" id="ss-go">Get Ideas</button></div>'
+      + '<div id="ss-out"></div>';
+    main.innerHTML = h;
+    const go = async () => {
+      const q = $('#ss-q').value.trim();
+      if (!q) { toast('Type a passage or topic.', 'warn'); return; }
+      const r = await api('sermon-starter', { q, limit: 10 });
+      if (!r.ok) { $('#ss-out').innerHTML = '<div class="st-body">' + esc(r.error) + '</div>'; return; }
+      let out = '<div class="tiny muted">' + r.starters.length + ' starter' + (r.starters.length === 1 ? '' : 's') + '</div>';
+      out += r.starters.map(s => '<div class="org-card"><div class="org-h"><b>'
+        + esc(s.title) + '</b><span class="muted tiny"> · ' + esc(s.theme) + '</span></div>'
+        + '<div class="st-sec"><div class="st-h">Key Verses</div>'
+        + (s.key_verses || []).map(v => '<div class="st-note"><a href="#" data-ref="'
+        + esc(v.ref) + '" class="pg-ref">' + esc(v.ref) + '</a> ' + esc((v.text || "").slice(0, 200)) + '</div>').join('')
+        + '</div>'
+        + '<div class="st-sec"><div class="st-h">Main Points</div>'
+        + (s.main_points || []).map(p => '<div class="st-note"><div class="st-body">' + esc(p) + '</div></div>').join('')
+        + '</div>'
+        + '<div class="st-sec"><div class="st-h">Illustrations</div>'
+        + (s.illustrations || []).map(i => '<div class="st-note"><div class="st-body">' + esc(i) + '</div></div>').join('')
+        + '</div>'
+        + '<div class="st-sec"><div class="st-h">Commentaries</div>'
+        + (s.commentaries || []).map(c => '<div class="st-note"><div class="st-src">' + esc(c.module || '') + '</div><div class="st-t">' + esc(c.title || '') + '</div><div class="st-body">' + esc((c.text || "").slice(0, 300)) + '</div></div>').join('')
+        + '</div>'
+        + '<div class="st-sec"><div class="st-h">Cross-References</div>'
+        + '<div class="st-body">' + (s.cross_references || []).map(x => '<a href="#" data-ref="' + esc(x.ref) + '" class="pg-ref">' + esc(x.label || x.ref) + '</a>').join(' · ') + '</div></div></div>').join('');
+      $('#ss-out').innerHTML = out;
+      $('#ss-out').querySelectorAll('.pg-ref').forEach(a => {
+        a.onclick = (e) => { e.preventDefault(); const ref = a.dataset.ref; App.show('workspace'); const pane = (S.layout && S.layout.panes && S.layout.panes[0]); if (pane) Reader.go(pane, ref); };
+      });
+    };
+    $('#ss-go').onclick = go;
+    $('#ss-q').onkeydown = (e) => { if (e.key === 'Enter') go(); };
+  },
+
+  /* ------------------------------------------------------------- Q&A */
+  async qaView(main) {
+    let h = '<div class="dash-card"><div class="dash-h">Questions &amp; Answers</div>'
+      + '<div class="tiny muted" style="margin-bottom:10px">Ask about Bible passages '
+      + 'and topics. Answers come from your installed commentaries, dictionaries '
+      + 'and fact books.</div>'
+      + '<div class="org-new" style="margin-bottom:10px">'
+      + '<input id="qa-q" placeholder="Question, e.g. What does baptism mean?" style="flex:1">'
+      + '<button class="btn primary" id="qa-go">Ask</button></div>'
+      + '<div id="qa-out"></div>';
+    main.innerHTML = h;
+    const go = async () => {
+      const q = $('#qa-q').value.trim();
+      if (!q) { toast('Type a question.', 'warn'); return; }
+      const r = await api('qa', { q, limit: 20 });
+      if (!r.ok) { $('#qa-out').innerHTML = '<div class="st-body">' + esc(r.error) + '</div>'; return; }
+      let out = '<div class="tiny muted">' + r.count + ' answer' + (r.count === 1 ? '' : 's') + '</div>';
+      out += r.questions.map(qq => '<div class="org-card"><div class="org-h"><b>'
+        + esc(qq.title || qq.question) + '</b></div>'
+        + '<div class="st-sec"><div class="st-h">Answer</div>'
+        + '<div class="st-body">' + esc(qq.answer || "") + '</div></div>'
+        + '<div class="tiny muted">' + esc(qq.module || '') + ' · ' + esc(qq.key || '') + '</div></div>').join('');
+      $('#qa-out').innerHTML = out;
+    };
+    $('#qa-go').onclick = go;
+    $('#qa-q').onkeydown = (e) => { if (e.key === 'Enter') go(); };
+  },
+
+  /* ------------------------------------------------------------- Sense Lexicon */
+  async senseLexiconView(main) {
+    let h = '<div class="dash-card"><div class="dash-h">Bible Sense Lexicon</div>'
+      + '<div class="tiny muted" style="margin-bottom:10px">Word sense '
+      + 'disambiguation — which sense of a word is used in each passage.</div>'
+      + '<div class="org-new" style="margin-bottom:10px">'
+      + '<input id="sl-q" placeholder="Word or Strong\'s number, e.g. love or G26" style="flex:1">'
+      + '<button class="btn primary" id="sl-go">Look Up</button></div>'
+      + '<div id="sl-out"></div>';
+    main.innerHTML = h;
+    const go = async () => {
+      const q = $('#sl-q').value.trim();
+      if (!q) { toast('Type a word or Strong\'s number.', 'warn'); return; }
+      const r = await api('sense-lexicon', { q, limit: 10 });
+      if (!r.ok) { $('#sl-out').innerHTML = '<div class="st-body">' + esc(r.error) + '</div>'; return; }
+      let out = '<div class="st-ref">' + esc(r.word) + ' (Strong\'s ' + esc(r.num) + ')</div>';
+      out += '<div class="tiny muted">' + esc(r.headword || '') + ' · ' + esc(r.lemma || '') + '</div>';
+      out += '<div class="st-sec"><div class="st-h">Senses</div>'
+        + (r.senses || []).map(s => '<div class="st-note"><div class="st-body"><b>'
+        + esc(s.sense || '') + '</b><br>' + esc(s.definition || "") + '</div></div>').join('')
+        + '</div>';
+      out += '<div class="st-sec"><div class="st-h">Example Uses</div>'
+        + (r.examples || []).map(e => '<div class="st-note"><a href="#" data-ref="'
+        + esc(e.ref) + '" class="pg-ref">' + esc(e.ref) + '</a> <span class="tiny muted">' + esc(e.surface || "") + '</span></div>').join('')
+        + '</div>';
+      $('#sl-out').innerHTML = out;
+      $('#sl-out').querySelectorAll('.pg-ref').forEach(a => {
+        a.onclick = (e) => { e.preventDefault(); const ref = a.dataset.ref; App.show('workspace'); const pane = (S.layout && S.layout.panes && S.layout.panes[0]); if (pane) Reader.go(pane, ref); };
+      });
+    };
+    $('#sl-go').onclick = go;
+    $('#sl-q').onkeydown = (e) => { if (e.key === 'Enter') go(); };
+  },
+
+  /* ------------------------------------------------------------- Community Tags */
+  async communityTagsView(main) {
+    let h = '<div class="dash-card"><div class="dash-h">Community Tags</div>'
+      + '<div class="tiny muted" style="margin-bottom:10px">User-sourced tags for '
+      + 'verses, words and topics. Tags are shared across all users.</div>'
+      + '<div class="org-new" style="margin-bottom:10px">'
+      + '<input id="ct-q" placeholder="Tag, module, or reference to filter" style="flex:1">'
+      + '<button class="btn primary" id="ct-go">Filter</button>'
+      + '<button class="btn" id="ct-export">Export Tags</button>'
+      + '<input id="ct-import-file" type="file" style="display:none">'
+      + '<button class="btn" id="ct-import">Import Tags</button></div>'
+      + '<div id="ct-out"></div>';
+    main.innerHTML = h;
+    const load = async () => {
+      const q = $('#ct-q').value.trim();
+      const r = await api('community-tags', { action: 'list' });
+      if (!r.ok) { $('#ct-out').innerHTML = '<div class="st-body">' + esc(r.error) + '</div>'; return; }
+      let tags = r.tags || [];
+      if (q) tags = tags.filter(t => t.tag.toLowerCase().includes(q.toLowerCase()) || (t.ref || "").toLowerCase().includes(q.toLowerCase()));
+      $('#ct-out').innerHTML = '<div class="tiny muted">' + tags.length + ' tag' + (tags.length === 1 ? '' : 's') + '</div>'
+        + tags.map(t => '<div class="org-card"><div class="org-h"><span class="chip">'
+        + esc(t.tag) + '</span> <span class="muted tiny">' + esc(t.module_id || '') + ' · ' + esc(t.ref || '') + '</span></div>'
+        + '<div class="st-body">' + esc(t.count) + ' occurrence' + (t.count === 1 ? '' : 's') + '</div></div>').join('');
+    };
+    $('#ct-go').onclick = load;
+    $('#ct-q').onkeydown = (e) => { if (e.key === 'Enter') load(); };
+    $('#ct-export').onclick = async () => {
+      const r = await api('community-tags', { action: 'list' });
+      if (!r.ok) { toast(r.error || 'Export failed.', 'err'); return; }
+      const data = JSON.stringify({ tags: r.tags || [], exported: new Date().toISOString() }, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'community-tags-' + new Date().toISOString().slice(0, 10) + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      toast('Tags exported.');
+    };
+    $('#ct-import').onclick = () => { $('#ct-import-file').click(); };
+    $('#ct-import-file').onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const text = await file.text();
+      let parsed;
+      try { parsed = JSON.parse(text); } catch (err) { toast('Invalid JSON file.', 'err'); return; }
+      const tags = parsed.tags || [];
+      if (!tags.length) { toast('No tags in file.', 'warn'); return; }
+      let added = 0;
+      for (const t of tags) {
+        const rr = await api('community-tags', {
+          action: 'add', tag: t.tag, module_id: t.module_id || '', ref: t.ref || ''
+        });
+        if (rr.ok) added++;
+      }
+      toast('Imported ' + added + ' tag' + (added === 1 ? '' : 's') + '.');
+      load();
+    };
+    load();
+  },
+
+  /* ------------------------------------------------------------- Personal Books */
+  async personalBooksView(main) {
+    let h = '<div class="dash-card"><div class="dash-h">Personal Books</div>'
+      + '<div class="tiny muted" style="margin-bottom:10px">Import your own books '
+      + '(PDF, EPUB, plain text) as personal modules.</div>'
+      + '<div class="org-new" style="margin-bottom:10px">'
+      + '<input id="pb-path" placeholder="/path/to/book.epub or /path/to/book.txt" style="flex:1">'
+      + '<button class="btn primary" id="pb-import">Import</button></div>'
+      + '<div id="pb-out"></div>';
+    main.innerHTML = h;
+    const load = async () => {
+      const r = await api('personal-books', { action: 'list' });
+      if (!r.ok) { $('#pb-out').innerHTML = '<div class="st-body">' + esc(r.error) + '</div>'; return; }
+      $('#pb-out').innerHTML = (r.books || []).map(b => '<div class="org-card"><div class="org-h"><b>'
+        + esc(b.title) + '</b><span class="muted tiny"> · ' + esc(b.format) + ' · ' + b.unit_count + ' units</span>'
+        + '<span class="org-a"><button class="btn tiny" data-pbdel="' + esc(b.id) + '">delete</button></span></div></div>').join('');
+      $('#pb-out').querySelectorAll('[data-pbdel]').forEach(b => {
+        b.onclick = async () => {
+          await api('personal-books', { action: 'delete', book_id: b.dataset.pbdel });
+          load();
+        };
+      });
+    };
+    $('#pb-import').onclick = async () => {
+      const path = $('#pb-path').value.trim();
+      if (!path) { toast('Type a file path.', 'warn'); return; }
+      const r = await api('personal-books', { action: 'import', path });
+      if (!r.ok) { toast(r.error || 'Import failed.', 'err'); return; }
+      toast('Imported "' + r.title + '" (' + r.unit_count + ' units).');
+      $('#pb-path').value = '';
+      load();
+    };
+    load();
+  },
+
+  /* ------------------------------------------------------------- Courses */
+  async coursesView(main) {
+    let h = '<div class="dash-card"><div class="dash-h">Courses</div>'
+      + '<div class="tiny muted" style="margin-bottom:10px">Video and audio courses '
+      + 'for Bible study. Track your progress through lessons.</div>'
+      + '<div id="courses-out"></div>';
+    main.innerHTML = h;
+    const load = async () => {
+      const r = await api('courses', { action: 'list' });
+      if (!r.ok) { $('#courses-out').innerHTML = '<div class="st-body">' + esc(r.error) + '</div>'; return; }
+      $('#courses-out').innerHTML = (r.courses || []).map(c => '<div class="org-card"><div class="org-h"><b>'
+        + esc(c.title) + '</b><span class="muted tiny"> · ' + (c.lesson_count || 0) + ' lessons</span>'
+        + '<span class="org-a"><a href="#" data-course-open="' + esc(c.id) + '">open</a></span></div>'
+        + '<div class="tiny muted">' + esc(c.description || "") + '</div></div>').join('');
+      $('#courses-out').querySelectorAll('[data-course-open]').forEach(a => {
+        a.onclick = (e) => { e.preventDefault(); openCourse(a.dataset.courseOpen); };
+      });
+    };
+    const openCourse = async (id) => {
+      const r = await api('courses', { action: 'open', course_id: id });
+      if (!r.ok) { toast(r.error || 'Could not open course.', 'err'); return; }
+      const c = r.course;
+      let out = '<div class="st-ref">' + esc(c.title) + '</div>';
+      if (c.author) out += '<div class="tiny muted">by ' + esc(c.author) + '</div>';
+      if (c.description) out += '<div class="st-body">' + esc(c.description) + '</div>';
+      out += '<div class="st-sec"><div class="st-h">Lessons</div>'
+        + (r.lessons || []).map(l => {
+          const done = r.progress && r.progress[l.id] ? ' ✓' : '';
+          return '<div class="st-note"><a href="#" data-lesson="' + esc(l.id) + '" class="pg-ref">' + esc(l.title) + '</a>' + esc(done) + '</div>';
+        }).join('') + '</div>';
+      main.innerHTML = out;
+      main.querySelectorAll('[data-lesson]').forEach(a => {
+        a.onclick = (e) => { e.preventDefault(); openLesson(a.dataset.lesson); };
+      });
+    };
+    const openLesson = async (id) => {
+      const r = await api('courses', { action: 'lesson', lesson_id: id });
+      if (!r.ok) { toast(r.error || 'Could not open lesson.', 'err'); return; }
+      const l = r.lesson;
+      main.innerHTML = '<div class="st-ref">' + esc(l.title) + '</div>'
+        + (l.content ? '<div class="st-body">' + esc(l.content) + '</div>' : '')
+        + (l.video_url ? '<div class="st-sec"><div class="st-h">Video</div>'
+        + '<video controls style="width:100%;max-width:640px" src="' + esc(l.video_url) + '"></video></div>' : '')
+        + (l.audio_url ? '<div class="st-sec"><div class="st-h">Audio</div>'
+        + '<audio controls src="' + esc(l.audio_url) + '"></audio></div>' : '')
+        + '<div class="row wrap" style="margin-top:10px">'
+        + '<button class="btn" id="course-complete" data-lesson="' + esc(id) + '">Mark Complete</button>'
+        + '</div>';
+      $('#course-complete').onclick = async () => {
+        await api('courses', { action: 'progress', course_id: main.dataset.courseId, lesson_id: id, completed: '1' });
+        toast('Lesson marked complete.');
+        load();
+      };
+      main.dataset.courseId = main.dataset.courseId || "";
+    };
+    load();
+  },
+
+  /* ------------------------------------------------------------- Draw on Screen */
+  async drawOnScreenView(main) {
+    let h = '<div class="dash-card"><div class="dash-h">Draw on Screen</div>'
+      + '<div class="tiny muted" style="margin-bottom:10px">Create drawing annotations '
+      + 'over Bible text. Save, load and delete drawings.</div>'
+      + '<div class="org-new" style="margin-bottom:10px">'
+      + '<input id="dw-title" placeholder="Drawing title" style="flex:1">'
+      + '<button class="btn primary" id="dw-save">Save Drawing</button></div>'
+      + '<div id="dw-out"></div>';
+    main.innerHTML = h;
+    const load = async () => {
+      const r = await api('draw-on-screen', { action: 'list' });
+      if (!r.ok) { $('#dw-out').innerHTML = '<div class="st-body">' + esc(r.error) + '</div>'; return; }
+      $('#dw-out').innerHTML = '<div class="tiny muted">' + (r.drawings || []).length + ' drawing' + ((r.drawings || []).length === 1 ? '' : 's') + '</div>'
+        + (r.drawings || []).map(d => '<div class="org-card"><div class="org-h"><b>'
+        + esc(d.title) + '</b><span class="muted tiny"> · ' + new Date(d.updated_at * 1000).toLocaleString() + '</span>'
+        + '<span class="org-a"><button class="btn tiny" data-dwload="' + esc(d.id) + '">load</button><button class="btn tiny danger" data-dwdel="' + esc(d.id) + '">delete</button></span></div></div>').join('');
+      $('#dw-out').querySelectorAll('[data-dwdel]').forEach(b => {
+        b.onclick = async () => {
+          await api('draw-on-screen', { action: 'delete', drawing_id: b.dataset.dwdel });
+          load();
+        };
+      });
+      $('#dw-out').querySelectorAll('[data-dwload]').forEach(b => {
+        b.onclick = async () => {
+          const r = await api('draw-on-screen', { action: 'load', drawing_id: b.dataset.dwload });
+          if (!r.ok) { toast(r.error || 'Could not load drawing.', 'err'); return; }
+          $('#dw-drawing-data').value = r.drawing.data || "";
+          toast('Drawing loaded. Use the drawing canvas to view/edit.');
+        };
+      });
+    };
+    $('#dw-save').onclick = async () => {
+      const title = $('#dw-title').value.trim();
+      const data = $('#dw-drawing-data').value.trim();
+      if (!title || !data) { toast('Enter a title and drawing data.', 'warn'); return; }
+      const r = await api('draw-on-screen', { action: 'save', drawing_id: '', data });
+      if (!r.ok) { toast(r.error || 'Save failed.', 'err'); return; }
+      toast('Drawing saved.');
+      $('#dw-title').value = '';
+      load();
+    };
+    // Hidden textarea for drawing data (in a real app this would be a canvas)
+    h += '<textarea id="dw-drawing-data" style="display:none"></textarea>';
+    load();
+  },
+
+  /* ------------------------------------------------------------- Print/Export */
+  async printExportView(main) {
+    let h = '<div class="dash-card"><div class="dash-h">Print / Export</div>'
+      + '<div class="tiny muted" style="margin-bottom:10px">Export passages, guides, '
+      + 'searches, notes, sermons and canvases to PDF, HTML, Markdown or text.</div>'
+      + '<div class="org-new" style="margin-bottom:10px">'
+      + '<label style="width:100px">Content type</label>'
+      + '<select id="pe-type" style="flex:1">'
+      + '<option value="passage">Passage</option>'
+      + '<option value="guide">Guide</option>'
+      + '<option value="search">Search</option>'
+      + '<option value="notes">Notes</option>'
+      + '<option value="sermon">Sermon</option>'
+      + '<option value="word-study">Word Study</option>'
+      + '<option value="canvas">Canvas</option></select>'
+      + '<label style="width:110px;margin-left:10px">Reference/ID</label>'
+      + '<input id="pe-id" style="flex:1" placeholder="e.g. John 3:16"></div>'
+      + '<div class="org-new" style="margin-bottom:10px">'
+      + '<label style="width:100px">Format</label>'
+      + '<select id="pe-format" style="flex:1">'
+      + '<option value="pdf">PDF</option>'
+      + '<option value="html">HTML</option>'
+      + '<option value="txt">Text</option>'
+      + '<option value="md">Markdown</option>'
+      + '<option value="docx">DOCX</option></select>'
+      + '<button class="btn primary" id="pe-export" style="margin-left:10px">Export</button></div>'
+      + '<div id="pe-out"></div>';
+    main.innerHTML = h;
+    $('#pe-export').onclick = async () => {
+      const type = $('#pe-type').value;
+      const id = $('#pe-id').value.trim();
+      const fmt = $('#pe-format').value;
+      if (!id) { toast('Enter a reference or ID.', 'warn'); return; }
+      const r = await api('print-export', { action: 'export', content_type: type, content_id: id, format: fmt });
+      if (!r.ok) { $('#pe-out').innerHTML = '<div class="st-body">' + esc(r.error) + '</div>'; return; }
+      if (r.note) $('#pe-out').innerHTML = '<div class="tiny muted">' + esc(r.note) + '</div>';
+      $('#pe-out').innerHTML += '<div class="st-sec"><div class="st-h">Exported Content</div>'
+        + '<div class="st-body"><pre style="white-space:pre-wrap;font-family:monospace;font-size:12px">'
+        + esc(r.content || "") + '</pre></div></div>'
+        + '<div class="row wrap" style="margin-top:10px">'
+        + '<button class="btn" id="pe-copy">Copy to Clipboard</button></div>';
+      $('#pe-copy').onclick = async () => {
+        await navigator.clipboard.writeText(r.content || "");
+        toast('Copied to clipboard.');
+      };
+    };
+  },
+
   async templatesView(main) {
     const r = await api('search/template');
     this.templates = r.templates || [];
@@ -2512,7 +2931,7 @@ const Guides = {
     // than at the end of each renderer means a new tab cannot forget it.
     try {
       if (tab === 'canon') return await this.canon(body);
-      if (tab === 'eusebian') return await this.eusebian(body);
+      if (tab === 'eusebian') return await this.canon(body);
       if (tab === 'harmony') return await this.harmony(body);
       if (tab === 'timeline') return await this.timeline(body);
        if (tab === 'biblefacts') return await this.biblefacts(body);
@@ -2747,7 +3166,6 @@ const Guides = {
      * Every section added or removed through that editor had no effect on what
      * appeared here.  The configured guide is run for real now; the sections
      * above already render well and are not repeated. */
-    h += configuredGuideHtml(g);
     body.innerHTML = h;
     // Clicking a cross-reference opens it in the Bible pane.
     $$('.pg-xref a', body).forEach((a, i) => {

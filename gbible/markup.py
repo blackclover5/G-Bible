@@ -668,6 +668,11 @@ def parse_osis(src: str, *, keep_footnotes: bool = True) -> list[Seg]:
                 continue
             if not selfclose:
                 kind = _FRAME_KIND.get(name_l, "seg")
+                if name_l == "q" and not _osis_speaker_is_jesus(
+                        attrs.get("who", "")):
+                    # OSIS uses <q> for ordinary quotations too. Only an
+                    # explicit Jesus speaker attribution means red letters.
+                    kind = "seg"
                 stack.append(_Frame(kind, attrs, _EMIT.get(kind, _emit_transparent),
                                     tag=name_l))
             continue
@@ -790,6 +795,12 @@ def _emit_q(f: _Frame, parent: list[Seg], keep_notes: bool) -> None:
             parent.append(s)
 
 
+def _osis_speaker_is_jesus(raw: str) -> bool:
+    """Return true only for an explicit OSIS Jesus speaker identifier."""
+    return any(re.fullmatch(r"#?Jesus", token, re.I)
+               for token in re.split(r"[\s,;]+", (raw or "").strip()) if token)
+
+
 def _emit_divine(f: _Frame, parent: list[Seg], keep_notes: bool) -> None:
     for s in f.buf:
         if s.is_text():
@@ -903,6 +914,82 @@ def parse_esword_inline(src: str) -> list[Seg]:
     if pos < len(src or ""):
         segs.append(Seg("text", collapse(unescape(src[pos:]))))
     return [s for s in segs if s.text or s.kind in ("strongs", "note", "red", "break")]
+
+
+_GBF_TAG_RE = re.compile(r"<(/?)([A-Za-z]{2})([^>]*)>")
+
+
+def parse_gbf_inline(src: str) -> list[Seg]:
+    """Parse the GBF markup used inside a single SWORD verse.
+
+    GBF is a token format rather than XML. In particular, `<FR>...<Fr>` marks
+    Jesus' words, `<WGn>` / `<WHn>` annotate the preceding word, and `<RF>...<Rf>`
+    carries a footnote. Unrecognized tags are stripped while their surrounding
+    text remains in order.
+    """
+    if not src:
+        return []
+    out: list[Seg] = []
+    note: list[str] | None = None
+    red = False
+    pos = 0
+
+    def add_text(raw: str) -> None:
+        if not raw:
+            return
+        if note is not None:
+            note.append(raw)
+        else:
+            out.append(Seg("red" if red else "text", unescape(raw)))
+
+    for match in _GBF_TAG_RE.finditer(src):
+        add_text(src[pos:match.start()])
+        pos = match.end()
+        closing, tag, arg = match.groups()
+        if tag == "FR" and not closing:
+            red = True
+        elif tag == "Fr" and not closing:
+            red = False
+        elif tag == "RF" and not closing:
+            note = []
+        elif tag == "Rf" and not closing and note is not None:
+            body = " ".join("".join(note).split())
+            if body:
+                out.append(Seg("note", body, "", "footnote",
+                               {"placement": "foot"}))
+            note = None
+        elif not closing and tag in ("WG", "WH"):
+            number = re.match(r"\s*(\d+)", arg or "")
+            if number and out and out[-1].is_text():
+                prev = out.pop()
+                tail = re.search(r"(\S+)(\s*)$", prev.text)
+                if tail:
+                    prefix = prev.text[:tail.start(1)]
+                    if prefix:
+                        out.append(prev._replace(text=prefix))
+                    word = tail.group(1)
+                    strong = tag[1] + number.group(1)
+                    attrs = dict(prev.attrs)
+                    if red:
+                        attrs["wj"] = "1"
+                    out.append(Seg("strongs", word, strong, "", attrs))
+                    if tail.group(2):
+                        out.append(Seg("text", tail.group(2)))
+                else:
+                    out.append(prev)
+                    out.append(Seg("strongs", "", tag[1] + number.group(1)))
+            elif number:
+                out.append(Seg("strongs", "", tag[1] + number.group(1)))
+        elif not closing and tag == "RX":
+            target = (arg or "").strip()
+            if target:
+                out.append(Seg("xref", "", target))
+    add_text(src[pos:])
+    if note is not None:
+        body = " ".join("".join(note).split())
+        if body:
+            out.append(Seg("note", body, "", "footnote", {"placement": "foot"}))
+    return _run(out)
 
 
 # --------------------------------------------------------------------------
@@ -1276,20 +1363,26 @@ class RenderOpts:
 def segs_html(segs: Iterable[Seg], o: RenderOpts | None = None) -> str:
     o = o or RenderOpts()
     out: list[str] = []
+
+    def with_red(h: str, marked: bool) -> str:
+        return f'<span class="wj">{h}</span>' if marked and o.show_red else h
+
     for s in segs:
         wj = bool(s.attrs.get("wj"))
         if s.kind == "text":
             h = esc(s.text)
             out.append(f'<span class="wj">{h}</span>' if (wj and o.show_red) else h)
         elif s.kind == "add":
-            out.append(f'<i class="supplied">{esc(s.text)}</i>' if o.show_add else esc(s.text))
+            h = f'<i class="supplied">{esc(s.text)}</i>' if o.show_add else esc(s.text)
+            out.append(with_red(h, wj))
         elif s.kind == "alt":
-            out.append(f'<span class="alt">{esc(s.text)}</span>')
+            out.append(with_red(f'<span class="alt">{esc(s.text)}</span>', wj))
         elif s.kind == "red":
             out.append(f'<span class="wj">{"".join(esc(t) for t in s.text)}</span>'
                        if o.show_red else esc(s.text))
         elif s.kind == "name":
-            out.append(f'<span class="pname" data-kind="{esc(s.value)}">{esc(s.text)}</span>')
+            h = f'<span class="pname" data-kind="{esc(s.value)}">{esc(s.text)}</span>'
+            out.append(with_red(h, wj))
         elif s.kind == "strongs":
             w = esc(s.text)
             if o.show_strongs and s.value:
@@ -1324,6 +1417,9 @@ def segs_html(segs: Iterable[Seg], o: RenderOpts | None = None) -> str:
             if src:
                 out.append(f'<figure><img loading="lazy" src="{esc(src)}" '
                            f'alt="{esc(s.attrs.get("alt", "") or s.attrs.get("caption", ""))}"></figure>')
+        elif s.kind == "xref":
+            tgt = esc(s.value or "")
+            out.append(f'<a href="#" data-ref="{tgt}">{tgt}</a>')
     return "".join(out)
 
 

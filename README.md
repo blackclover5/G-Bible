@@ -33,6 +33,12 @@ Go beyond a single Bible window. Arrange your study materials side by side, open
 
 Read a passage in one pane while consulting a commentary, lexicon, or reference book in another. Resize your workspace, organize your tabs, and save layouts that fit the way you study.
 
+In a Bible pane, use the book-and-chapter button to choose a book and then one of the chapters available in that Bible. The chapter list updates when you change books, and the button follows you as you move between books and chapters.
+
+### Red-Letter Display
+
+G-Bible marks verses from the [BibleMaximum red-letter list](https://biblemaximum.com/red-letter) in red across the Bible modules in your library. The marking is applied to whole verses: if Jesus speaks anywhere in a verse, the entire verse appears red, including any narrative words in that same verse. Red text therefore does not mean that every word in the verse is spoken by Jesus. This verse-level approach preserves each Bible's original wording and verse boundaries.
+
 ### A Library That Grows With You
 
 Build a personal collection of Bibles, commentaries, dictionaries, maps, and other study resources.
@@ -75,7 +81,7 @@ G-Bible brings together the tools you need for a more organized and meaningful s
 | Feature | What it does |
 |---|---|
 | Home | Today's reading, reading plans, prayer list, notes, and highlights |
-| Workspace | Multi-pane Bible reading, linked resources, tabs, and saved layouts |
+| Workspace | Multi-pane Bible reading, book-and-chapter passage picker, linked resources, tabs, and saved layouts |
 | Search | Search installed resources, with filters and Strong's number support |
 | Guides | Timelines, maps, genealogies, Gospel harmonies, and outlines |
 | Library | Manage your installed Bibles, books, and reference materials |
@@ -95,19 +101,19 @@ G-Bible is designed to be easy to run on your own computer.
 
 Want to get started with G-Bible on Linux without installing Python or setting up dependencies?
 
-**Download the G-Bible 0.9.6 AppImage.** It comes with everything you need to run the application, so there's no complicated setup required.
+**Download the G-Bible 0.9.8 AppImage.** It comes with everything you need to run the application, so there's no complicated setup required.
 
-1. Download the G-Bible 0.9.6 AppImage.
+1. Download the G-Bible 0.9.8 AppImage.
 2. Make the file executable in your file manager, or run:
 
    ```bash
-   chmod +x "G-Bible 0.9.6.AppImage"
+   chmod +x "G-Bible 0.9.8.AppImage"
    ```
 
 3. Double-click the AppImage to launch G-Bible, or run it from the terminal:
 
    ```bash
-   ./"G-Bible 0.9.6.AppImage"
+   ./"G-Bible 0.9.8.AppImage"
    ```
 
 #### Enable Read Aloud
@@ -202,14 +208,6 @@ python3 tools/install_voice.py
 **AI Assistant:** The AI Assistant is optional and disabled until you configure your own provider.
 
 **Synchronization:** If you want to use G-Bible across multiple computers, you can configure synchronization through a folder, WebDAV, or Nextcloud.
-
----
-
-## Maintainer version notes
-
-The application version is defined in `gbible/__init__.py`. When preparing a release, update the AppImage version examples in the Linux quick-start section of this README to match. An AppImage's embedded version metadata must also be updated when rebuilding the image; changing only its filename does not change the version reported by the packaged app.
-
-Run `python3 tools/test_version_metadata.py` to check that the README's AppImage version references match the application version.
 
 ---
 

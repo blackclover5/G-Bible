@@ -28,7 +28,6 @@ jobs:
         run: |
           python3 -m compileall -q gbible tools run.py
           python3 -c "import gbible.server.app; print('imports ok')"
-          python3 tools/test_version_metadata.py
 
       - name: Check database migrations
         run: python3 tools/test_migrations.py

@@ -492,62 +492,232 @@ const App = {
       const refBox = el('input', 'refbox');
       refBox.value = (p.cursor && (p.cursor.ref || p.cursor.key)) || '';
       refBox.placeholder = 'Jn 3:16';
-      refBox.onkeydown = (e) => { if (e.key === 'Enter') { Study.openPassage(refBox.value, p.cursor && p.cursor.guide, body); } };
+      const gtype = (p.cursor && p.cursor.guide) || 'passage';
+      refBox.onkeydown = (e) => { if (e.key === 'Enter') { Study.openGuidePane(gtype, refBox.value, body); } };
       tools.appendChild(refBox);
       const ref = (p.cursor && (p.cursor.ref || p.cursor.key)) || '';
-      if (ref) Study.openPassage(ref, (p.cursor && p.cursor.guide) || 'passage', body);
+      if (ref) Study.openGuidePane(gtype, ref, body);
       else body.innerHTML = '<div class="empty">Type a reference and press Enter.</div>';
       return;
     }
     if (p.view === 'wordstudy') {
       const numBox = el('input', 'refbox');
-      numBox.value = (p.cursor && p.cursor.number) || '';
+      numBox.value = (p.cursor && (p.cursor.number || p.cursor.strongs)) || '';
       numBox.placeholder = 'G2316 / H430';
       const render = async (num) => {
         body.innerHTML = '<div class="st-loading">Gathering…</div>';
-        const r = await api('study/word', { number: num });
+        const r = await api('word-study', { num, limit: 30 });
         if (!r.ok) { body.innerHTML = '<div class="st-body">' + esc(r.error || 'failed') + '</div>'; return; }
-        let h = '<div class="st-ref">' + esc(r.number) + '</div>';
-        if (r.word || r.lemma) h += '<div class="st-body"><b>' + esc(r.word) + '</b> '
-          + esc(r.lemma) + ' · ' + (r.total || 0) + ' occurrences</div>';
-        if ((r.entries || []).length) {
-          h += '<div class="st-sec open"><div class="st-h">Lexicon entries</div>'
-            + r.entries.map(e => '<div class="st-note"><div class="st-src">' + esc(e.module || '')
-            + '</div><div class="st-body">' + esc(e.text || '') + '</div></div>').join('') + '</div>';
+        p.cursor = p.cursor || {}; p.cursor.number = num;
+        Reader.saveNow && Reader.saveNow(p);
+        const s = r.sections || {};
+        let h = '<div class="st-ref">' + esc(r.headword || num) + '</div>';
+        if (r.gloss) h += '<div class="st-body"><b>' + esc(r.headword || num) + '</b> '
+          + esc(r.lemma || '') + ' · ' + esc(r.gloss) + '</div>';
+        /* Lemma — lexicon articles. */
+        if (s.lemma && s.lemma.length) {
+          h += '<div class="st-sec open"><div class="st-h">Lemma</div>'
+            + s.lemma.map(x => '<div class="st-note"><div class="st-src">' + esc(x.module || '')
+            + '</div><div class="st-body">' + esc(x.text || '') + '</div></div>').join('') + '</div>';
         }
-        if ((r.by_book || []).length) {
-          h += '<div class="st-sec"><div class="st-h">By book</div>'
-            + r.by_book.map(([b, n]) => '<span style="margin-right:8px">' + esc(b) + ' ' + n + '</span>').join('') + '</div>';
+        /* Translation — how each Bible renders this word. */
+        if (s.translation && s.translation.length) {
+          h += '<div class="st-sec"><div class="st-h">Translation</div>'
+            + s.translation.map(t => '<div class="st-note"><div class="st-src">'
+            + esc(t.module || '') + ' (' + t.count.toLocaleString() + '×)</div>'
+            + '<div class="st-body">' + t.renderings.map(r => esc(r[0]) + ' ' + r[1].toLocaleString() + '×').join(' · ')
+            + '</div></div>').join('') + '</div>';
+        }
+        /* Senses. */
+        if (s.senses && s.senses.length) {
+          h += '<div class="st-sec"><div class="st-h">Senses</div>'
+            + s.senses.map(x => '<div class="st-note"><div class="st-body"><b>'
+            + esc(x.sense || '') + '</b> ' + esc(x.definition || '') + '</div></div>').join('') + '</div>';
+        }
+        /* Example uses. */
+        if (s.example_uses && s.example_uses.length) {
+          h += '<div class="st-sec"><div class="st-h">Example Uses</div>'
+            + s.example_uses.map(x => '<div class="st-note"><a href="#" data-ref="'
+            + esc(x.ref) + '" class="pg-ref">' + esc(x.ref) + '</a> <span class="tiny muted">'
+            + esc(x.surface || '') + '</span></div>').join('') + '</div>';
+        }
+        /* Clause participants. */
+        if (s.clause_participants && s.clause_participants.length) {
+          h += '<div class="st-sec"><div class="st-h">Clause Participants</div>'
+            + s.clause_participants.map(x => '<span style="margin-right:8px">' + esc(x) + '</span>').join('') + '</div>';
+        }
+        /* Textual searches — where in each Bible. */
+        if (s.textual_searches && s.textual_searches.length) {
+          h += '<div class="st-sec"><div class="st-h">Textual Searches</div>'
+            + s.textual_searches.map(t => '<div class="st-note"><div class="st-src">'
+            + esc(t.module || '') + ' (' + t.count.toLocaleString() + ' hits)</div>'
+            + '<div class="st-body">' + t.sample.map(s => '<a href="#" data-ref="'
+            + esc(s.ref) + '" class="pg-ref">' + esc(s.ref) + '</a> ' + esc(s.surface || '')).join(' · ')
+            + '</div></div>').join('') + '</div>';
         }
         body.innerHTML = h;
-        $$('.st-h', body).forEach(hh => hh.onclick = () => hh.parentElement.classList.toggle('open'));
+        body.querySelectorAll('.pg-ref').forEach(a => {
+          a.onclick = (e) => { e.preventDefault(); const ref = a.dataset.ref;
+            App.show('workspace'); const pane = (S.layout && S.layout.panes && S.layout.panes[0]);
+            if (pane) Reader.go(pane, ref); };
+        });
       };
-      numBox.onkeydown = (e) => { if (e.key === 'Enter') { p.cursor = p.cursor || {}; p.cursor.number = numBox.value; Reader.saveNow && Reader.saveNow(p); render(numBox.value); } };
+      numBox.onkeydown = (e) => { if (e.key === 'Enter') { render(numBox.value); } };
       tools.appendChild(numBox);
-      const n = (p.cursor && p.cursor.number) || '';
+      const n = (p.cursor && (p.cursor.number || p.cursor.strongs)) || '';
       if (n) render(n);
       else body.innerHTML = '<div class="empty">Type a Strong’s number and press Enter.</div>';
       return;
     }
 
+    if (p.view === 'factbook') {
+      const termBox = el('input', 'refbox');
+      termBox.value = (p.cursor && p.cursor.term) || '';
+      termBox.placeholder = 'Person, place, or topic';
+      const render = async (term) => {
+        body.innerHTML = '<div class="st-loading">Gathering…</div>';
+        const r = await api('factbook', { q: term, per_section: 10 });
+        if (!r.ok) { body.innerHTML = '<div class="st-body">' + esc(r.error || 'failed') + '</div>'; return; }
+        p.cursor = p.cursor || {}; p.cursor.term = term;
+        Reader.saveNow && Reader.saveNow(p);
+        let h = '<div class="st-ref">' + esc(term) + '</div>';
+        const sections = r.sections || [];
+        sections.forEach(sec => {
+          const items = sec.items || [];
+          if (!items.length) return;
+          h += '<div class="st-sec open"><div class="st-h">' + esc(sec.label || sec.kind)
+            + (sec.note ? ' <span class="tiny muted">' + esc(sec.note) + '</span>' : '')
+            + '</div>';
+          h += items.map(it => '<div class="st-note"><div class="st-src">'
+            + esc(it.module || '') + '</div><div class="st-t">' + esc(it.title || it.key)
+            + '</div><div class="st-body">' + esc(it.text || '') + '</div></div>').join('');
+          h += '</div>';
+        });
+        if (!h || h === '<div class="st-ref">' + esc(term) + '</div>') {
+          h += '<div class="empty">No fact-book entries found for "' + esc(term) + '".</div>';
+        }
+        body.innerHTML = h;
+      };
+      termBox.onkeydown = (e) => { if (e.key === 'Enter') { render(termBox.value); } };
+      tools.appendChild(termBox);
+      const t = (p.cursor && p.cursor.term) || '';
+      if (t) render(t);
+      else body.innerHTML = '<div class="empty">Type a person, place, or topic and press Enter.</div>';
+      return;
+    }
+
     /* -- reader-specific controls -- */
     if (m.reader === 'verse') {
-      const box = el('input', 'refbox');
-      box.value = p.cursor.ref || '';
-      box.placeholder = 'Jn 3:16';
-      box.onkeydown = (e) => {
-        if (e.key !== 'Enter') return;
-        // Dismiss the suggestion list before navigating.  It stays anchored
-        // under the box and hangs over the first lines of the chapter, where it
-        // silently swallowed the next click -- a right-click meant for a verse
-        // landed on the dropdown, so the verse could not be identified and the
-        // action was filed against the wrong one.
-        Reader.suggest(box, '');
-        box.blur();
-        Reader.go(p, box.value);
+      const pickerWrap = el('div', 'ref-picker-wrap');
+      const box = el('button', 'refbox ref-picker-trigger', 'Choose passage');
+      box.type = 'button';
+      box.setAttribute('aria-haspopup', 'dialog');
+      box.setAttribute('aria-expanded', 'false');
+      box.title = 'Choose a book and chapter';
+      const picker = el('div', 'ref-picker-popover');
+      picker.hidden = true;
+      picker.setAttribute('role', 'dialog');
+      picker.setAttribute('aria-label', 'Choose a Bible book and chapter');
+      picker.innerHTML = '<div class="ref-picker-col"><div class="ref-picker-heading">Book</div>'
+        + '<div class="ref-picker-books" role="listbox" aria-label="Books"></div></div>'
+        + '<div class="ref-picker-col"><div class="ref-picker-heading">Chapter</div>'
+        + '<div class="ref-picker-chapters" role="listbox" aria-label="Chapters"></div></div>';
+      pickerWrap.append(box, picker);
+      tools.appendChild(pickerWrap);
+
+      let pickerBooks = [];
+      let activeBook = null;
+      let pickerCloseEvents = null;
+      const closePicker = () => {
+        picker.hidden = true;
+        box.setAttribute('aria-expanded', 'false');
+        if (pickerCloseEvents) {
+          document.removeEventListener('pointerdown', pickerCloseEvents.outside, true);
+          pickerCloseEvents = null;
+        }
       };
-      box.oninput = debounce(() => Reader.suggest(box, box.value), 180);
-      box.onblur = () => Reader.suggest(box, '');
+      const currentParts = () => {
+        const ref = String((p.cursor && p.cursor.ref) || '');
+        const mt = ref.match(/^(.+?)\s+(\d+)(?::.*)?$/);
+        return mt ? { book: mt[1], chapter: Number(mt[2]) } : { book: '', chapter: 0 };
+      };
+      const drawChapters = () => {
+        const host = $('.ref-picker-chapters', picker);
+        if (!host) return;
+        host.innerHTML = '';
+        if (!activeBook) {
+          host.innerHTML = '<div class="ref-picker-empty">Select a book</div>';
+          return;
+        }
+        const current = currentParts();
+        const count = Number(activeBook.chapters || 0);
+        for (let chapter = 1; chapter <= count; chapter++) {
+          const b = el('button', 'ref-picker-choice ref-picker-chapter', String(chapter));
+          b.type = 'button';
+          b.setAttribute('role', 'option');
+          b.setAttribute('aria-selected', String(current.book.toLowerCase() === activeBook.name.toLowerCase()
+            && current.chapter === chapter));
+          if (current.book.toLowerCase() === activeBook.name.toLowerCase()
+              && current.chapter === chapter) b.classList.add('current');
+          b.onclick = async (e) => {
+            e.stopPropagation();
+            const ref = activeBook.name + ' ' + chapter;
+            closePicker();
+            await Reader.go(p, ref);
+          };
+          host.appendChild(b);
+        }
+      };
+      const drawBooks = () => {
+        const host = $('.ref-picker-books', picker);
+        if (!host) return;
+        host.innerHTML = '';
+        pickerBooks.forEach(book => {
+          const b = el('button', 'ref-picker-choice ref-picker-book', book.name);
+          b.type = 'button';
+          b.setAttribute('role', 'option');
+          b.setAttribute('aria-selected', String(activeBook && activeBook.osis === book.osis));
+          if (activeBook && activeBook.osis === book.osis) b.classList.add('selected');
+          b.onclick = (e) => {
+            e.stopPropagation();
+            activeBook = book;
+            drawBooks();
+            drawChapters();
+          };
+          host.appendChild(b);
+        });
+      };
+      const loadPicker = async () => {
+        const [canon, available] = await Promise.all([
+          api('books', { scheme: m.v11n || 'KJV' }),
+          api('library/outline', { id: m.id }),
+        ]);
+        if (!canon.ok || !available.ok) {
+          toast('Could not load the book and chapter list.', 'warn');
+          return false;
+        }
+        const inModule = new Map((available.books || []).map(b => [b.osis, b]));
+        pickerBooks = (canon.books || []).filter(b => inModule.has(b.osis))
+          .map(b => Object.assign({}, b, { chapters: inModule.get(b.osis).chapters }));
+        const current = currentParts();
+        activeBook = pickerBooks.find(b => [b.name, b.short, b.osis, ...(b.abbrevs || [])]
+          .some(n => String(n || '').toLowerCase() === current.book.toLowerCase()))
+          || pickerBooks[0] || null;
+        drawBooks();
+        drawChapters();
+        return true;
+      };
+      box.onclick = async (e) => {
+        e.stopPropagation();
+        if (!picker.hidden) { closePicker(); return; }
+        if (!await loadPicker()) return;
+        picker.hidden = false;
+        box.setAttribute('aria-expanded', 'true');
+        pickerCloseEvents = {
+          outside: (ev) => { if (!pickerWrap.contains(ev.target)) closePicker(); },
+        };
+        document.addEventListener('pointerdown', pickerCloseEvents.outside, true);
+      };
       const prev = el('button', '', '◀'); prev.title = 'Previous book';
       prev.onclick = () => Reader.step(p, 'prevbook');
       const next = el('button', '', '▶'); next.title = 'Next book';
@@ -556,7 +726,7 @@ const App = {
       pc.onclick = () => Reader.step(p, 'prevchapter');
       const nc = el('button', '', '❯'); nc.title = 'Next chapter';
       nc.onclick = () => Reader.step(p, 'nextchapter');
-      tools.append(prev, pc, box, nc, next);
+      tools.append(prev, pc, pickerWrap, nc, next);
       /* Pack 6: parallel prev/next steps through same-type resources in
        * priority order; the edition toggle swaps study/clean rendering. */
       const parP = el('button', '', '‹‖'); parP.title = 'Previous parallel resource';

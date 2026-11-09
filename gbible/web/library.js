@@ -1580,7 +1580,7 @@ const MapsUI = {
     d.appendChild(el('h3', '', esc(p.name)));
     if (p.comment) d.appendChild(el('p', 'tiny muted', esc(p.comment)));
     d.appendChild(el('p', 'tiny muted',
-      p.lat.toFixed(4) + ', ' + p.lon.toFixed(4)));
+      (p.lat != null ? p.lat.toFixed(4) : '?') + ', ' + (p.lon != null ? p.lon.toFixed(4) : '?')));
     const refs = el('div', 'mp-refs');
     (p.passages || []).forEach((ref) => {
       const a = el('a', 'mp-ref', esc(ref));

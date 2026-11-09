@@ -650,6 +650,7 @@ def _study_reverse_interlinear(parts, q):
 def _study_morph(parts, q):
     """Morph search over the tagged original-language texts."""
     return study.morph_search(conn=db.connect(), code=q.get("code", ""),
+                              module_id=q.get("module_id", ""),
                               limit=int(q.get("limit") or 400))
 
 

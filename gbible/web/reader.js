@@ -1,4 +1,14 @@
 const Reader = {
+  setReferenceButton(tools, ref) {
+    const button = tools && tools.querySelector('.ref-picker-trigger');
+    if (!button) return;
+    const value = String(ref || '').trim();
+    const parts = value.match(/^(.+?)\s+(\d+)(?::.*)?$/);
+    const label = parts ? parts[1] + ' ' + parts[2] : value;
+    button.textContent = label || 'Choose passage';
+    button.setAttribute('aria-label', label ? 'Current passage: ' + label : 'Choose passage');
+  },
+
   async render(p, m, body, tools) {
     body.innerHTML = '<div class="loading">Loading…</div>';
     const opts = Object.assign({}, p.options || {});
@@ -36,10 +46,8 @@ const Reader = {
         }).catch(() => {});
       }
     }
-    if (r.ref_label && m.reader === 'verse' && tools) {
-      const box = $('.refbox', tools.parentElement);
-      if (box) box.value = r.ref_label;
-    }
+    if (m.reader === 'verse' && tools)
+      this.setReferenceButton(tools, p.cursor.ref || r.ref_label || '');
     VisualFilters.paintPane(p, m, body);
     ClickSearch.arm(p, body);
   },
@@ -84,10 +92,7 @@ const Reader = {
     col1.appendChild(v1); col2.appendChild(v2);
     wrap.appendChild(col1); wrap.appendChild(col2);
     body.appendChild(wrap);
-    if (r1.ref_label && tools) {
-      const box = $('.refbox', tools.parentElement);
-      if (box) box.value = r1.ref_label;
-    }
+    if (tools) this.setReferenceButton(tools, p.cursor.ref || r1.ref_label || '');
     (r1.notices || []).forEach(n => body.appendChild(el('div', 'notice', esc(n))));
   },
 
@@ -125,6 +130,14 @@ const Reader = {
             sp.classList.add('selected');
             toast('Selected ' + it.label);
           }
+        };
+        /* Right-click a verse for the context menu.  Identifies the word under
+         * the pointer from the verse's span table so the menu offers Word Study
+         * for that word, then delegates everything to Study.wordMenu (the
+         * original, full menu). */
+        sp.oncontextmenu = (e) => {
+          e.preventDefault();
+          Reader.wordMenu(e, sp, m, it);
         };
         Reader.decorate(sp, m, it);
         Highlights.mark(sp, m.id, it.key, it.extra && it.extra.osis);
@@ -584,10 +597,11 @@ const Reader = {
         re.lastIndex = 0;
         while ((mm = re.exec(n.nodeValue))) {
           frag.appendChild(document.createTextNode(n.nodeValue.slice(last, mm.index)));
-          const a = el('a', '', esc(mm[0]));
+          const verseRef = mm[0];
+          const a = el('a', '', esc(verseRef));
           a.href = '#';
           a.title = 'Open this reference';
-          a.onclick = (e) => { e.preventDefault(); e.stopPropagation(); Reader.openRefAnywhere(mm[0]); };
+          a.onclick = (e) => { e.preventDefault(); e.stopPropagation(); Reader.openRefAnywhere(verseRef); };
           frag.appendChild(a);
           last = mm.index + mm[0].length;
         }
@@ -907,6 +921,75 @@ const Reader = {
       img.style.maxWidth = '100%';
       body.appendChild(img);
     }
+  },
+
+  /* ------------------------------------------------- word context menu
+   *
+   * Right-click a verse: find the word under the pointer from the verse's
+   * span table, then hand off to Study.wordMenu (the original full menu,
+   * which now also offers Word Study, Passage Guide and Exegetical Guide).
+   * Only one menu is painted -- there is no duplicate.
+   */
+  wordMenu(e, sp, m, it) {
+    /* Find the word under the pointer using character position, and look up
+     * its Strong's number from the verse's span table. */
+    let word = '', strongs = '', offset = 0;
+    try {
+      const range = document.caretRangeFromPoint(e.clientX, e.clientY);
+      if (range && range.startContainer && range.startContainer.nodeType === 3) {
+        const text = range.startContainer.textContent || '';
+        let i = range.startOffset;
+        const isW = (c) => /[\p{L}\p{N}'\u0591-\u05FF\u0370-\u03FF\u1F00-\u1FFF]'/u.test(c || '');
+        let a = i, b = i;
+        while (a > 0 && isW(text[a - 1])) a--;
+        while (b < text.length && isW(text[b])) b++;
+        word = text.slice(a, b);
+        offset = a;
+      }
+    } catch (err) { word = ''; }
+    /* Look up Strong's from the span table at the pointer's character offset. */
+    try {
+      const markup = it.extra && it.extra.markup ? JSON.parse(it.extra.markup) : null;
+      const spans = (markup && markup.s) || [];
+      for (const sp2 of spans) {
+        const start = Number(sp2[0]), ln = Number(sp2[1]);
+        if (start <= offset && offset < start + ln) {
+          strongs = (sp2[3] || '').split(' ').filter(Boolean).join(' ');
+          break;
+        }
+      }
+    } catch (err) { /* best effort */ }
+    const unitKey = it.key || '';
+    const ref = it.label || '';
+    Study.wordMenu(e.clientX, e.clientY, word, m, unitKey, ref, '', strongs);
+  },
+
+  /* Open a Word Study pane for a Strong's number, in the workspace. */
+  openWordStudyPane(number) {
+    const lay = S.layout;
+    if (!lay) { toast('No workspace open.'); return; }
+    const ids = App.leafTileIds(lay.tiles || [[1.0]]);
+    const tile = ids[0] || 't0_0';
+    post('workspace/pane', {
+      action: 'add', layout: lay.id, module: '', tile: tile,
+      cursor: { number: number || '' }, view: 'wordstudy',
+      options: {}, link_set: '' }).then(r => {
+      if (r && r.pane) { App.loadWorkspace(); App.showPane(tile, r.pane.id); }
+    });
+  },
+
+  /* Open a Passage or Exegetical Guide pane for a reference. */
+  openGuidePane(ref, guideType) {
+    const lay = S.layout;
+    if (!lay) { toast('No workspace open.'); return; }
+    const ids = App.leafTileIds(lay.tiles || [[1.0]]);
+    const tile = ids[0] || 't0_0';
+    post('workspace/pane', {
+      action: 'add', layout: lay.id, module: '', tile: tile,
+      cursor: { ref: ref || '', guide: guideType || 'passage' }, view: 'guide',
+      options: {}, link_set: '' }).then(r => {
+      if (r && r.pane) { App.loadWorkspace(); App.showPane(tile, r.pane.id); }
+    });
   },
 };
 

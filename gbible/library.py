@@ -22,7 +22,7 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
-from . import canon, db, markup, taxonomy
+from . import canon, db, markup, redletter, taxonomy
 from .markup import RenderOpts, Seg
 
 
@@ -129,6 +129,12 @@ class Module:
                   "has_xref", "has_redletter", "favorite", "enabled", "verified"):
             if k in d:
                 d[k] = bool(d.get(k))
+        if d.get("type") in ("Bible", "StudyBible", "ParallelBible",
+                              "OriginalLanguage", "Manuscript"):
+            # Whole-verse red-letter references apply to every Bible module,
+            # including ones imported before this list was added.
+            d["has_redletter"] = bool(redletter.RED_LETTER_VERSES) or d.get(
+                "has_redletter", False)
         d.pop("heading_count", None)
         d.pop("notes_count", None)
         d.pop("xrefs_count", None)
@@ -438,7 +444,7 @@ def _read_keys(m: Module, cursor: dict, o: RenderOpts,
         if row is None:
             missing.append(k)
             continue
-        items.append(_mk_item(row, o))
+        items.append(_mk_item(row, o, mark_redletter=m.is_bible))
     c = Content(m.id, m.name, "verse", cursor=cursor)
     c.items = items
     c.ref_label = cursor.get("list_name") or f"{len(items)} passages"
@@ -450,7 +456,8 @@ def _read_keys(m: Module, cursor: dict, o: RenderOpts,
     return c
 
 
-def _mk_item(row, o: RenderOpts, *, with_html=True) -> Item:
+def _mk_item(row, o: RenderOpts, *, with_html=True,
+             mark_redletter=False) -> Item:
     it = Item(key=row["key"], label=row["ref_label"], title=row["title"] or "",
               text=row["text"] or "", extra={})
     try:
@@ -480,6 +487,8 @@ def _mk_item(row, o: RenderOpts, *, with_html=True) -> Item:
         _b = _c = _v = None
     if _b and _c and _v:
         it.extra["osis"] = f"{_b}.{_c}.{_v}"
+        if mark_redletter and redletter.has_red_letter_verse(_b, _c, _v):
+            it.extra["_segs"] = redletter.mark_verse_segments(_segs_of(it))
     if with_html:
         it.html = _render(it, o)
     return it
@@ -512,11 +521,11 @@ def _read_bible(m: Module, cursor: dict, o: RenderOpts, span: str, context: int)
                     "This module's notes carry chapter:verse but no book name, "
                     "so they cannot be opened by reference. They are listed "
                     "here and are fully searchable.")
-                c.items = [_mk_item(r, o) for r in listed]
+                c.items = [_mk_item(r, o, mark_redletter=m.is_bible) for r in listed]
         return c
     bk = canon.BOOK_BY_OSIS.get(rows[0]["book"])
     c.section_title = (bk.name if bk else rows[0]["book"]) + " " + str(rows[0]["chapter"])
-    c.items = [_mk_item(r, o) for r in rows]
+    c.items = [_mk_item(r, o, mark_redletter=m.is_bible) for r in rows]
     c.context = _bible_context(m, rr.start, context)
     return c
 

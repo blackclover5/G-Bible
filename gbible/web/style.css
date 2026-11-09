@@ -248,6 +248,44 @@ code { font-family: var(--mono); font-size: .92em; background: var(--bg-3); padd
   font-family: var(--mono); font-size: 13px;
 }
 .refbox:focus { outline: none; border-color: var(--accent); }
+.ref-picker-wrap { position: relative; display: inline-flex; align-items: center; }
+.ref-picker-trigger {
+  width: auto; min-width: 112px; font-family: var(--mono); text-align: left;
+  white-space: nowrap;
+}
+.ref-picker-trigger::after { content: ' ▾'; color: var(--fg-3); }
+.ref-picker-popover {
+  position: absolute; z-index: 80; top: calc(100% + 6px); left: 0;
+  width: min(420px, calc(100vw - 28px)); height: min(370px, 70vh);
+  display: grid; grid-template-columns: minmax(130px, 1fr) minmax(120px, 1fr);
+  grid-template-rows: minmax(0, 1fr); overflow: auto;
+  background: var(--bg-4); border: 1px solid var(--line-2);
+  border-radius: 8px; box-shadow: 0 10px 30px #0009;
+}
+.ref-picker-popover[hidden] { display: none; }
+.ref-picker-col { display: flex; flex-direction: column; min-width: 0; }
+.ref-picker-col + .ref-picker-col { border-left: 1px solid var(--line); }
+.ref-picker-heading {
+  flex: 0 0 auto; padding: 8px 10px; font-size: 11px; font-weight: 700;
+  color: var(--fg-3); text-transform: uppercase; letter-spacing: .06em;
+  border-bottom: 1px solid var(--line); background: var(--bg-2);
+}
+.ref-picker-books, .ref-picker-chapters {
+  overflow: auto; min-height: 0; padding: 4px;
+}
+.ref-picker-choice {
+  display: block; width: 100%; border: 0 !important; border-radius: 5px !important;
+  padding: 6px 8px !important; background: transparent !important; color: var(--fg) !important;
+  text-align: left; font-size: 12px !important; cursor: pointer;
+}
+.ref-picker-choice:hover { background: var(--bg-3) !important; }
+.ref-picker-book.selected, .ref-picker-chapter.current {
+  background: var(--bg-3) !important; color: var(--accent) !important; font-weight: 700;
+}
+.ref-picker-chapters { display: grid; grid-template-columns: repeat(5, minmax(28px, 1fr));
+                       align-content: start; gap: 2px; }
+.ref-picker-chapter { text-align: center; }
+.ref-picker-empty { grid-column: 1 / -1; padding: 8px; color: var(--fg-3); font-size: 12px; }
 .refsugg {
   position: absolute; z-index: 50; background: var(--bg-4);
   border: 1px solid var(--line-2); border-radius: var(--r);
@@ -447,6 +485,20 @@ figure img { max-width: 100%; border: 1px solid var(--line); border-radius: var(
   white-space: nowrap; flex: 0 0 auto;
 }
 .search-bar button.on { background: var(--accent); color: #1a1400; border-color: var(--accent); }
+.search-bar button.on { background: var(--accent); color: #1a1400; border-color: var(--accent); }
+/* Morph search type: active state shown on s-stype */
+#s-morph-bar { gap: 6px; align-items: center; position: relative; }
+#s-morph-bar input { width: 150px; }
+#s-morph-bar select { width: 170px; }
+#s-morph-forms .morph-chip {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 5px 8px; border: 1px solid var(--line-2); border-radius: var(--r);
+  background: var(--bg-3); color: var(--fg); font-size: 12.5px; cursor: pointer;
+  text-align: left; width: 100%;
+}
+#s-morph-forms .morph-chip:hover { border-color: var(--accent); }
+#s-morph-forms .morph-chip code { font-size: 11px; color: var(--fg-3); }
+#s-morph-forms .morph-chip .feat { font-size: 11px; color: var(--fg-3); margin-top: 2px; }
 .search-body { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 /* The clause panel and the saved-search chips are full-width strips above the
  * results, not columns competing with them for the same row. */
@@ -2112,3 +2164,334 @@ body .article h3, body .article h4, body .tl-pl, body .st-src {
 .ai-ok { color: var(--link); }
 .ai-bad { color: var(--red); }
 
+/* ------------------------------------------------- right-click context menu */
+.ctxmenu { font-family: inherit; }
+.ctxitem:hover { background: var(--bg-3); }
+
+/* ------------------------------------------------- word-by-word (exegetical guide) */
+.wbw-word { cursor: pointer; text-decoration: none; }
+.wbw-word:hover { color: var(--accent); text-decoration: underline; }
+.wbw-gloss { color: var(--fg-3); font-style: italic; }
+
+/* ------------------------------------------------- passage guide named people/places */
+.pg-name { display: flex; gap: 8px; align-items: baseline; margin: 3px 0;
+           font-size: 12.5px; }
+.pg-name .w { font-weight: 600; min-width: 120px; }
+.pg-name .g { color: var(--fg-3); }
+.pg-name .s { margin-left: auto; font-size: 10.5px; color: var(--fg-3); }
+.pg-place { display: flex; gap: 8px; align-items: baseline; margin: 3px 0;
+            font-size: 12.5px; }
+.pg-place .w { font-weight: 600; min-width: 120px; }
+.pg-place .ll { font-size: 10.5px; color: var(--fg-3); }
+
+/* ------------------------------------------------- quickstart layout cards */
+.qs-card { border: 1px solid var(--line); border-radius: var(--r);
+           padding: 10px 12px; margin-bottom: 8px; background: var(--bg-2);
+           cursor: pointer; }
+.qs-card:hover { border-color: var(--line-2); }
+.qs-card .qs-title { font-weight: 600; margin-bottom: 4px; }
+.qs-card .qs-desc { font-size: 11.5px; color: var(--fg-3); margin-bottom: 6px; }
+.qs-card .qs-contents { font-size: 10.5px; color: var(--fg-2); }
+
+
+/* ========================================================================
+   G-Bible modern workspace refresh
+   Keeps the existing component system and theme variables; this layer
+   improves hierarchy, density, keyboard focus and responsive navigation.
+   ======================================================================== */
+:root {
+  --r: 10px;
+  --gb-shadow: 0 12px 34px rgba(0,0,0,.24);
+  --gb-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+#topbar {
+  min-height: 58px;
+  height: 58px;
+  flex-basis: 58px;
+  gap: 12px;
+  padding: 0 16px;
+  background: color-mix(in srgb, var(--bg-2) 94%, #000 6%);
+  border-bottom-color: color-mix(in srgb, var(--line) 72%, transparent);
+  box-shadow: 0 2px 14px rgba(0,0,0,.12);
+}
+#topbar .brand { flex: 0 0 auto; padding-right: 5px; }
+#topbar .brand img { height: 40px; width: 40px; object-fit: contain; }
+#nav.tabs { align-items: center; gap: 4px; min-width: 0; }
+#nav > button, #nav .menu-btn {
+  min-height: 36px;
+  padding: 7px 11px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: .005em;
+  color: var(--fg-2);
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+#nav > button.on {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--accent) 13%, var(--bg-3));
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.025);
+}
+#nav > button:hover, #nav .menu-btn:hover,
+#nav .menu-btn[aria-expanded="true"] {
+  color: var(--fg);
+  background: var(--bg-3);
+  border-color: var(--line);
+}
+#nav .menu-btn span { margin-left: 3px; color: var(--fg-3); font-size: 11px; }
+#nav .menu-pop {
+  top: calc(100% + 9px);
+  min-width: 220px;
+  max-width: min(340px, calc(100vw - 24px));
+  max-height: min(72vh, 620px);
+  overflow-y: auto;
+  padding: 7px;
+  gap: 2px;
+  background: color-mix(in srgb, var(--bg-2) 97%, #000 3%);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  box-shadow: var(--gb-shadow);
+  backdrop-filter: blur(16px);
+}
+#nav .menu-pop.menu-wide { min-width: 270px; }
+#nav .menu-pop button {
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--fg-1);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+#nav .menu-pop button:hover {
+  color: var(--fg);
+  background: var(--bg-4);
+  border-color: var(--line-2);
+}
+.menu-group-label {
+  padding: 9px 10px 4px;
+  color: var(--fg-3);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  user-select: none;
+}
+.menu-divider { height: 1px; margin: 5px 7px; background: var(--line); }
+#cmdbox-btn {
+  min-width: 48px;
+  min-height: 34px;
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  background: var(--bg-3);
+  color: var(--fg-2);
+  font-weight: 650;
+}
+#cmdbox-btn:hover { border-color: var(--accent); color: var(--fg); }
+#status { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Shared controls: calmer shapes and stronger interaction states. */
+button, input, select, textarea { accent-color: var(--accent); }
+button { transition: background .14s ease, border-color .14s ease, color .14s ease, transform .14s ease; }
+button:active { transform: translateY(1px); }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--gb-ring);
+}
+input, textarea, select {
+  min-height: 32px;
+  border-radius: 8px;
+}
+.btn, .primary, .danger { border-radius: 8px; }
+.store-head {
+  padding: 17px 20px 13px;
+  border-bottom-color: var(--line);
+}
+.store-head h2, .store-head h3 { letter-spacing: -.015em; }
+.dash-card, .card, .panel, .modal {
+  border-radius: 12px;
+}
+.tile-tabs { padding: 6px 7px 0; gap: 3px; }
+.tile-tab { border-radius: 8px 8px 0 0; padding: 7px 11px; }
+.pane-tools { padding: 7px 10px; gap: 7px; }
+.pane-tools button, .pane-tools select, .pane-tools input { min-height: 29px; border-radius: 7px; }
+.pane-body { padding: 18px clamp(16px, 2.2vw, 30px) 64px; }
+.workspace-bar { padding: 8px 12px; background: var(--bg-2); }
+.workspace-bar .btn { min-height: 30px; }
+
+/* Right-click menu: organized sections, generous targets and viewport safety. */
+.ctxmenu {
+  min-width: 248px;
+  max-width: min(360px, calc(100vw - 16px));
+  max-height: min(76vh, 680px);
+  overflow-y: auto;
+  padding: 7px;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-2) 97%, #000 3%);
+  box-shadow: 0 18px 48px rgba(0,0,0,.42);
+  backdrop-filter: blur(16px);
+}
+.ctx-section {
+  padding: 9px 10px 4px;
+  color: var(--fg-3);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: .095em;
+  line-height: 1.3;
+}
+.ctx-row { gap: 5px; padding: 1px 0; }
+.ctxmenu .ctx-row button {
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--fg-1);
+  white-space: normal;
+}
+.ctxmenu .ctx-row button:hover,
+.ctxmenu .ctx-row button:focus-visible {
+  background: color-mix(in srgb, var(--accent) 15%, var(--bg-3));
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+  color: var(--fg);
+}
+.ctx-sep { margin: 6px 7px; background: var(--line-2); }
+.ctxmenu .hl-swatch { min-height: 14px; padding: 0; }
+
+/* Small screens retain all destinations without forcing the header offscreen. */
+@media (max-width: 1080px) {
+  #topbar { gap: 8px; padding: 5px 10px; height: auto; min-height: 58px; flex-basis: auto; flex-wrap: wrap; }
+  #nav.tabs { flex: 1 1 100%; order: 3; overflow-x: auto; padding: 2px 0 4px; }
+  #topbar .brand { margin-right: auto; }
+  #topbar > .spacer { display: none; }
+  #nav > button, #nav .menu-btn { flex: 0 0 auto; }
+  #status { max-width: 120px; }
+}
+@media (max-width: 620px) {
+  #nav.tabs { gap: 2px; }
+  #nav > button, #nav .menu-btn { padding: 7px 9px; font-size: 12px; }
+  #nav .menu-pop { position: fixed; top: 108px; left: 8px; right: 8px; width: auto; max-width: none; max-height: calc(100vh - 120px); }
+  .pane-body { padding: 12px 12px 56px; }
+  .store-head { padding: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* Content views: give the major destinations the same visual rhythm. */
+.store-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px 14px;
+  padding: 15px 20px;
+  background: color-mix(in srgb, var(--bg-2) 96%, var(--bg));
+}
+.store-head h2 { margin: 0; color: var(--fg); font-size: 17px; font-weight: 680; }
+.store-head > .tiny.muted { margin-right: auto; }
+.store-filters { gap: 8px; }
+.store-filters label { gap: 7px; }
+.store-side { background: color-mix(in srgb, var(--bg-2) 96%, #000 4%); padding: 14px; }
+.store-list { padding: 15px 18px 64px; }
+.item { padding: 12px 14px; border-radius: 10px; background: var(--bg-2); }
+.item:hover { border-color: color-mix(in srgb, var(--accent) 42%, var(--line-2)); }
+
+/* Search: keep the query and controls visible while results are explored. */
+#v-search .search-bar {
+  position: relative;
+  z-index: 8;
+  padding: 12px 16px;
+  gap: 7px;
+  background: color-mix(in srgb, var(--bg-2) 97%, #000 3%);
+}
+#v-search .search-bar input[type=search] {
+  min-height: 38px;
+  font-size: 13px;
+  border-radius: 9px;
+}
+#v-search .search-bar button, #v-search .search-bar select {
+  min-height: 34px;
+  border-radius: 8px;
+}
+#v-search .search-main { min-height: 0; }
+#v-search .search-help { padding: 14px; }
+#v-search .search-results { padding: 14px 18px 60px; }
+#v-search .search-extras { padding: 0 16px; }
+#v-search .search-tpl { border-radius: 9px; }
+
+/* Home dashboard: consistent card spacing while preserving drag-to-reorder. */
+#v-today .store-head { padding: 18px 22px 14px; }
+#v-today .store-head h2 { font-size: 20px; }
+#v-today .dash { gap: 16px; padding: 18px clamp(14px, 2.4vw, 30px) 52px; }
+#v-today .dash-col { display: flex; flex-direction: column; gap: 14px; }
+#v-today .dash-card {
+  margin: 0;
+  padding: 15px 17px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, var(--bg-2), color-mix(in srgb, var(--bg-2) 88%, var(--bg-3)));
+  box-shadow: 0 4px 14px rgba(0,0,0,.10);
+  transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+#v-today .dash-card:hover { border-color: var(--line-2); box-shadow: 0 7px 20px rgba(0,0,0,.16); }
+#v-today .dash-h { color: var(--accent-2); font-weight: 750; letter-spacing: .09em; }
+
+/* Notes: stable two-column editor with independent scrolling. */
+#v-notes .notes-wrap {
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+  gap: 16px;
+  overflow: hidden;
+  padding: 16px 20px 20px;
+}
+#v-notes .notes-list {
+  width: clamp(220px, 25vw, 320px);
+  flex-basis: clamp(220px, 25vw, 320px);
+  max-height: none;
+  height: 100%;
+  padding-right: 10px;
+}
+#v-notes .notes-edit { height: 100%; overflow: auto; padding-right: 4px; }
+#v-notes .note-row { padding: 10px 11px; margin-bottom: 4px; border-radius: 9px; }
+#v-notes .note-row.on { background: color-mix(in srgb, var(--accent) 10%, var(--bg-2)); }
+
+/* Guides and AI: make long-form research feel like a reading surface. */
+.guides-body { padding: 18px clamp(14px, 2.4vw, 30px) 64px; }
+.guide-bar { flex-wrap: wrap; padding: 10px 0; }
+#v-ai .store-head { gap: 8px 12px; }
+#v-ai .store-head > div:last-child { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+#v-ai .ai-chat { padding: 18px clamp(12px, 3vw, 40px); }
+#v-ai .ai-msg { max-width: min(900px, 86%); }
+#v-ai .ai-msg .ai-body { padding: 13px 16px; border-radius: 13px; }
+#v-ai .ai-compose { padding: 12px clamp(12px, 3vw, 40px) 8px; }
+#v-ai .ai-compose textarea { min-height: 48px; border-radius: 11px; }
+
+/* Dialogs and popovers should read as deliberate surfaces, not default boxes. */
+.modal-bg { padding: 18px; backdrop-filter: blur(5px); }
+.modal {
+  width: min(760px, calc(100vw - 32px));
+  max-height: min(88vh, 900px);
+  border: 1px solid var(--line-2);
+  border-radius: 14px;
+  box-shadow: 0 24px 70px rgba(0,0,0,.48);
+}
+.modal h3 { padding: 15px 18px; font-size: 15px; }
+.modal .body { padding: 16px 18px; }
+.modal .foot { padding: 12px 18px; }
+
+@media (max-width: 760px) {
+  #v-search .search-main { flex-direction: column; }
+  #v-search .search-help { width: 100%; flex: 0 0 auto; max-height: 150px; border-right: 0; border-bottom: 1px solid var(--line); }
+  #v-today .dash { flex-direction: column; }
+  #v-today .dash-col { width: 100%; }
+  #v-notes .notes-wrap { flex-direction: column; overflow: auto; padding: 12px; }
+  #v-notes .notes-list { width: 100%; flex: 0 0 auto; height: auto; max-height: 34vh; border-right: 0; border-bottom: 1px solid var(--line); padding: 0 0 8px; }
+  #v-notes .notes-edit { flex: 1 0 auto; min-height: 280px; overflow: visible; }
+  #v-ai .ai-msg { max-width: 96%; }
+  .store-side { width: 210px; flex-basis: 210px; }
+}

@@ -153,18 +153,6 @@ APIS: list[Api] = [
         "The project is MIT on GitHub (HelloAOLab/bible-api), so the texts it "
         "carries can be installed locally, not merely looked up.",
         "", "JSON"),
-    Api("bible-supersearch", "Bible SuperSearch API", "AIC Web Tech / "
-        "Preserved Word Ministries",
-        "scripture", "https://api.biblesupersearch.com",
-        "https://api.biblesupersearch.com/documentation",
-        "https://www.biblesupersearch.com", False, AUTH_NONE, "",
-        "1,000 hits/day on the hosted API", "https://www.biblesupersearch.com/terms",
-        "GPL v3 (software); per-version text rights",
-        "Full Boolean plus verse-proximity search, which is unusual among the free "
-        "APIs. Query shape: /api?bible=kjv&reference=Rom&search=faith. Modules "
-        "include kjv, kjv_strongs, web, bishops, geneva, tyndale and Textus "
-        "Receptus. The whole API is self-hostable, so it can be run locally with "
-        "no daily cap.", "", "JSON"),
     Api("openbible-info", "OpenBible.info", "openbible.info",
         "study", "https://openbible.info", "https://openbible.info/geo/",
         "https://openbible.info", False, AUTH_NONE, "", "n/a",

@@ -1,16 +1,21 @@
 App.bind = function () {
   $$('#nav button[data-view]').forEach(b => b.onclick = () => { App.show(b.dataset.view);
     $$('#nav .menu-pop').forEach(m => m.classList.remove('open'));
+    $$('#nav .menu-btn').forEach(x => x.setAttribute('aria-expanded', 'false'));
   });
   $$('#nav .menu-btn').forEach(b => b.onclick = (ev) => {
     ev.stopPropagation();
     const panel = $('#menu-' + b.dataset.menu);
     const open = panel && !panel.classList.contains('open');
     $$('#nav .menu-pop').forEach(m => m.classList.remove('open'));
-    if (panel && open) panel.classList.add('open');
+    $$('#nav .menu-btn').forEach(x => x.setAttribute('aria-expanded', 'false'));
+    if (panel && open) { panel.classList.add('open'); b.setAttribute('aria-expanded', 'true'); }
   });
   document.addEventListener('click', (ev) => {
-    if (!ev.target.closest('#nav .nav-menu')) $$('#nav .menu-pop').forEach(m => m.classList.remove('open'));
+    if (!ev.target.closest('#nav .nav-menu') || ev.target.closest('#nav .menu-pop button')) {
+      $$('#nav .menu-pop').forEach(m => m.classList.remove('open'));
+      $$('#nav .menu-btn').forEach(x => x.setAttribute('aria-expanded', 'false'));
+    }
     /* Clicking anywhere outside a verse span deselects the selected verse.
      * If the click lands on a verse span or its verse number, leave the
      * selection as-is so the reader can keep working with that verse. */
@@ -61,6 +66,14 @@ App.bind = function () {
     if (e.key === 'Escape') {
       const modalUp = $('#modal-bg') && $('#modal-bg').classList.contains('on');
       if (modalUp) { closeModal(); e.preventDefault(); }
+      const openMenu = $('#nav .menu-pop.open');
+      if (openMenu) {
+        const trigger = openMenu.parentElement && openMenu.parentElement.querySelector('.menu-btn');
+        $$('#nav .menu-pop').forEach(m => m.classList.remove('open'));
+        $$('#nav .menu-btn').forEach(x => x.setAttribute('aria-expanded', 'false'));
+        if (trigger) trigger.focus({ preventScroll: true });
+        e.preventDefault();
+      }
     }
     if (e.key === '?' && !(e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'))) {
       e.preventDefault();
@@ -81,9 +94,8 @@ App.bind = function () {
   $('#s-range').onchange = () => {
     if (($('#sq').value || '').trim()) Search.go();
   };
-  $('#s-morph').onclick = () => Study.openMorph(
-    ($('#sq').value || '').trim().replace(/^\s*morph:\s*/i, ''));
-  $('#s-scope').onclick = (e) => {
+  /* ---- Search type: Bible text vs Morphology ------------------------------ */
+$('#s-scope').onclick = (e) => {
     const opts = [['', 'All resources'], ['bible', 'Bibles only'], ['books', 'Books only']];
     const cur = opts.findIndex(o => o[0] === S.search.opts.scope);
     const nx = opts[(cur + 1) % opts.length];
@@ -135,6 +147,245 @@ App.bind = function () {
     if (num) await Workspace.openWordStudyPane(num);
   };
   Search.help();
+
+  /* ---- Morph search ------------------------------------------------ */
+  $('#s-stype').onclick = () => {
+    Search.morphMode = !Search.morphMode;
+    const on = Search.morphMode;
+    $('#s-stype').classList.toggle('on', on);
+    $('#s-stype').textContent = on ? 'Morph' : 'Bible';
+    $('#s-morph-bar').style.display = on ? 'flex' : 'none';
+    $('#s-morph-forms').innerHTML = '';
+    $('#sq').placeholder = on
+      ? 'word  then  @  to pick a grammatical form   (e.g. love@V-PAI-3S)'
+      : 'faith AND Lord    Lord WITHIN 5 WORDS Christ    strongs:G2316    bible:"Gen 1:1"';
+    if (on) Search._morphFillResources();
+    if (!on && ($('#sq').value || '').trim()) Search.go();
+  };
+  Search.morphMode = false;
+  Search._morphFillResources = async () => {
+    const sel = $('#s-morph-res');
+    const mods = (S.modules || []).filter(m => m.has_morph);
+    sel.innerHTML = '<option value="">All tagged resources</option>'
+      + mods.map(m => '<option value="' + esc(m.id) + '">'
+      + esc(m.name) + ' (' + esc(m.lang || '') + ')</option>').join('');
+  };
+  let morphTimer = 0;
+  const morphWord = $('#s-morph-word');
+  if (morphWord) {
+    morphWord.oninput = (e) => {
+      clearTimeout(morphTimer);
+      const v = e.target.value;
+      const at = /@\s*$/.test(v);
+      const w = v.replace(/@\s*$/, '').trim();
+      const forms = $('#s-morph-forms');
+      if (!at || !w) { forms.innerHTML = ''; return; }
+      forms.innerHTML = '<div class="tiny muted">looking up forms…</div>';
+      morphTimer = setTimeout(async () => {
+        const mid = $('#s-morph-res').value || '';
+        if (!mid) { forms.innerHTML = '<div class="tiny muted">pick a tagged resource first.</div>'; return; }
+        const r = await api('morph/wordforms', { module_id: mid, word: w, limit: 12 });
+        forms.innerHTML = '';
+        if (!r.ok || !r.forms || !r.forms.length) {
+          forms.innerHTML = '<div class="tiny muted">no tagged forms for "' + esc(w) + '"</div>';
+          return;
+        }
+        const midName = (S.modules || []).find(m => m.id === mid);
+        r.forms.forEach(f => {
+          const chip = document.createElement('div');
+          chip.className = 'morph-chip';
+          const feat = Study._morphLabel ? Study._morphLabel(f.features) : f.code;
+          chip.innerHTML = '<div style="display:flex;justify-content:space-between"><b>'
+            + esc(w) + '</b><code>' + esc(f.code) + '</code></div>'
+            + '<div class="feat">' + esc(feat) + ' · ' + f.count.toLocaleString() + '×</div>';
+          chip.onclick = () => {
+            morphWord.value = w + ' @' + f.code;
+            forms.innerHTML = '';
+            Search.go();
+          };
+          forms.appendChild(chip);
+        });
+      }, 250);
+    };
+    morphWord.onkeydown = (e) => { if (e.key === 'Enter') Search.go(); };
+  }
+  $('#s-morph-res').onchange = () => { $('#s-morph-forms').innerHTML = ''; };
+  /* ---- Tools menu items ------------------------------------------------ */
+  $('#tc-copy-bible-verses').onclick = async () => {
+    const ref = prompt('Reference to copy:', 'John 3:16');
+    if (ref) {
+      const r = await api('read', { id: 'crosswire-kjv', cursor: { ref }, span: 'verse' });
+      if (!r.ok || !r.items || !r.items.length) { toast('Could not read that verse.'); return; }
+      const text = r.items.map(i => i.text || '').join(' ');
+      await navigator.clipboard.writeText(text);
+      toast('Copied to clipboard.');
+    }
+  };
+  $('#tc-text-comparison').onclick = async () => {
+    const ref = prompt('Reference to compare across translations:', 'John 3:16');
+    if (!ref) return;
+    App.show('workspace');
+    const bibles = (S.modules || []).filter(m => m.is_bible && m.installed_at).slice(0, 4);
+    if (!bibles.length) { toast('No Bibles installed.', 'warn'); return; }
+    for (const b of bibles) {
+      await Workspace.openModule(b.id, { ref, span: 'chapter' });
+    }
+    await App.loadWorkspace();
+    toast('Opened ' + bibles.length + ' translations side by side.');
+  };
+  $('#vf-visual-filters').onclick = async () => {
+    await VisualFilters.dialog();
+  };
+
+  /* ---- New tools menu items ------------------------------------------------ */
+  $('#tc-info-tool').onclick = async () => {
+    const ref = prompt('Reference to look up:', 'John 3:16');
+    if (!ref) return;
+    const r = await api('info-tool', { ref: ref });
+    if (!r.ok) { toast(r.error || 'Failed to load info.', 'err'); return; }
+    let h = '<div class="st-sec open"><div class="st-h">Info Tool: ' + esc(r.ref_label || ref) + '</div>';
+    if (r.verses && r.verses.length) {
+      h += '<div class="st-sec"><div class="st-h">Verses</div>';
+      r.verses.forEach(v => {
+        h += '<div class="st-note"><div class="st-t">' + esc(v.ref) + '</div><div class="st-body">' + esc(v.text) + '</div></div>';
+      });
+      h += '</div>';
+    }
+    if (r.strongs && r.strongs.length) {
+      h += '<div class="st-sec"><div class="st-h">Strong\'s Numbers</div>' + r.strongs.join(', ') + '</div>';
+    }
+    if (r.morphology && r.morphology.length) {
+      h += '<div class="st-sec"><div class="st-h">Morphology</div>' + r.morphology.join(', ') + '</div>';
+    }
+    if (r.topics && r.topics.length) {
+      h += '<div class="st-sec"><div class="st-h">Topics</div>' + r.topics.join(', ') + '</div>';
+    }
+    if (r.cross_references && r.cross_references.length) {
+      h += '<div class="st-sec"><div class="st-h">Cross-References</div>' + r.cross_references.map(x => '<a href="#" data-ref="' + esc(x) + '">' + esc(x) + '</a>').join(', ') + '</div>';
+    }
+    if (r.notes && r.notes.length) {
+      h += '<div class="st-sec"><div class="st-h">Notes</div>' + r.notes.map(n => '<div class="st-body">' + esc(n) + '</div>').join('');
+    }
+    modal('Info Tool', h, [{ label: 'Close', cls: 'btn' }]);
+  };
+
+  $('#tc-bibliography').onclick = async () => {
+    const r = await api('bibliography', {});
+    if (!r.ok) { toast(r.error || 'Failed to load bibliography.', 'err'); return; }
+    let h = '<div class="st-sec open"><div class="st-h">Bibliography (' + r.count + ' entries)</div>';
+    r.entries.forEach(e => {
+      h += '<div class="st-note"><div class="st-t">' + esc(e.title || '') + '</div><div class="st-body">' + esc(e.citation || e.name || '') + '</div></div>';
+    });
+    h += '</div>';
+    modal('Bibliography', h, [{ label: 'Close', cls: 'btn' }]);
+  };
+
+  $('#tc-books-search').onclick = async () => {
+    const q = prompt('Search books for:', '');
+    if (!q) return;
+    const r = await api('books-search', { q: q, limit: 20 });
+    if (!r.ok) { toast(r.error || 'Failed to search.', 'err'); return; }
+    let h = '<div class="st-sec open"><div class="st-h">Books Search: "' + esc(q) + '"</div>';
+    r.results.forEach(r => {
+      h += '<div class="st-note"><div class="st-t">' + esc(r.ref) + '</div><div class="st-body">' + esc(r.text) + '</div><div class="tiny muted">' + esc(r.module) + '</div></div>';
+    });
+    h += '</div>';
+    modal('Books Search', h, [{ label: 'Close', cls: 'btn' }]);
+  };
+
+  $('#tc-search-synopsis').onclick = async () => {
+    const q = prompt('Search synopsis for:', '');
+    if (!q) return;
+    const r = await api('search-synopsis', { q: q });
+    if (!r.ok) { toast(r.error || 'Failed to get synopsis.', 'err'); return; }
+    let h = '<div class="st-sec open"><div class="st-h">Search Synopsis: "' + esc(q) + '"</div>';
+    r.synopsis.forEach(s => {
+      h += '<div class="st-note"><div class="st-t">' + esc(s.module) + '</div><div class="st-body">' + esc(s.sample) + '</div><div class="tiny muted">' + s.count + ' matches</div></div>';
+    });
+    h += '</div>';
+    modal('Search Synopsis', h, [{ label: 'Close', cls: 'btn' }]);
+  };
+
+  $('#tc-insights').onclick = async () => {
+    const ref = prompt('Get insights for:', 'John 3:16');
+    if (!ref) return;
+    const r = await api('insights', { ref: ref });
+    if (!r.ok) { toast(r.error || 'Failed to get insights.', 'err'); return; }
+    let h = '<div class="st-sec open"><div class="st-h">Insights: ' + esc(r.ref) + '</div>';
+    r.sections.forEach(s => {
+      h += '<div class="st-sec"><div class="st-h">' + esc(s.title) + '</div><div class="st-body">' + esc(s.content) + '</div></div>';
+    });
+    h += '</div>';
+    modal('Insights', h, [{ label: 'Close', cls: 'btn' }]);
+  };
+
+  $('#tc-sermon-import').onclick = async () => {
+    const text = prompt('Enter sermon text:', '');
+    if (!text) return;
+    const title = prompt('Sermon title:', '');
+    if (!title) return;
+    const series = prompt('Sermon series (optional):', '');
+    const r = await api('sermon-import', { text: text, title: title, series: series });
+    if (!r.ok) { toast(r.error || 'Failed to import sermon.', 'err'); return; }
+    toast('Sermon imported: ' + r.title);
+  };
+
+  $('#tc-sermon-documents').onclick = async () => {
+    const r = await api('sermon-documents', {});
+    if (!r.ok) { toast(r.error || 'Failed to load sermons.', 'err'); return; }
+    let h = '<div class="st-sec open"><div class="st-h">Sermon Documents (' + r.count + ')</div>';
+    r.sermons.forEach(s => {
+      h += '<div class="st-note"><div class="st-t">' + esc(s.title) + '</div><div class="st-body">' + esc((s.text || '').slice(0, 200)) + '</div></div>';
+    });
+    h += '</div>';
+    modal('Sermon Documents', h, [{ label: 'Close', cls: 'btn' }]);
+  };
+
+  $('#tc-visual-copy').onclick = async () => {
+    const ref = prompt('Reference for visual copy:', 'John 3:16');
+    if (!ref) return;
+    const r = await api('visual-copy', { ref: ref });
+    if (!r.ok) { toast(r.error || 'Failed to create visual copy.', 'err'); return; }
+    let h = '<div class="st-sec open"><div class="st-h">Visual Copy: ' + esc(r.ref) + '</div>';
+    h += '<div class="st-body"><pre style="font-family: monospace; font-size: 12px;">' + esc(r.content || '') + '</pre></div>';
+    h += '</div>';
+    modal('Visual Copy', h, [{ label: 'Close', cls: 'btn' }]);
+  };
+
+  $('#tc-confessional-docs').onclick = async () => {
+    const r = await api('confessional-documents', {});
+    if (!r.ok) { toast(r.error || 'Failed to load confessional documents.', 'err'); return; }
+    let h = '<div class="st-sec open"><div class="st-h">Confessional Documents</div>';
+    r.documents.forEach(d => {
+      h += '<div class="st-note"><div class="st-t">' + esc(d.title) + '</div><div class="st-body">' + esc(d.text) + '</div><div class="tiny muted">' + esc(d.module) + '</div></div>';
+    });
+    h += '</div>';
+    modal('Confessional Documents', h, [{ label: 'Close', cls: 'btn' }]);
+  };
+
+  $('#tc-catholic-readings').onclick = async () => {
+    const date = prompt('Date (YYYY-MM-DD):', '');
+    if (!date) return;
+    const r = await api('catholic-daily-readings', { date: date });
+    if (!r.ok) { toast(r.error || 'Failed to load daily readings.', 'err'); return; }
+    let h = '<div class="st-sec open"><div class="st-h">Catholic Daily Readings' + (r.season ? ' - ' + esc(r.season) : '') + '</div>';
+    r.readings.forEach(r => {
+      h += '<div class="st-note"><div class="st-t">' + esc(r.title) + '</div><div class="st-body">' + esc(r.text) + '</div><div class="tiny muted">' + esc(r.module) + '</div></div>';
+    });
+    h += '</div>';
+    modal('Catholic Daily Readings', h, [{ label: 'Close', cls: 'btn' }]);
+  };
+
+  $('#tc-popular-quotes').onclick = async () => {
+    const r = await api('popular-quotes', {});
+    if (!r.ok) { toast(r.error || 'Failed to load popular quotes.', 'err'); return; }
+    let h = '<div class="st-sec open"><div class="st-h">Popular Quotes</div>';
+    r.quotes.forEach(q => {
+      h += '<div class="st-note"><div class="st-t">' + esc(q.ref) + '</div><div class="st-body">' + esc(q.text) + '</div><div class="tiny muted">' + q.count + ' occurrences</div></div>';
+    });
+    h += '</div>';
+    modal('Popular Quotes', h, [{ label: 'Close', cls: 'btn' }]);
+  };
 
   const sf = debounce(() => Store.fetch(), 320);
   ['#f-repo', '#f-lang', '#f-cat', '#f-subj', '#f-slot', '#f-sort'].forEach(s =>

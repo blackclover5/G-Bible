@@ -227,6 +227,10 @@ const Workspace = {
         const near = L.cursor.ref;
         t.cursor.ref = near;
       }
+      if (L.shared.indexOf('strongs') >= 0 && L.cursor.strongs) {
+        t.cursor.number = L.cursor.strongs;
+        t.cursor.strongs = L.cursor.strongs;
+      }
       const pane = $('.pane[data-pane="' + t.id + '"]');
       if (pane) App.fillPane(pane, t);
     });
@@ -705,16 +709,36 @@ const Search = {
   },
 
   async go() {
-    const q = $('#sq').value;
-    if (!q.trim()) {
-      $('#search-results').innerHTML = '<div class="empty">Type something '
-        + 'to search'
-        + ((S.search.mods || []).length
-           ? ' — currently scoped to ' + S.search.mods.length + ' resources'
-           : '') + '.</div>';
-      return;
+    let q = $('#sq').value;
+    /* ---- Morph search type ------------------------------------------------
+     * When Morph is the active search type, the query is built from the
+     * morph word input: `love @V-PAI-3S` becomes `morph:V-PAI-3S`, which the
+     * search engine already resolves against the morphology marker index.
+     * Results come back as verse hits, grouped by resource, each linking to
+     * the Bible pane -- the same path an ordinary text search takes. */
+    if (Search.morphMode) {
+      const mw = $('#s-morph-word');
+      const w = (mw && mw.value ? mw.value : '').trim();
+      if (!w) {
+        $('#search-results').innerHTML = '<div class="empty">Type a word, '
+          + 'press @ and pick a grammatical form.</div>';
+        return;
+      }
+      const m = w.match(/^(.+?)\s*@\s*(.+)$/);
+      q = m ? ('morph:' + m[2]) : ('morph:' + w);
+      $('#sq').value = q;
+      S.search.q = q;
+    } else {
+      if (!q.trim()) {
+        $('#search-results').innerHTML = '<div class="empty">Type something '
+          + 'to search'
+          + ((S.search.mods || []).length
+             ? ' — currently scoped to ' + S.search.mods.length + ' resources'
+             : '') + '.</div>';
+        return;
+      }
+      S.search.q = q;
     }
-    S.search.q = q;
     const host = $('#search-results');
     host.innerHTML = '<div class="loading">Searching…</div>';
     /* A range is a second request path, not a filter on the first: the engine
@@ -852,6 +876,12 @@ const Search = {
         + '<span class="mod">' + esc(h.module_name) + '</span>'
         + (h.strongs && h.strongs.length
           ? '<span class="tiny muted">' + esc(h.strongs.slice(0, 4).join(' ')) + '</span>' : '')
+        /* Morphology codes appear in matched when the search was a morph query;
+         * show them so each hit says what grammatical form was found. */
+        + (h.matched && h.matched.some(m => /^[A-Z0-9/:]+$/.test(m) && m.length > 2)
+          ? '<span class="tiny muted" style="color:var(--accent-2)">'
+          + esc(h.matched.filter(m => /^[A-Z0-9/:]+$/.test(m) && m.length > 2)
+                  .slice(0, 4).join(' · ')) + '</span>' : '')
         + '<span class="rank">' + h.rank + '</span></div>'
         + '<div class="sn">' + h.snippet_html + '</div>'
         + (h.context && h.context.length
@@ -905,6 +935,85 @@ const Search = {
       'Translate these hits  (sends text off this computer)');
     tr.onclick = () => Translate.open(r.hits);
     acts.appendChild(tr);
+    /* Add Versions -- Logos shows the same search side by side across
+     * translations.  Offer the other tagged resources and render each
+     * selection as its own column of verse hits. */
+    if (Search.morphMode) {
+      const tagged = (S.modules || []).filter(m => m.has_morph);
+      const others = tagged.filter(m => !byModule.has(m.id));
+      if (others.length) {
+        const av = el('button', 'btn tiny', 'Add versions');
+        const picker = el('div', 'morph-versions-picker');
+        picker.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;align-items:center';
+        others.forEach(m => {
+          const lab = el('label');
+          lab.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:12px';
+          lab.innerHTML = '<input type="checkbox" class="mv-sel" value="'
+            + esc(m.id) + '"> ' + esc(m.name) + ' (' + esc(m.lang || '') + ')';
+          picker.appendChild(lab);
+        });
+        const goAv = el('button', 'btn primary tiny', 'Compare');
+        const out = el('div', 'morph-versions-out');
+        out.style.cssText = 'display:flex;gap:8px;overflow-x:auto;padding:8px 0;border-top:1px solid var(--line);margin-top:6px';
+        goAv.onclick = async () => {
+          const sel = [...picker.querySelectorAll('.mv-sel:checked')].map(i => i.value);
+          out.innerHTML = '<div class="tiny muted">Loading versions…</div>';
+          await Promise.all(sel.map(async (mid) => {
+            const rr = await api('search', {
+              q: S.search.q, modules: [mid],
+              match_case: S.search.opts.match_case,
+              match_all_forms: S.search.opts.match_all_forms,
+              context: S.search.opts.context, sort: S.search.opts.sort, limit: 60 });
+            const col = document.createElement('div');
+            col.style.cssText = 'border:1px solid var(--line-2);border-radius:8px;padding:8px;min-width:220px;flex:0 0 auto';
+            const m = modById(mid);
+            col.innerHTML = '<div style="font-size:12px;font-weight:600;margin-bottom:6px">'
+              + esc((m && m.name) || mid) + (m && m.lang ? ' · ' + m.lang : '')
+              + '</div>';
+            if (!rr.ok || !rr.hits || !rr.hits.length) {
+              col.innerHTML += '<div class="tiny muted">no hits</div>';
+            } else {
+              rr.hits.forEach(h => {
+                const a = document.createElement('a');
+                a.href = '#'; a.textContent = esc(h.label);
+                a.title = esc(h.module_name);
+                a.onclick = (ev) => {
+                  ev.preventDefault();
+                  const mm = modById(h.module_id);
+                  if (mm) {
+                    const p = S.layout.panes.find(x => x.module_id === h.module_id);
+                    if (p && mm.reader === 'verse') {
+                      p.cursor = { ref: h.label, span: 'chapter' };
+                      Reader.reload(p, mm);
+                    } else Workspace.openModule(h.module_id,
+                      mm.reader === 'verse' ? { ref: h.label, span: 'chapter' } : { key: h.key });
+                    App.show('workspace');
+                  }
+                };
+                const row = el('div', '');
+                row.style.cssText = 'padding:3px 0;border-bottom:1px solid var(--line-2);font-size:12px';
+                row.appendChild(a);
+                const code = document.createElement('span');
+                code.className = 'tiny muted';
+                code.textContent = '  ' + (h.matched && h.matched.some(x => /^[A-Z0-9/:]+$/.test(x))
+                  ? h.matched.filter(x => /^[A-Z0-9/:]+$/.test(x)).join(' · ') : '');
+                row.appendChild(code);
+                col.appendChild(row);
+              });
+            }
+            out.appendChild(col);
+          }));
+        };
+        av.onclick = () => {
+          picker.style.display = picker.style.display === 'none' ? '' : 'none';
+          goAv.style.display = picker.style.display === 'none' ? 'none' : '';
+        };
+        acts.appendChild(av);
+        acts.appendChild(picker);
+        acts.appendChild(goAv);
+        acts.appendChild(out);
+      }
+    }
     host.appendChild(acts);
 
     if (grouping) {

@@ -754,6 +754,8 @@ def _parse_by_source(txt: str, source_type: str) -> list[Seg]:
     st = (source_type or "Plaintext").lower()
     if st == "osis":
         return markup.parse_osis(txt)
+    if st == "gbf":
+        return markup.parse_gbf_inline(txt)
     if st in ("tei", "thml"):
         return markup.parse_teithml(txt)
     if st in ("plaintext", "gbx", ""):

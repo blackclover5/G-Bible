@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf-token" content="__GBIBLE_CSRF_TOKEN__">
 <title>G-Bible</title>
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 <link rel="stylesheet" href="/print.css" media="print">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#128218;</text></svg>">
 </head>
@@ -14,59 +14,82 @@
 <div id="app">
 
   <div id="topbar" role="banner">
-    <div class="brand" aria-label="G-Bible"
-         aria-label="G-Bible"><img src="icon.png" alt="G-Bible"></div>
+    <div class="brand" aria-label="G-Bible"><img src="icon.png" alt="G-Bible"></div>
     <nav class="tabs" id="nav" aria-label="Main navigation">
-      <button data-view="today" class="on">Home</button>
-      <button data-view="workspace">Workspace</button>
-      <button data-view="search">Search</button>
-      <button data-view="guides">Guides</button>
-      <button data-view="ai">AI Assistant</button>
+      <button data-view="today" class="on" aria-label="Home">Home</button>
+      <button data-view="workspace" aria-label="Study workspace">Workspace</button>
+      <button data-view="search" aria-label="Search your library">Search</button>
+      <button data-view="guides" aria-label="Study guides">Guides</button>
+      <button data-view="ai" aria-label="AI assistant">Assistant</button>
 
       <div class="nav-menu">
-        <button class="menu-btn" data-menu="tools">Tools ▾</button>
-        <div class="menu-pop" id="menu-tools">
+        <button class="menu-btn" data-menu="tools" aria-controls="menu-tools" aria-haspopup="true" aria-expanded="false">Study tools <span aria-hidden="true">⌄</span></button>
+        <div class="menu-pop menu-wide" id="menu-tools">
+          <div class="menu-group-label">Explore Scripture</div>
           <button data-view="concordance">Concordance</button>
-          <button data-view="maps">Maps</button>
-          <button data-view="ntuseot">NT uses OT</button>
-          <button data-view="wordlists">Word Lists</button>
-          <button data-view="memorization">Memorization</button>
-          <button data-view="sermon-manager">Sermon Manager</button>
+          <button data-view="maps">Biblical maps</button>
+          <button data-view="ntuseot">New Testament use of the Old Testament</button>
+          <button data-view="wordlists">Word lists</button>
+          <button data-view="memorization">Verse memorization</button>
+          <button id="menu-passage-guide">Passage guide</button>
+          <div class="menu-divider"></div>
+          <div class="menu-group-label">Text tools</div>
+          <button id="tc-copy-bible-verses">Copy Bible verses</button>
+          <button id="tc-text-comparison">Text comparison</button>
+          <button id="vf-visual-filters">Visual filters</button>
+          <button id="tc-info-tool">Information tool</button>
+          <button id="tc-books-search">Books search</button>
+          <button id="tc-search-synopsis">Search synopsis</button>
+          <button id="tc-insights">Insights</button>
+          <div class="menu-divider"></div>
+          <div class="menu-group-label">Research & ministry</div>
+          <button id="tc-bibliography">Bibliography</button>
+          <button id="tc-sermon-import">Sermon import</button>
+          <button id="tc-sermon-documents">Sermon documents</button>
+          <button id="tc-visual-copy">Visual copy</button>
+          <button id="tc-confessional-docs">Confessional documents</button>
+          <button id="tc-catholic-readings">Catholic daily readings</button>
+          <button id="tc-popular-quotes">Popular quotes</button>
         </div>
       </div>
 
       <div class="nav-menu">
-        <button class="menu-btn" data-menu="documents">Documents ▾</button>
+        <button class="menu-btn" data-menu="documents" aria-controls="menu-documents" aria-haspopup="true" aria-expanded="false">My study <span aria-hidden="true">⌄</span></button>
         <div class="menu-pop" id="menu-documents">
-          <button data-view="notes">Notes</button>
-          <button data-view="organise">Organise</button>
-          <button data-view="workflows">Workflows</button>
-          <button data-view="clippings">Clips</button>
+          <div class="menu-group-label">Personal study</div>
+          <button data-view="notes">Notes & highlights</button>
+          <button data-view="organise">Organise & collections</button>
+          <button data-view="clippings">Clippings</button>
+          <div class="menu-divider"></div>
+          <div class="menu-group-label">Growth & preparation</div>
+          <button data-view="workflows">Study workflows</button>
+          <button data-view="sermon-manager">Sermon manager</button>
           <button data-view="plans">Reading plans</button>
-          <button data-view="prayer">Prayer</button>
+          <button data-view="prayer">Prayer lists</button>
         </div>
       </div>
 
       <div class="nav-menu">
-        <button class="menu-btn" data-menu="library">Library ▾</button>
+        <button class="menu-btn" data-menu="library" aria-controls="menu-library" aria-haspopup="true" aria-expanded="false">Library <span aria-hidden="true">⌄</span></button>
         <div class="menu-pop" id="menu-library">
-          <button data-view="library">My Library</button>
-          <button data-view="store">Modules</button>
+          <button data-view="library">My library</button>
+          <button data-view="store">Resource store</button>
         </div>
       </div>
 
       <div class="nav-menu">
-        <button class="menu-btn" data-menu="settings">Settings ▾</button>
+        <button class="menu-btn" data-menu="settings" aria-controls="menu-settings" aria-haspopup="true" aria-expanded="false">Settings <span aria-hidden="true">⌄</span></button>
         <div class="menu-pop" id="menu-settings">
-          <button data-view="apis">API Settings</button>
-          <button data-view="aisettings">AI</button>
-          <button data-view="sync">Sync</button>
+          <button data-view="apis">API settings</button>
+          <button data-view="aisettings">AI providers</button>
+          <button data-view="sync">Synchronization</button>
+          <div class="menu-divider"></div>
           <button id="menu-appearance">Appearance</button>
           <button id="menu-ra-settings">Read aloud settings</button>
-          <button id="menu-passage-guide">Passage</button>
+          <div class="menu-divider"></div>
+          <button id="menu-about" title="About G-Bible">About G-Bible</button>
         </div>
       </div>
-      <button id="menu-about" title="About G-Bible">About</button>
     </nav>
     <div class="spacer"></div>
     <button class="btn tiny" id="cmdbox-btn" title="Command box (Ctrl+K)" aria-label="Command box (Ctrl+K)" style="margin-right:8px">⌘K</button>
@@ -106,7 +129,7 @@
         <button class="btn tiny" id="ws-closeall" title="Close every pane (keeps one empty tile)">Close all panes</button>
         <button class="btn tiny" id="ws-fullscreen" title="Fullscreen reading of the first pane">Fullscreen</button>
         <button class="btn tiny" id="ws-guidepane" title="Open Passage in a pane">Passage pane</button>
-        <button class="btn tiny" id="ws-wordstudypane" title="Open Word Study in a pane">Word Study pane</button>
+
         <span class="spacer"></span>
         <span class="tiny muted" id="ws-status"></span>
       </div>
@@ -124,12 +147,19 @@
         <button id="s-case" title="Match case">Aa</button>
         <button id="s-forms" title="Match all forms (stemming)">*</button>
         <button id="s-ctx" title="Show surrounding verses">Context</button>
-        <button id="s-morph" title="Search the morphology of the tagged texts">Morph</button>
+        <button id="s-stype" title="Search type: Bible text or Morphology">Bible</button>
         <select id="s-sort">
           <option value="relevance">Relevance</option>
           <option value="passage">Passage order</option>
           <option value="resource">By resource</option>
         </select>
+        <div id="s-morph-bar" style="display:none;align-items:center;gap:6px">
+          <label style="font-size:11.5px;color:var(--fg-3)">Morph · resource</label>
+          <select id="s-morph-res" style="width:170px"></select>
+          <label style="font-size:11.5px;color:var(--fg-3)">word</label>
+          <input type="search" id="s-morph-word" placeholder="love  then  @" style="width:150px">
+          <div id="s-morph-forms" style="display:flex;flex-direction:column;gap:3px;max-height:220px;overflow-y:auto;background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--r);padding:6px;z-index:10;position:absolute"></div>
+        </div>
         <button id="s-go" class="primary">Search</button>
         <button id="s-browse" title="Build a search without remembering the syntax">Browse</button>
         <button id="s-save" title="Keep this search">Save</button>
@@ -374,6 +404,14 @@
             <option value="canvases">Canvases</option>
             <option value="charts">Charts</option>
             <option value="templates">Search templates</option>
+            <option value="sermon-starter">Sermon Starter</option>
+            <option value="qa">Questions &amp; Answers</option>
+            <option value="sense-lexicon">Sense Lexicon</option>
+            <option value="community-tags">Community Tags</option>
+            <option value="personal-books">Personal Books</option>
+            <option value="courses">Courses</option>
+            <option value="draw-on-screen">Draw on Screen</option>
+            <option value="print-export">Print / Export</option>
           </select>
           <select id="o-chart" style="display:none">
             <option value="type">Resources by kind</option>
@@ -686,7 +724,7 @@
 <script src="reader.js"></script>
 <script src="cite.js"></script>
 <script src="study-pre.js"></script>
-<script src="study.js"></script>
+<script src="study.js?v=5"></script>
 <script src="panes.js"></script>
 <script src="speech.js"></script>
 <script src="appearance.js"></script>
@@ -699,7 +737,7 @@
 <script src="tools-prayer.js?v=2"></script>
 <script src="tools-clippings.js?v=2"></script>
 <script src="tools-diagram.js?v=2"></script>
-<script src="tools-bind.js?v=2"></script>
+<script src="tools-bind.js?v=3"></script>
 <script src="tools-preach.js?v=2"></script>
 <script src="tools-selcard.js?v=2"></script>
 <script src="tools-flashcards.js?v=2"></script>

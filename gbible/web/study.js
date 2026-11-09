@@ -85,20 +85,114 @@ const Study = {
     return h;
   },
 
+  /* Turn decoded morphology features into a human-readable label, the way
+   * Logos presents the grammatical form you can pick after typing a word + @.
+   */
+  _morphLabel(f) {
+    const parts = [];
+    const push = (v) => { if (v) parts.push(String(v)); };
+    push(f.pos);
+    push(f.gender);
+    push(f.number);
+    push(f.case);
+    push(f.state);
+    push(f.conjugation);
+    push(f.tense);
+    push(f.voice);
+    push(f.mood);
+    if (f.person) parts.push(f.person + (f.person === 'third' ? ' person' : ''));
+    push(f.degree);
+    push(f.participle);
+    return parts.join(', ') || (f.scheme ? f.scheme + ' code' : 'code');
+  },
+
   async openMorph(initial) {
-    modal('Morph search', '<div class="st-body">Search the morphology of the '
-      + 'tagged texts you have installed. A prefix is enough: <code>HNcms</code> '
-      + 'finds every noun, <code>HTd/</code> every article.</div>'
-      + '<div style="display:flex;gap:6px;margin:10px 0">'
+    if (!initial) return this.openMorphBuilder();
+    const mods = (S.modules || []).filter(m => m.has_morph);
+    const resOpts = mods.map(m => '<option value="' + esc(m.id) + '">'
+      + esc(m.name) + ' (' + esc(m.lang || '') + ')</option>').join('');
+    modal('Morph search', '<div class="st-body">Search the morphology of tagged '
+      + 'texts. Type a word or lemma and press <b>@</b> to pick its grammatical '
+      + 'form (as in Logos), or enter a code prefix directly '
+      + '(<code>HNcmsa</code>, <code>HTd/</code>, <code>V-PAI-3S</code>).</div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">'
+      + '<label>Resource <select id="morph-resource"><option value="">All tagged resources</option>'
+      + resOpts + '</select></label></div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0">'
+      + '<label>Word / lemma <input id="morph-word" style="flex:1;background:var(--bg-3);'
+      + 'border:1px solid var(--line-2);color:var(--fg);padding:6px;border-radius:6px"'
+      + ' placeholder="a word, then @"></label>'
+      + '<div id="morph-forms" style="display:flex;flex-direction:column;gap:4px;max-height:260px;overflow-y:auto"></div>'
+      + '</div>'
+      + '<div style="display:flex;gap:6px;margin:6px 0">'
       + '<input id="morph-q" style="flex:1;background:var(--bg-3);'
       + 'border:1px solid var(--line-2);color:var(--fg);padding:6px;'
-      + 'border-radius:6px" placeholder="HNcmsa" value="'
+      + 'border-radius:6px" placeholder="or code prefix" value="'
       + esc(initial || '') + '">'
       + '<button class="btn primary" id="morph-go">Search</button></div>'
       + '<div id="morph-out"></div>',
       [{ label: 'Close', cls: 'btn' }]);
+
+    const resource = $('#morph-resource');
+    if (mods.length && !resource.value) resource.value = mods[0].id;
+    let selectedCode = '';
+    const forms = $('#morph-forms');
+    const wordIn = $('#morph-word');
+    let timer = 0;
+    const clearForms = () => { forms.innerHTML = ''; selectedCode = ''; };
+    const showForms = async (raw) => {
+      const w = (raw || '').replace(/@\s*$/, '').trim();
+      if (!w) { clearForms(); return; }
+      const mid = resource.value || '';
+      if (!mid) {
+        forms.innerHTML = '<div class="tiny muted">Pick a tagged resource first.</div>';
+        selectedCode = '';
+        return;
+      }
+      forms.innerHTML = '<div class="st-loading tiny">looking up forms…</div>';
+      const r = await api('morph/wordforms', { module_id: mid, word: w, limit: 12 });
+      forms.innerHTML = '';
+      if (!r.ok || !r.forms || !r.forms.length) {
+        forms.innerHTML = '<div class="tiny muted">no tagged forms found for "'
+          + esc(w) + '"</div>';
+        selectedCode = '';
+        return;
+      }
+      r.forms.forEach(f => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn morph-form-chip';
+        btn.title = f.code;
+        btn.style.cssText = 'text-align:left;width:100%;padding:6px 8px';
+        const feat = this._morphLabel(f.features);
+        btn.innerHTML = '<div style="display:flex;justify-content:space-between">'
+          + '<b>' + esc(w) + '</b><span class="tiny muted">' + esc(f.code)
+          + ' · ' + f.count.toLocaleString() + '</span></div>'
+          + '<div class="tiny muted">' + esc(feat) + '</div>';
+        btn.onclick = () => { selectedCode = f.code; $('#morph-q').value = f.code; clearForms(); go(); };
+        forms.appendChild(btn);
+      });
+    };
+    wordIn.oninput = (e) => {
+      clearTimeout(timer);
+      if (/@\s*$/.test(e.target.value)) timer = setTimeout(() => showForms(e.target.value), 250);
+      else clearForms();
+    };
+    resource.onchange = clearForms;
+    const moduleName = (mid) => {
+      const m = (S.modules || []).find(x => x.id === mid);
+      return m ? m.name + (m.lang ? ' · ' + m.lang : '') : mid;
+    };
+    const renderColumn = (mid, hits) => {
+      const rows = (hits || []).map(x => '<a href="#" data-ref="'
+        + esc((x.ref && x.ref.label) || x.key) + '" title="' + esc(x.code) + '">'
+        + esc((x.surface || x.code)) + '</a>').join('') || '<div class="tiny muted">none</div>';
+      return '<div style="border:1px solid var(--line-2);border-radius:8px;padding:8px;min-width:210px">'
+        + '<div class="dash-h" style="font-size:13px">' + esc(moduleName(mid)) + '</div>'
+        + '<div class="st-words" style="margin-top:6px">' + rows + '</div></div>';
+    };
     const go = async () => {
-      const code = $('#morph-q').value.trim();
+      const code = ($('#morph-q').value || '').trim() || selectedCode;
       if (!code) return;
       $('#morph-out').innerHTML = '<div class="st-loading">Searching…</div>';
       const r = await api('study/morph', { code, limit: 300 });
@@ -116,12 +210,94 @@ const Study = {
           + esc((x.surface || x.code)) + '</a>';
       });
       h += '</div>';
+      /* Add Versions -- Logos shows the same search side by side across
+       * translations.  Group this search's hits by module, offer the other
+       * tagged modules, and render each selection as its own column. */
+      const byModule = {};
+      (r.hits || []).forEach(x => { (byModule[x.module_id] = byModule[x.module_id] || []).push(x); });
+      const others = mods.filter(m => !byModule[m.id]);
+      if (others.length || Object.keys(byModule).length > 1) {
+        h += '<div style="margin-top:10px"><div class="dash-h" style="font-size:13px;margin-bottom:4px">Add versions</div>'
+          + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">'
+          + others.map(m => '<label style="display:flex;align-items:center;gap:4px"><input type="checkbox" class="mv-sel" value="'
+          + esc(m.id) + '"> ' + esc(m.name) + ' (' + esc(m.lang || '') + ')</label>').join('')
+          + '</div><button class="btn" id="morph-compare">Compare selected versions</button>'
+          + '<div id="morph-versions" style="display:flex;gap:8px;overflow-x:auto;padding:8px 0"></div></div>';
+      }
       $('#morph-out').innerHTML = h;
       this.wire($('#morph-out'));
+      $('#morph-out').querySelectorAll('#morph-compare').forEach(b => {
+        b.onclick = async () => {
+          const sel = [...$('#morph-out').querySelectorAll('.mv-sel:checked')].map(i => i.value);
+          const out = $('#morph-versions');
+          out.innerHTML = '<div class="st-loading">Loading versions…</div>';
+          await Promise.all(sel.map(async (mid) => {
+            const rr = await api('study/morph', { code, module_id: mid, limit: 60 });
+            const col = document.createElement('div');
+            col.innerHTML = renderColumn(mid, (rr.ok && rr.hits) ? rr.hits : []);
+            out.appendChild(col);
+          }));
+          out.querySelector('.st-loading')?.remove();
+        };
+      });
     };
     $('#morph-go').onclick = go;
     $('#morph-q').onkeydown = (e) => { if (e.key === 'Enter') go(); };
+    wordIn.onkeydown = (e) => { if (e.key === 'Enter') go(); };
     if (initial) go();
+  },
+
+  async openMorphBuilder() {
+    const resources = (S.modules || []).filter(m => m.has_morph);
+    modal('Morph search', '<div class="st-body">Build ordered word patterns from the tags available in an installed resource. Words in one pattern are searched in sequence; add an OR alternative to search another pattern. A word can also be excluded from the selected verse or chapter.</div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0"><label>Tagged resource <select id="morph-resource">' + resources.map(m => '<option value="' + esc(m.id) + '">' + esc(m.name) + '</option>').join('') + '</select></label><label>Search field <select id="morph-field"><option value="">Any field</option></select></label><label>Passage <input id="morph-ref" placeholder="e.g. John 1"></label><label>Match within <select id="morph-boundary"><option value="verse">Verse</option><option value="chapter">Chapter</option></select></label><label>Maximum words between <input id="morph-gap" type="number" min="0" max="10" value="0" style="width:64px"></label></div><div id="morph-groups"></div><datalist id="morph-lemmas"></datalist><div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"><button class="btn" id="morph-or">Add OR alternative</button><button class="btn primary" id="morph-go">Search</button><button class="btn" id="morph-code-mode">Morph code search</button></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0"><input id="morph-save-name" placeholder="Name this query"><button class="btn" id="morph-save">Save query</button><select id="morph-saved"></select><button class="btn" id="morph-load">Load</button><button class="btn" id="morph-delete">Delete saved</button><span class="tiny muted">Saved in this library</span></div><div id="morph-out"></div>', [{label:'Close',cls:'btn'}]);
+    if (!resources.length) { $('#morph-groups').innerHTML='<div class="st-body">No installed modules advertise morphology tags. Install a tagged Hebrew or Greek text, then reopen Morph Search.</div>'; $('#morph-go').disabled=true; return; }
+    let facets={}, groupCount=0;
+    const fields=['pos','case','number','gender','tense','voice','mood','person','state','degree','conjugation','participle','pos_particle','scheme'];
+    const addWord = (group) => {
+      const container=group.querySelector('.morph-terms'); if(container.querySelectorAll('.morph-term').length>=6)return; const n=container.querySelectorAll('.morph-term').length+1, box=document.createElement('div'); box.className='st-note morph-term'; box.style.cssText='display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0;padding:8px';
+      box.innerHTML='<b>Word '+n+'</b>'+fields.map(k=>'<label>'+k+' <select data-feature="'+k+'"><option value="">Any</option>'+((facets[k]||[]).map(x=>'<option value="'+esc(x.value)+'">'+esc(x.value)+' ('+x.n+')</option>').join(''))+'</select></label>').join('')+'<label>Form <input data-feature="form" placeholder="exact surface form"></label><label>Lemma <input data-feature="lemma" list="morph-lemmas" data-lemma placeholder="type to find a lemma"></label><label><input type="checkbox" data-exclude> Exclude if present in range</label>'+(n>1?'<button class="btn" data-remove>Remove</button>':'');
+      const lemmaInput=box.querySelector('[data-lemma]'); let lemmaTimer=0; lemmaInput.oninput=()=>{clearTimeout(lemmaTimer);lemmaTimer=setTimeout(async()=>{const r=await api('morph/suggest',{module_id:$('#morph-resource').value,q:lemmaInput.value.trim()});const list=$('#morph-lemmas');list.innerHTML=(r.suggestions||[]).map(x=>'<option value="'+esc(x.lemma)+'"></option>').join('');},180);};
+      const rm=box.querySelector('[data-remove]'); if(rm)rm.onclick=()=>{box.remove();[...container.querySelectorAll('.morph-term')].forEach((x,i)=>x.querySelector('b').textContent='Word '+(i+1));}; container.appendChild(box);
+    };
+    const addGroup = () => {
+      if(groupCount>=6)return; const n=++groupCount, group=document.createElement('div'); group.className='st-note morph-group'; group.style.cssText='margin:8px 0;padding:8px'; group.innerHTML='<div style="display:flex;gap:8px;align-items:center"><b>Alternative '+n+'</b><button class="btn" data-add-word>Add word</button>'+(n>1?'<button class="btn" data-remove-group>Remove alternative</button>':'')+'</div><div class="morph-terms"></div>';
+      group.querySelector('[data-add-word]').onclick=()=>addWord(group); const rm=group.querySelector('[data-remove-group]'); if(rm)rm.onclick=()=>{group.remove();groupCount--;[...document.querySelectorAll('#morph-groups .morph-group')].forEach((x,i)=>x.querySelector('b').textContent='Alternative '+(i+1));}; $('#morph-groups').appendChild(group); addWord(group); addWord(group); addWord(group);
+    };
+    const load=async()=>{ $('#morph-groups').innerHTML='<div class="st-loading">Loading available tags…</div>';groupCount=0;const module_id=$('#morph-resource').value,[r,fr]=await Promise.all([api('morph/facets',{module_id}),api('morph/fields',{module_id})]);facets=r.facets||{};const field=$('#morph-field');field.innerHTML='<option value="">Any field</option>'+((fr.fields||[]).map(x=>'<option value="'+esc(x.value)+'">'+esc(x.label)+' ('+x.n+')</option>').join(''));$('#morph-groups').innerHTML='';addGroup(); };
+    $('#morph-resource').onchange=load; $('#morph-or').onclick=addGroup; $('#morph-code-mode').onclick=()=>this.openMorphCode(''); await load();
+    let savedQueries=[];
+    const refreshSaved=async()=>{const r=await api('morph/saved',{action:'list'});savedQueries=r.saved||[];const sel=$('#morph-saved');sel.innerHTML=savedQueries.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');};
+    const snapshot=()=>({name:$('#morph-save-name').value.trim(),module_id:$('#morph-resource').value,search_field:$('#morph-field').value,ref:$('#morph-ref').value.trim(),boundary:$('#morph-boundary').value,gap:$('#morph-gap').value,groups:[...document.querySelectorAll('#morph-groups .morph-group')].map(group=>[...group.querySelectorAll('.morph-term')].map(box=>{const f={};box.querySelectorAll('[data-feature]').forEach(x=>{if(x.value)f[x.dataset.feature]=x.value;});f.exclude=!!box.querySelector('[data-exclude]').checked;return f;}))});
+    const restore=async saved=>{if(saved.module_id&&!resources.some(m=>m.id===saved.module_id)){$('#morph-out').innerHTML='<div class="st-body">That saved query uses a tagged resource that is not currently installed.</div>';return;}if(saved.module_id&&saved.module_id!==$('#morph-resource').value){$('#morph-resource').value=saved.module_id;await load();}$('#morph-field').value=saved.search_field||'';$('#morph-ref').value=saved.ref||'';$('#morph-boundary').value=saved.boundary||'verse';$('#morph-gap').value=saved.gap||'0';$('#morph-groups').innerHTML='';groupCount=0;(saved.groups||[]).slice(0,6).forEach(words=>{addGroup();const all=$$('#morph-groups .morph-group'),group=all[all.length-1],container=group.querySelector('.morph-terms');while(container.children.length>(words.length||3))container.lastElementChild.remove();while(container.children.length<(words.length||3))addWord(group);(words||[]).forEach((f,i)=>{const box=container.children[i];box.querySelectorAll('[data-feature]').forEach(x=>{x.value=f[x.dataset.feature]||'';});box.querySelector('[data-exclude]').checked=!!f.exclude;});});if(!groupCount)addGroup();};
+    await refreshSaved();
+    $('#morph-save').onclick=async()=>{const q=snapshot();if(!q.name){$('#morph-save-name').focus();return;}const r=await api('morph/saved',{action:'save',name:q.name,query:JSON.stringify(q)});if(!r.ok){$('#morph-out').innerHTML='<div class="st-body">'+esc(r.error||'Could not save this query.')+'</div>';return;}await refreshSaved();$('#morph-saved').value=r.saved.id;};
+    $('#morph-load').onclick=async()=>{const row=savedQueries.find(x=>x.id===$('#morph-saved').value);if(row){try{await restore(JSON.parse(row.query_json));$('#morph-save-name').value=row.name;}catch(e){$('#morph-out').innerHTML='<div class="st-body">That saved query could not be read.</div>';}}};
+    $('#morph-delete').onclick=async()=>{const id=$('#morph-saved').value;if(!id)return;const r=await api('morph/saved',{action:'delete',id});if(r.ok)await refreshSaved();};
+    let resultRows=[], resultView='passages';
+    const renderResults=()=>{
+      const tabs='<div style="display:flex;gap:6px;margin:8px 0"><button class="btn '+(resultView==='passages'?'primary':'')+'" data-view="passages">Passages</button><button class="btn '+(resultView==='aligned'?'primary':'')+'" data-view="aligned">Aligned</button><button class="btn '+(resultView==='analysis'?'primary':'')+'" data-view="analysis">Analysis</button></div>';
+      const markText=x=>{const text=x.text||'';const spans=(x.matched||[]).filter(w=>Number.isInteger(w.start)&&Number.isInteger(w.end)&&w.end>w.start).sort((a,b)=>a.start-b.start);let out='',at=0;spans.forEach(w=>{if(w.start<at)return;out+=esc(text.slice(at,w.start))+'<mark>'+esc(text.slice(w.start,w.end))+'</mark>';at=w.end;});return out+esc(text.slice(at));};
+      let body='';
+      if(resultView==='passages') body=resultRows.map(x=>'<div class="st-note" style="margin:6px 0"><a href="#" data-ref="'+esc(x.ref||x.key)+'"><b>'+esc(x.ref||x.key)+'</b></a><div class="st-body">'+markText(x)+'</div><div class="tiny muted">'+(x.matched||[]).map(w=>'#'+w.position+' '+(w.surface||'')+' · '+w.morph+(w.lemma?' · '+w.lemma:'')).map(esc).join(' &nbsp; ')+'</div></div>').join('');
+      if(resultView==='aligned') { const nWords=Math.max(0,...resultRows.map(x=>(x.matched||[]).length)); body='<div style="overflow:auto"><table class="kv"><thead><tr><th>Passage</th>'+Array.from({length:nWords},(_,i)=>'<th>Word '+(i+1)+'</th>').join('')+'</tr></thead><tbody>'+resultRows.map(x=>'<tr><td><a href="#" data-ref="'+esc(x.ref||x.key)+'">'+esc(x.ref||x.key)+'</a></td>'+Array.from({length:nWords},(_,i)=>{const w=(x.matched||[])[i];return '<td>'+(w?'<b>'+esc(w.surface||'')+'</b><br><span class="tiny muted">'+esc(w.morph||'')+'</span>':'')+'</td>';}).join('')+'</tr>').join('')+'</tbody></table></div>'; }
+      if(resultView==='analysis') body=resultRows.map(x=>'<div class="st-note" style="margin:6px 0"><a href="#" data-ref="'+esc(x.ref||x.key)+'"><b>'+esc(x.ref||x.key)+'</b></a>'+(x.matched||[]).map((w,i)=>{const features=Object.entries(w.features||{}).filter(([k,v])=>v!=null&&v!==''&&!['raw','scheme','stem','particles','pos_label'].includes(k)).map(([k,v])=>k+': '+(Array.isArray(v)?v.join(', '):v)).join(' · ');return '<div class="st-body"><b>Word '+(i+1)+': '+esc(w.surface||'')+'</b> · '+esc(w.ref||'')+'<br>Morphology: '+esc(w.morph||'')+(features?'<br>'+esc(features):'')+(w.strongs?'<br>Strong’s: '+esc(w.strongs):'')+'<br>Lemma: '+esc(w.lemma||'')+'</div>';}).join('')+'</div>').join('');
+      $('#morph-out').innerHTML='<div class="tiny muted">'+resultRows.length+' '+($('#morph-boundary').value==='chapter'?'chapters':'verses')+' loaded</div>'+tabs+body+(groupOffsets.some(x=>x!==null)?'<button class="btn" data-more style="margin:8px 0">Load more results</button>':'');
+      $('#morph-out').querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{resultView=b.dataset.view;renderResults();}); this.wire($('#morph-out'));
+      const more=$('#morph-out').querySelector('[data-more]'); if(more)more.onclick=()=>fetchPage(false);
+    };
+    let activeTerms=[], groupOffsets=[];
+    const fetchPage=async reset=>{if(reset){resultRows=[];groupOffsets=activeTerms.map(()=>0);$('#morph-out').innerHTML='<div class="st-loading">Searching…</div>';}const requests=activeTerms.map((terms,i)=>groupOffsets[i]===null?Promise.resolve(null):api('morph/pattern',{module_id:$('#morph-resource').value,terms:JSON.stringify(terms),search_field:$('#morph-field').value,ref:$('#morph-ref').value.trim(),max_gap:$('#morph-gap').value,boundary:$('#morph-boundary').value,limit:100,offset:groupOffsets[i]}));const pages=await Promise.all(requests);const bad=pages.find(r=>r&&!r.ok);if(bad){$('#morph-out').innerHTML='<div class="st-body">'+esc(bad.error)+'</div>';return;}const unique=new Map(resultRows.map(x=>[x.key,x]));pages.forEach((r,i)=>{if(!r)return;groupOffsets[i]=r.next||null;(r.results||[]).forEach(x=>{if(!unique.has(x.key))unique.set(x.key,x);});});resultRows=[...unique.values()];renderResults();};
+    $('#morph-go').onclick=async()=>{activeTerms=[...document.querySelectorAll('#morph-groups .morph-group')].map(group=>[...group.querySelectorAll('.morph-term')].map(box=>{const f={};box.querySelectorAll('[data-feature]').forEach(x=>{if(x.value)f[x.dataset.feature]=x.value;});f.exclude=!!box.querySelector('[data-exclude]').checked;return f;}));resultView='passages';await fetchPage(true);};
+  },
+
+  /* Morph code mode: search the tagged texts by a raw morphology code prefix
+   * (e.g. HNcms finds every common masculine singular noun, HTd/ every article).
+   * The builder's pattern mode builds word-by-word feature sequences; code mode
+   * is the direct prefix search that powers the Morph button on the search bar.
+   */
+  async openMorphCode(initial) {
+    return this.openMorph(initial);
   },
 
   _isFunctionWord(w) {
@@ -479,14 +655,19 @@ const Study = {
           h += '<div class="st-note"><div class="st-t">' + esc(p.name) + '</div>'
             + '<div class="tiny muted">' + esc((p.alt || []).join(', ')) + '</div>'
             + '<div class="tiny">' + esc((p.passages || []).slice(0, 6).join(', ')) + '</div>'
-            + '<div class="tiny"><a href="#" data-map="' + esc(p.name) + '">Open on map</a></div>'
+            + '<div class="tiny"><a href="#" data-map="' + esc(p.name) + '">Open on map</a>'
+            + ' <a href="#" data-ref="' + esc((p.passages || [])[0] || '') + '">Open in Bible</a></div>'
             + '</div>';
         });
       } else {
         list.slice(0, 300).forEach(e => {
-          h += '<div class="st-note"><div class="st-t">' + esc(e.name) + '</div>'
+          const kindBadge = e.kind === 'person' ? '<span class="chip tiny">person</span>'
+            : e.kind === 'thing' ? '<span class="chip tiny">thing</span>'
+            : '<span class="chip tiny">entry</span>';
+          h += '<div class="st-note"><div class="st-t">' + esc(e.name) + ' ' + kindBadge + '</div>'
             + '<div class="tiny muted">' + esc(e.module) + '</div>'
-            + '<div class="tiny"><a href="#" data-fact="' + esc(e.name) + '">Open Topics</a></div>'
+            + '<div class="tiny"><a href="#" data-fact="' + esc(e.name) + '">Open Topics</a>'
+            + ' <a href="#" data-ref="' + esc(e.name) + '">Open in Bible</a></div>'
             + '</div>';
         });
       }
@@ -506,6 +687,9 @@ const Study = {
       });
       $$('#modal-body a[data-map]').forEach(a => {
         a.onclick = (e) => { e.preventDefault(); MapsUI.showPlace && MapsUI.showPlace(a.dataset.map); };
+      });
+      $$('#modal-body a[data-ref]').forEach(a => {
+        a.onclick = (e) => { e.preventDefault(); const ref = a.dataset.ref; if (ref) { App.show('workspace'); Reader.go((S.layout && S.layout.panes && S.layout.panes[0]) || null, ref); } };
       });
       this.wire($('#modal-body'));
     };
@@ -550,6 +734,10 @@ const Study = {
         a.onclick = async (e) => {
           e.preventDefault();
           const [book, ch] = a.dataset.chap.split(':');
+          // Open in Bible pane as well as showing outline
+          App.show('workspace');
+          const pane = (S.layout && S.layout.panes && S.layout.panes[0]);
+          if (pane) Reader.go(pane, book + ' ' + ch);
           const r = await api('outline/chapter', { book, chapter: ch });
           if (!r.ok) { toast('No outline.', 'warn'); return; }
           let txt = (r.sections || []).map(s => (s.title || '')).join('\n');
@@ -725,7 +913,8 @@ const Study = {
     body.innerHTML = h;
   },
 
-  /* Transliterate a Greek or Hebrew word into Latin letters. */
+  /* Transliterate a Greek or Hebrew word into Latin letters, and speak it
+   * using the browser's built-in speech synthesis. */
   async pronounce(word) {
     const w = (word || '').trim();
     if (!w) return;
@@ -734,14 +923,34 @@ const Study = {
     const b = await api('study/pronounce', { word: w });
     const body = $('#modal-body');
     if (!b.ok) { body.innerHTML = '<div class="st-body">' + esc(b.error) + '</div>'; return; }
+    const isGreek = /[\u0370-\u03ff\u1f00-\u1fff]/.test(w);
+    const isHebrew = /[\u0590-\u05ff]/.test(w);
+    const lang = isGreek ? 'el-GR' : (isHebrew ? 'he-IL' : 'en-US');
+    const speak = () => {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(w);
+      u.lang = lang;
+      u.rate = 0.9;
+      u.pitch = 1;
+      window.speechSynthesis.speak(u);
+    };
     body.innerHTML = '<div class="st-body">'
-      + '<div style="font-size:26px">' + esc(b.input) + '</div>'
-      + '<div style="font-size:22px;margin:8px 0">' + esc(b.transliteration) + '</div>'
+      + '<div style="font-size:28px;line-height:1.4">' + esc(b.input) + '</div>'
+      + '<div class="row" style="gap:8px;margin:10px 0">'
+      + '<button class="btn primary" id="pr-speak" title="Speak this word (browser text-to-speech)">🔊 Speak</button>'
+      + '<button class="btn" id="pr-stop" title="Stop speaking">⏹ Stop</button>'
+      + '</div>'
+      + '<div style="font-size:20px;margin:8px 0">' + esc(b.transliteration) + '</div>'
       + '<div class="tiny muted" style="margin-bottom:8px">' + esc(b.script)
       + ' in Latin letters</div>'
       + '<div class="tiny muted" style="margin-top:8px">How the word is spelled '
       + 'out, not what it means. The letter-by-letter guide is a separate '
       + 'question: this one is how it sounds.</div></div>';
+    const spk = $('#pr-speak');
+    const stp = $('#pr-stop');
+    if (spk) spk.onclick = () => speak();
+    if (stp) stp.onclick = () => { window.speechSynthesis.cancel(); };
   },
 
   /* Numeric value of a Hebrew word (mispar hechri). */
@@ -944,6 +1153,197 @@ body.innerHTML = h;
     aiGo('pg-ai-exp', () => Ai.ask('explain', aiText, b.ref));
     aiGo('pg-ai-tr', () => Ai.translateText(aiText, b.ref));
     this.wire(body);
+  },
+
+  /* ------------------------------------------------- guide pane renderer
+   *
+   * A guide pane can show any of: Passage, Word Study, Exegetical.
+   * Each is a collapsible-section report collated from the installed library.
+   */
+  async openGuidePane(gtype, ref, host) {
+    if (!ref) return;
+    const target = host || null;
+    if (!target) {
+      modal(gtype.charAt(0).toUpperCase() + gtype.slice(1) + ': ' + ref,
+        '<div class="st-loading">Gathering…</div>',
+        [{ label: 'Close', cls: 'btn' }]);
+    }
+    const body = target || $('#modal-body');
+    if (!body) return;
+    if (gtype === 'passage') {
+      const b = await api('study/passage', { ref }).catch(() => ({ ok: false }));
+      if (!b.ok) { body.innerHTML = '<div class="st-body">' + esc(b.error) + '</div>'; return; }
+      let h = '<div class="pg-src tiny muted">' + esc(b.ref)
+        + ' · ' + b.verses + ' verse' + (b.verses === 1 ? '' : 's')
+        + ' · every section read from your installed resources</div>';
+      const sec = (label, note, inner) =>
+        h += '<div class="st-sec open"><div class="st-h">' + esc(label)
+          + (note ? ' <span class="tiny muted">' + esc(note) + '</span>' : '')
+          + '</div>' + inner + '</div>';
+      const aiText = (b.texts && b.texts.length) ? b.texts[0].text : '';
+      if (aiText) {
+        sec('AI', b.texts[0].module,
+          '<div class="st-tools">'
+          + '<button class="btn" id="pg-ai-sum">Summarise this passage</button>'
+          + '<button class="btn" id="pg-ai-exp">Explain this passage</button>'
+          + '<button class="btn" id="pg-ai-tr">Translate this passage…</button>'
+          + '<span class="tiny muted" style="align-self:center">Opens the '
+          + 'assistant panel.</span></div>');
+      }
+      if (b.texts && b.texts.length) {
+        sec('Text', b.texts.length + ' translations', b.texts.map(t =>
+          '<div class="st-note"><div class="st-src">' + esc(t.module)
+          + '</div><div class="st-body">' + esc(t.text) + '</div></div>').join(''));
+      }
+      if (b.named && b.named.length) {
+        sec('People', 'names in the passage, with their meanings',
+          '<div class="pg-named">' + b.named.map(n =>
+            '<div class="pg-name"><span class="w">' + esc(n.word)
+            + '</span><span class="g">' + esc(n.gloss)
+            + '</span><span class="s">' + esc(n.source) + '</span></div>').join('')
+          + '</div>');
+      }
+      if (b.places && b.places.length) {
+        sec('Places', 'from the gazetteer', b.places.map(p =>
+          '<div class="pg-place"><span class="w">' + esc(p.name) + '</span>'
+          + (p.lat ? '<span class="ll">' + esc(p.lat) + ', ' + esc(p.lon) + '</span>' : '')
+          + (p.comment ? '<div class="tiny muted">' + esc(p.comment) + '</div>' : '')
+          + '</div>').join(''));
+      }
+      if (b.commentary && b.commentary.length) {
+        sec('Commentary', b.commentary.length + ' entries', b.commentary.map(c =>
+          '<div class="st-note"><div class="st-src">' + esc(c.module)
+          + '</div><div class="st-t">' + esc(c.title) + '</div>'
+          + '<div class="st-body">' + esc(c.text) + '</div>'
+          + '<div class="tiny"><a href="#" data-open="' + esc(c.module_id)
+          + '" data-key="' + esc(c.key) + '">Open in a pane</a></div></div>').join(''));
+      }
+      if (b.xrefs && b.xrefs.length) {
+        sec('Cross-references', b.xrefs.length + ' links',
+          '<div class="pg-xref">' + b.xrefs.map(x =>
+            '<a href="#">' + esc(x.label.replace('.', ' ')) + '</a>').join('')
+          + '</div>');
+      }
+      const _markerItems = (b.sermons || []).concat(b.studies || []);
+      if (_markerItems.length) {
+        sec('Sermons & studies', _markerItems.length + ' item'
+          + (_markerItems.length === 1 ? '' : 's'),
+          _markerItems.map(m =>
+            '<div class="st-note"><div class="st-src">' + esc(m.kind)
+            + '</div><div class="st-t">' + esc(m.title) + '</div>'
+            + (m.preview ? '<div class="st-body">' + esc(m.preview) + '</div>' : '')
+            + '</div>').join(''));
+      }
+      h += configuredGuideHtml(gtype);
+      body.innerHTML = h;
+      body.insertBefore(this.guideChrome(body, gtype), body.firstChild);
+      $$('.st-h', body).forEach(hh => {
+        hh.onclick = () => hh.parentElement.classList.toggle('open');
+        hh.title = 'Click to fold or unfold this section';
+      });
+      const aiGo = (id, fn) => { const btn = $('#' + id, body); if (btn) btn.onclick = fn; };
+      aiGo('pg-ai-sum', () => Ai.ask('summarize', aiText, b.ref));
+      aiGo('pg-ai-exp', () => Ai.ask('explain', aiText, b.ref));
+      aiGo('pg-ai-tr', () => Ai.translateText(aiText, b.ref));
+      this.wire(body);
+    }
+    else if (gtype === 'word-study') {
+      const r = await api('word-study', { num: ref, limit: 30 }).catch(() => ({ ok: false }));
+      if (!r.ok) { body.innerHTML = '<div class="st-body">' + esc(r.error || 'failed') + '</div>'; return; }
+      const s = r.sections || {};
+      let h = '<div class="pg-src tiny muted">' + esc(r.headword || ref)
+        + ' · Strong’s ' + esc(r.num) + '</div>';
+      const sec = (label, note, inner) =>
+        h += '<div class="st-sec open"><div class="st-h">' + esc(label)
+          + (note ? ' <span class="tiny muted">' + esc(note) + '</span>' : '')
+          + '</div>' + inner + '</div>';
+      if (r.gloss) {
+        sec('Lemma', r.lemma || '',
+          '<div class="st-body"><b>' + esc(r.headword || ref) + '</b> · '
+          + esc(r.gloss) + '</div>');
+      }
+      if (s.lemma && s.lemma.length) {
+        sec('Lexicon', 'articles from your installed lexica',
+          s.lemma.map(x => '<div class="st-note"><div class="st-src">' + esc(x.module || '')
+          + '</div><div class="st-body">' + esc(x.text || '') + '</div></div>').join(''));
+      }
+      if (s.translation && s.translation.length) {
+        sec('Translation', 'how each Bible renders this word',
+          s.translation.map(t => '<div class="st-note"><div class="st-src">'
+          + esc(t.module || '') + ' (' + t.count.toLocaleString() + '×)</div>'
+          + '<div class="st-body">' + t.renderings.map(r => esc(r[0]) + ' ' + r[1].toLocaleString() + '×').join(' · ')
+          + '</div></div>').join(''));
+      }
+      if (s.senses && s.senses.length) {
+        sec('Senses', 'meanings taken by this word',
+          s.senses.map(x => '<div class="st-note"><div class="st-body"><b>'
+          + esc(x.sense || '') + '</b> ' + esc(x.definition || '') + '</div></div>').join(''));
+      }
+      if (s.example_uses && s.example_uses.length) {
+        sec('Example Uses', 'where this word occurs',
+          s.example_uses.map(x => '<div class="st-note"><a href="#" data-ref="'
+          + esc(x.ref) + '" class="pg-ref">' + esc(x.ref) + '</a> <span class="tiny muted">'
+          + esc(x.surface || '') + '</span></div>').join(''));
+      }
+      if (s.textual_searches && s.textual_searches.length) {
+        sec('Textual Searches', 'where this word occurs in each Bible',
+          s.textual_searches.map(t => '<div class="st-note"><div class="st-src">'
+          + esc(t.module || '') + ' (' + t.count.toLocaleString() + ' hits)</div>'
+          + '<div class="st-body">' + t.sample.map(s => '<a href="#" data-ref="'
+          + esc(s.ref) + '" class="pg-ref">' + esc(s.ref) + '</a> ' + esc(s.surface || '')).join(' · ')
+          + '</div></div>').join(''));
+      }
+      body.innerHTML = h;
+      body.querySelectorAll('.pg-ref').forEach(a => {
+        a.onclick = (e) => { e.preventDefault(); const ref = a.dataset.ref;
+          App.show('workspace'); const pane = (S.layout && S.layout.panes && S.layout.panes[0]);
+          if (pane) Reader.go(pane, ref); };
+      });
+    }
+    else if (gtype === 'exegetical') {
+      const r = await api('exegetical-guide', { ref }).catch(() => ({ ok: false }));
+      if (!r.ok) { body.innerHTML = '<div class="st-body">' + esc(r.error || 'failed') + '</div>'; return; }
+      const s = r.sections || {};
+      let h = '<div class="pg-src tiny muted">' + esc(r.ref)
+        + ' · ' + r.verses + ' verse' + (r.verses === 1 ? '' : 's') + '</div>';
+      const sec = (label, note, inner) =>
+        h += '<div class="st-sec open"><div class="st-h">' + esc(label)
+          + (note ? ' <span class="tiny muted">' + esc(note) + '</span>' : '')
+          + '</div>' + inner + '</div>';
+      if (s.word_by_word && s.word_by_word.length) {
+        sec('Word by Word', 'grammar, morphology, gloss for each word',
+          s.word_by_word.map(v => '<div class="st-note"><div class="st-src">'
+          + esc(v.ref) + '</div><div class="st-body">'
+          + v.words.map(w => '<span class="wbw-word"><b>' + esc(w.form)
+          + '</b>' + (w.strongs && w.strongs.length ? ' <span class="tiny muted">[' + w.strongs.join(', ') + ']</span>' : '')
+          + (w.morph && w.morph.length ? ' <span class="tiny muted">(' + w.morph.join(', ') + ')</span>' : '')
+          + (w.gloss ? ' <span class="wbw-gloss">' + esc(w.gloss) + '</span>' : '') + '</span>').join(' ')
+          + '</div></div>').join(''));
+      }
+      if (s.commentaries && s.commentaries.length) {
+        sec('Commentaries', s.commentaries.length + ' entries',
+          s.commentaries.map(c => '<div class="st-note"><div class="st-src">' + esc(c.module)
+          + '</div><div class="st-t">' + esc(c.title) + '</div>'
+          + '<div class="st-body">' + esc(c.text) + '</div></div>').join(''));
+      }
+      if (s.grammars && s.grammars.length) {
+        sec('Grammars', 'grammar articles mentioning this passage',
+          s.grammars.map(g => '<div class="st-note"><div class="st-src">' + esc(g.module)
+          + '</div><div class="st-t">' + esc(g.title) + '</div>'
+          + '<div class="st-body">' + esc(g.text) + '</div></div>').join(''));
+      }
+      if (s.visualizations && s.visualizations.length) {
+        sec('Visualizations', 'text structure diagrams',
+          s.visualizations.map(v => '<div class="st-note"><div class="st-src">'
+          + esc(v.ref) + '</div><div class="st-body">' + esc(v.tree || '(diagram)') + '</div></div>').join(''));
+      }
+      if (s.important_words && s.important_words.length) {
+        sec('Important Words', 'frequent in the commentaries on this passage',
+          s.important_words.map(w => '<span style="margin:2px 6px 2px 0" class="chip">' + esc(w.word)
+          + ' <span class="tiny">' + w.count + '×</span></span>').join(''));
+      }
+      body.innerHTML = h;
+    }
   },
 
   /* ------------------------------------------------- verse-level panels
@@ -2382,9 +2782,14 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
     m.id = 'ctxmenu';
     items.forEach(it => {
       if (it === '-') { m.appendChild(el('div', 'ctx-sep')); return; }
+      if (it && it.section) {
+        const heading = el('div', 'ctx-section', it.section);
+        m.appendChild(heading);
+        return;
+      }
       const row = el('div', 'ctx-row');
       const b = el('button', '', it.label);
-      b.onclick = () => { m.remove(); it.fn(it.color || 'yellow'); };
+      b.onclick = () => { dismiss(); it.fn(it.color || 'yellow'); };
       row.appendChild(b);
       if (it.colors && it.colors.length) {
         const swatches = el('div', 'hl-colors');
@@ -2392,7 +2797,7 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
           const sw = el('button', 'hl-swatch hl-swatch-' + color);
           sw.title = color;
           sw.style.background = it.swatch && it.swatch[color] ? it.swatch[color] : '';
-          sw.onclick = (e) => { e.stopPropagation(); m.remove(); it.fn(color); };
+          sw.onclick = (e) => { e.stopPropagation(); dismiss(); it.fn(color); };
           swatches.appendChild(sw);
         });
         row.appendChild(swatches);
@@ -2401,17 +2806,27 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
     });
     document.body.appendChild(m);
     const w = m.offsetWidth, h = m.offsetHeight;
-    m.style.left = Math.min(window.innerWidth - w - 8, x) + 'px';
-    m.style.top = Math.min(window.innerHeight - h - 8, y) + 'px';
-    const close = (e) => {
-      if (!m.contains(e.target)) { m.remove(); document.removeEventListener('click', close); }
+    m.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, x)) + 'px';
+    m.style.top = Math.max(8, Math.min(window.innerHeight - h - 8, y)) + 'px';
+    const close = (e) => { if (!m.contains(e.target)) dismiss(); };
+    const onKey = (e) => { if (e.key === 'Escape') dismiss(); };
+    const dismiss = () => {
+      m.remove();
+      document.removeEventListener('click', close);
+      document.removeEventListener('keydown', onKey);
     };
     setTimeout(() => document.addEventListener('click', close), 0);
+    document.addEventListener('keydown', onKey);
+    const firstAction = m.querySelector('.ctx-row button');
+    if (firstAction) firstAction.focus({ preventScroll: true });
   },
 
-  wordMenu(x, y, word, m, unitKey, ref, selText) {
+  wordMenu(x, y, word, m, unitKey, ref, selText, strongs) {
     const items = [];
     if (word) {
+      items.push({ section: 'QUICK ACTIONS' });
+      items.push({ label: 'Copy word', fn: () => navigator.clipboard.writeText(word) });
+      items.push({ section: 'WORD & TOPIC STUDY' });
       items.push({ label: 'Word find from ' + ref, fn: () => Study.openWordFind(ref) });
       if (/[\u0370-\u03ff]/.test(word) || /[\u0590-\u05ff]/.test(word)) {
         items.push({ label: 'Pronounce “' + word + '”',
@@ -2427,6 +2842,7 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
       items.push({ label: 'Topics for “' + word + '”', fn: () => Study.openFact(word) });
     }
     if (ref) {
+      items.push({ section: 'PASSAGE RESEARCH' });
       items.push({ label: 'Cross-references for ' + ref,
                    fn: () => Study.openCrossrefs(ref) });
       items.push({ label: 'Cite / export this', fn: () => Cite.exportPassage(ref) });
@@ -2485,6 +2901,7 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
       items.push({ label: 'Preach from this verse',
                    fn: () => { Preach.enter(); } });
       items.push('-');
+      items.push({ section: 'ORGANIZE & SAVE' });
       items.push({ label: 'Add to a passage list',
                    fn: () => Organise.addToPassageList(m.id, unitKey, ref) });
       items.push({ label: 'Add this resource to a collection',
@@ -2503,8 +2920,22 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
         items.push({ label: 'Every occurrence of “' + word + '” as a word list',
           fn: () => WordLists.fromQuery(word) });
       }
+      /* ---- Logos-style study panes --------------------------------------
+       * Open a linked Word Study, Passage Guide or Exegetical Guide pane for
+       * this word or verse.  These open in the current pane's link set so the
+       * guide follows the Bible as the reader moves. */
+      if (strongs) {
+        items.push({ section: 'OPEN IN STUDY PANES' });
+        items.push({ label: 'Word Study: ' + strongs,
+          fn: () => Reader.openWordStudyPane(strongs) });
+      }
+      items.push({ label: 'Passage Guide: ' + ref,
+        fn: () => Reader.openGuidePane(ref, 'passage') });
+      items.push({ label: 'Exegetical Guide: ' + ref,
+        fn: () => Reader.openGuidePane(ref, 'exegetical') });
       items.push({ label: 'Translate this verse  (sends text off this computer)',
                    fn: () => Translate.passage(ref, m.id) });
+      items.push({ section: 'PERSONAL STUDY' });
       items.push({
         label: 'Highlight selection',
         color: 'yellow',
@@ -2527,8 +2958,6 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
       items.push({ label: (m.is_bible ? 'Tag this verse…' : 'Tag this…'),
                    fn: () => Tags.picker(ref, m.id, unitKey) });
     }
-    items.push('-');
-    if (word) items.push({ label: 'Copy word', fn: () => navigator.clipboard.writeText(word) });
     this.menu(x, y, items);
   },
 };

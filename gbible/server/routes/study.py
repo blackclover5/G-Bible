@@ -472,7 +472,81 @@ def _bible_books(parts, q):
 # ------------------------------------------------------- original language
 @endpoint("morph/facets")
 def _morph_facets(parts, q):
-    return _ok(**{"facets": morphq.facets()})
+    return _ok(**{"facets": morphq.facets(q.get("module_id", ""))})
+
+
+@endpoint("morph/suggest")
+def _morph_suggest(parts, q):
+    return _ok(**morphq.suggest_lemmas(q.get("module_id", ""), q.get("q", "")))
+
+
+@endpoint("morph/fields")
+def _morph_fields(parts, q):
+    return _ok(**morphq.search_fields(q.get("module_id", "")))
+
+
+@endpoint("morph/wordforms")
+def _morph_wordforms(parts, q):
+    """Every morphology code carried by one word (lemma or surface) in a module.
+
+    Feeds the Logos-style "word then @" morphology picker: type a lemma or
+    surface form, press @, and pick the grammatical form you want to search.
+    """
+    try:
+        limit = int(q.get("limit") or 20)
+    except ValueError:
+        limit = 20
+    return _ok(**morphq.wordforms(q.get("module_id", ""), q.get("word", ""),
+                                  limit=limit))
+
+
+@endpoint("morph/saved")
+def _morph_saved(parts, q):
+    """Library-backed named Morph Query documents."""
+    import uuid
+    conn = db.connect()
+    action = q.get("action", "list")
+    if action == "save":
+        name = (q.get("name") or "").strip()[:120]
+        try:
+            query = json.loads(q.get("query") or "{}")
+        except (TypeError, ValueError):
+            return {"ok": False, "error": "That saved query is not valid JSON."}
+        if not name or not isinstance(query, dict) or not isinstance(query.get("groups"), list):
+            return {"ok": False, "error": "Give the query a name and include at least one word pattern."}
+        if len(json.dumps(query, ensure_ascii=False)) > 100_000:
+            return {"ok": False, "error": "That query is too large to save."}
+        now = time.time()
+        conn.execute(
+            "INSERT INTO saved_morph_query(id,name,query_json,created_at,updated_at) "
+            "VALUES(?,?,?,?,?) ON CONFLICT(name) DO UPDATE SET "
+            "query_json=excluded.query_json,updated_at=excluded.updated_at",
+            (str(uuid.uuid4()), name, json.dumps(query, ensure_ascii=False), now, now))
+        conn.commit()
+        row = conn.execute("SELECT id,name,query_json,created_at,updated_at FROM saved_morph_query WHERE name=?", (name,)).fetchone()
+        return _ok(saved=dict(row))
+    if action == "delete":
+        conn.execute("DELETE FROM saved_morph_query WHERE id=?", (q.get("id", ""),))
+        conn.commit()
+        return _ok()
+    rows = conn.execute(
+        "SELECT id,name,query_json,created_at,updated_at FROM saved_morph_query "
+        "ORDER BY updated_at DESC,name COLLATE NOCASE").fetchall()
+    return _ok(saved=[dict(r) for r in rows])
+
+
+@endpoint("morph/pattern")
+def _morph_pattern(parts, q):
+    import json
+    try:
+        terms = json.loads(q.get("terms") or "[]")
+        limit, offset = int(q.get("limit") or 100), int(q.get("offset") or 0)
+    except (ValueError, TypeError):
+        return {"ok": False, "error": "The morphology query could not be read."}
+    return morphq.pattern(q.get("module_id", ""), terms, ref=q.get("ref", ""),
+                          max_gap=q.get("max_gap", 0), boundary=q.get("boundary", "verse"),
+                          search_field=q.get("search_field", ""),
+                          limit=limit, offset=offset)
 
 
 @endpoint("morph/query")
@@ -482,8 +556,8 @@ def _morph_query(parts, q):
         offset = int(q.get("offset") or 0)
     except ValueError:
         limit, offset = 60, 0
-    allowed = ("pos", "gender", "number", "state", "conjugation", "tense",
-               "person", "participle", "scheme", "pos_particle")
+    allowed = ("pos", "gender", "number", "case", "degree", "state", "conjugation", "tense",
+               "voice", "mood", "person", "participle", "scheme", "pos_particle")
     filters = {k: q[k] for k in allowed if q.get(k) and q.get(k) != "any"}
     return _ok(**morphq.query(limit=limit, offset=offset,
                               order=q.get("order") or "count", **filters))
@@ -649,5 +723,210 @@ def _guide_create(parts, q):
 @endpoint("guide/delete")
 def _guide_delete(parts, q):
     return _ok(**guides.guide_delete(q.get("name", "")))
+
+
+# ------------------------------------------------------------------ word study
+# Bible Word Study: everything known about one word, like Logos' BWS guide.
+@endpoint("word-study")
+def _word_study(parts, q):
+    return _ok(**study.bible_word_study(
+        num=q.get("num", ""), word=q.get("word", ""),
+        module_id=q.get("module_id", ""),
+        limit=int(q.get("limit") or 30)))
+
+
+# ------------------------------------------------------------------ exegesis
+# Exegetical Guide: detailed exegesis of a passage, like Logos' EG.
+@endpoint("exegetical-guide")
+def _exegetical_guide(parts, q):
+    return _ok(**study.exegetical_guide(
+        q.get("ref", ""), span=int(q.get("span") or 3)))
+
+
+# ------------------------------------------------------------------ factbook
+# Factbook: everything known about a person, place, thing, or topic.
+@endpoint("factbook")
+def _factbook(parts, q):
+    return _ok(**study.fact_guide(
+        q.get("q", ""), per_section=int(q.get("per_section") or 8),
+        lens=q.get("lens", "")))
+
+
+# ------------------------------------------------------------------ sermon starter
+# Sermon Starter Guide: sermon ideas, outlines, illustrations for a passage/topic.
+@endpoint("sermon-starter")
+def _sermon_starter(parts, q):
+    return _ok(**study.sermon_starter(
+        q.get("q", ""), limit=int(q.get("limit") or 10)))
+
+
+# ------------------------------------------------------------------ Q&A
+# Questions & Answers: community-curated Q&A about Bible passages/topics.
+@endpoint("qa")
+def _qa(parts, q):
+    return _ok(**study.qa(
+        q.get("q", ""), limit=int(q.get("limit") or 20)))
+
+
+# ------------------------------------------------------------------ Bible Sense Lexicon
+# Word sense disambiguation: which sense of a word is used in this passage.
+@endpoint("sense-lexicon")
+def _sense_lexicon(parts, q):
+    return _ok(**study.sense_lexicon(
+        q.get("q", ""), module_id=q.get("module_id", ""),
+        limit=int(q.get("limit") or 10)))
+
+
+# ------------------------------------------------------------------ Community Tags
+# Community-sourced tags that can be shared across users.
+@endpoint("community-tags")
+def _community_tags(parts, q):
+    return _ok(**study.community_tags(
+        action=q.get("action", "list"),
+        tag=q.get("tag", ""),
+        module_id=q.get("module_id", ""),
+        ref=q.get("ref", "")))
+
+
+# ------------------------------------------------------------------ Personal Books
+# Import user's own books (PDF, EPUB, text) as personal modules.
+@endpoint("personal-books")
+def _personal_books(parts, q):
+    return _ok(**study.personal_books(
+        action=q.get("action", "list"),
+        path=q.get("path", ""),
+        book_id=q.get("book_id", "")))
+
+
+# ------------------------------------------------------------------ Courses
+# Video/audio course player and course library.
+@endpoint("courses")
+def _courses(parts, q):
+    return _ok(**study.courses(
+        action=q.get("action", "list"),
+        course_id=q.get("course_id", ""),
+        lesson_id=q.get("lesson_id", "")))
+
+
+# ------------------------------------------------------------------ Draw on Screen
+# Drawing annotation overlay on Bible text.
+@endpoint("draw-on-screen")
+def _draw_on_screen(parts, q):
+    return _ok(**study.draw_on_screen(
+        action=q.get("action", "list"),
+        drawing_id=q.get("drawing_id", ""),
+        data=q.get("data", "")))
+
+
+# ------------------------------------------------------------------ Print/Export
+# Full print and export for passages, guides, searches.
+@endpoint("print-export")
+def _print_export(parts, q):
+    return _ok(**study.print_export(
+        action=q.get("action", "list"),
+        content_type=q.get("content_type", ""),
+        content_id=q.get("content_id", ""),
+        format=q.get("format", "pdf")))
+
+
+# ------------------------------------------------------------------ Info Tool
+# Info tool: everything known about a passage/person/place.
+@endpoint("info-tool")
+def _info_tool(parts, q):
+    return _ok(**study.info_tool(
+        ref=q.get("ref", ""),
+        module_id=q.get("module_id", "")))
+
+
+# ------------------------------------------------------------------ Bibliography
+# Bibliography generator: formatted citations for passages/modules.
+@endpoint("bibliography")
+def _bibliography(parts, q):
+    return _ok(**study.bibliography(
+        module_ids=q.get("module_ids", []),
+        style=q.get("style", "sbl")))
+
+
+# ------------------------------------------------------------------ Books Search
+# Search inside books/modules.
+@endpoint("books-search")
+def _books_search(parts, q):
+    return _ok(**study.books_search(
+        q=q.get("q", ""),
+        module_ids=q.get("module_ids", []),
+        limit=q.get("limit", 20)))
+
+
+# ------------------------------------------------------------------ Search Synopsis
+# Search synopsis: overview of where results fall across books.
+@endpoint("search-synopsis")
+def _search_synopsis(parts, q):
+    return _ok(**study.search_synopsis(
+        q=q.get("q", ""),
+        module_ids=q.get("module_ids", [])))
+
+
+# ------------------------------------------------------------------ Insights
+# Insights: AI-style insights about a passage.
+@endpoint("insights")
+def _insights(parts, q):
+    return _ok(**study.insights(
+        ref=q.get("ref", ""),
+        module_id=q.get("module_id", "")))
+
+
+# ------------------------------------------------------------------ Sermon Import
+# Import a sermon from text.
+@endpoint("sermon-import")
+def _sermon_import(parts, q):
+    return _ok(**study.sermon_import(
+        text=q.get("text", ""),
+        title=q.get("title", ""),
+        series=q.get("series", "")))
+
+
+# ------------------------------------------------------------------ Sermon Documents
+# View/manage sermon documents.
+@endpoint("sermon-documents")
+def _sermon_documents(parts, q):
+    return _ok(**study.sermon_documents(
+        sermon_id=q.get("sermon_id", "")))
+
+
+# ------------------------------------------------------------------ Visual Copy
+# Copy verse as an image.
+@endpoint("visual-copy")
+def _visual_copy(parts, q):
+    return _ok(**study.visual_copy(
+        ref=q.get("ref", ""),
+        module_id=q.get("module_id", ""),
+        style=q.get("style", "default")))
+
+
+# ------------------------------------------------------------------ Confessional Documents
+# Confessional documents: creeds, confessions, catechisms.
+@endpoint("confessional-documents")
+def _confessional_documents(parts, q):
+    return _ok(**study.confessional_documents(
+        doc_type=q.get("doc_type", ""),
+        limit=q.get("limit", 20)))
+
+
+# ------------------------------------------------------------------ Catholic Daily Readings / Topical Index
+# Catholic daily readings / topical index.
+@endpoint("catholic-daily-readings")
+def _catholic_daily_readings(parts, q):
+    return _ok(**study.catholic_daily_readings(
+        date=q.get("date", ""),
+        liturgical_season=q.get("liturgical_season", "")))
+
+
+# ------------------------------------------------------------------ Popular Quotes
+# Popular quotes: most-quoted Bible verses.
+@endpoint("popular-quotes")
+def _popular_quotes(parts, q):
+    return _ok(**study.popular_quotes(
+        limit=q.get("limit", 20),
+        module_ids=q.get("module_ids", [])))
 
 

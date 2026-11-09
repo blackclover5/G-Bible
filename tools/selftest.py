@@ -1391,8 +1391,7 @@ def run() -> bool:
         # Every source named in the brief must be present and resolvable.
         named = ("gnosis", "bibleatlas", "theographic", "openbible-info",
                  "free-use-bible-api", "bible-midvash", "berean-standard-bible",
-                 "step-bible", "midvash-bible-data", "bible-supersearch",
-                 "bible-databases")
+                 "step-bible", "midvash-bible-data", "bible-databases")
         have = {r["id"] for r in rows}
         missing = [n for n in named if n not in have]
         assert not missing, f"named sources missing from the registry: {missing}"

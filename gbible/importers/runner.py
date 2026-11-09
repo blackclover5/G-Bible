@@ -1357,7 +1357,84 @@ def _sbl_units(text: str, fname: str) -> Iterator[UnitIn]:
 # --------------------------------------------------------------------------
 @handler("macula")
 def _install_macula(it, mid, prog, workdir, fmt):
-    return _install_stepbible_data(it, mid, prog, workdir, fmt)
+    import csv
+    import io
+    import urllib.parse
+
+    d = _pick_download(it, ("text", "tsv", "txt"))
+    url = d["url"]
+    prog("Downloading", 0, 1, note=os.path.basename(url))
+    raw = fetch(url, timeout=300, checksum=_checksum_for(it, d, url))
+    fname = os.path.basename(urllib.parse.urlparse(url).path) or "macula-greek.tsv"
+    (workdir / fname).write_bytes(raw)
+    reader = csv.DictReader(io.StringIO(raw.decode("utf-8-sig", "replace")), delimiter="\t")
+    if not reader.fieldnames:
+        raise InstallErrorFailed("MACULA TSV has no column header")
+
+    def field(row, *names):
+        aliases = {str(k or "").strip().lstrip("@").lower().replace("_", "").replace(":", ""):
+                   (v or "").strip() for k, v in row.items()}
+        for name in names:
+            key = name.lower().replace("_", "").replace(":", "")
+            if aliases.get(key):
+                return aliases[key]
+        return ""
+
+    grouped: dict[tuple[str, int, int], list[tuple[str, str, str, str, str]]] = {}
+    total = 0
+    for row in reader:
+        ref = field(row, "ref", "reference", "osisRef", "bcv")
+        m = re.match(r"^([A-Za-z0-9]{1,8})\s+(\d+):(\d+)", ref)
+        if not m:
+            continue
+        book = canon.lookup_book(m.group(1))
+        if book is None:
+            continue
+        try:
+            chapter, verse = int(m.group(2)), int(m.group(3))
+        except ValueError:
+            continue
+        word = markup.unescape(field(row, "text", "word", "surface"))
+        if not word:
+            continue
+        after = markup.unescape(field(row, "after", "following"))
+        lemma = field(row, "lemma", "lexeme")
+        morph = field(row, "morph", "morphology", "parsing")
+        strong = field(row, "strong", "strongs", "strongsNumber")
+        grouped.setdefault((book.osis, chapter, verse), []).append(
+            (word, after, lemma, morph, strong))
+        total += 1
+        if total % 10000 == 0:
+            prog("Indexing", total, 0, note=f"{total:,} Greek words")
+    if not grouped:
+        raise InstallErrorFailed("MACULA TSV did not contain readable word references")
+
+    units = []
+    for (osis, chapter, verse), words in grouped.items():
+        segs = []
+        for i, (surface, after, lemma, morph, strong) in enumerate(words):
+            if not after and i < len(words) - 1:
+                after = " "
+            snums = []
+            for raw_num in re.split(r"[ ,;]+", strong):
+                num = canon.normalise_strongs(raw_num)
+                if num:
+                    snums.append(num)
+            attrs = {"language": "grc", "morph_system": "MACULA"}
+            if lemma:
+                attrs["lemma"] = lemma
+            if morph:
+                attrs["morph"] = morph
+            segs.append(Seg("strongs", surface + after, " ".join(snums), morph, attrs))
+        key = f"{osis}.{chapter}.{verse}"
+        ref = canon.Ref(osis, chapter, verse)
+        units.append(UnitIn(key=key, label=canon.format_ref(ref), segs=segs,
+                            book=osis, chapter=chapter, verse=verse,
+                            extra={"lang": "grc", "morph_system": "MACULA"}))
+    return iter(units), {"format": "MACULA Greek (SBLGNT TSV)",
+                         "license": "CC-BY-4.0", "lang": "grc",
+                         "lang_name": "Greek (Ancient)",
+                         "attribution": "MACULA Greek Linguistic Datasets, available at https://github.com/Clear-Bible/macula-greek/"}
 
 
 # --------------------------------------------------------------------------

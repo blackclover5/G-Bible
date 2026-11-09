@@ -67,7 +67,7 @@ def sniff(data: bytes) -> str:
 # is what keeps a footnote -- "<fr>3:16</fr><ft>Or only begotten</ft>" -- from
 # being read as part of the verse.
 _USFX_SKIP = ("ve", "note", "hi", "toc", "id", "p", "s", "h", "book", "bk",
-              "lb", "ms", "sl", "sr", "fig", "f", "fr", "ft", "table", "thead",
+              "lb", "ms", "sl", "sr", "fig", "fr", "ft", "table", "thead",
               "tbody", "row", "cell", "caption", "alt", "list", "item")
 _OSIS_SKIP = ("note", "hi", "header", "title", "transChange", "figure",
               "fig", "list", "lb", "milestone", "figure", "table")
@@ -96,16 +96,17 @@ def _flush(st, emit):
     # numeric forms matter: they are how this corpus spells æ, œ and ß.
     if any("&" in s.text for s in segs):
         segs = [s._replace(text=unescape(s.text)) for s in segs]
-    text = "".join(s.text for s in segs)
+    # Notes and references share the segment stream but are not Bible text.
+    text = "".join(s.text for s in segs if s.is_text())
     if not text.strip():
         return
     key = f"{st.book} {st.chapter}:{st.verse}"
     emit(key, key, text, st.book, st.chapter, st.verse, list(segs))
 
 
-def _usfx_walk(el, st, emit):
+def _usfx_walk(el, st, emit, red=False):
     if (el.text or "").strip():
-        st.segs.append(Seg("text", el.text))
+        st.segs.append(Seg("red" if red else "text", el.text))
     for child in list(el):
         tag = child.tag
         if tag == "c":
@@ -123,7 +124,7 @@ def _usfx_walk(el, st, emit):
             if child.text:
                 st.segs.append(Seg("text", child.text))
             if child.tail:
-                st.segs.append(Seg("text", child.tail))
+                st.segs.append(Seg("red" if red else "text", child.tail))
         elif tag == "ve":
             if child.tail:
                 st.segs.append(Seg("text", child.tail))
@@ -138,15 +139,33 @@ def _usfx_walk(el, st, emit):
             if tag == "h":
                 st.title = (child.text or "").strip()
             elif tag in ("p", "s", "id", "toc", "lb", "ms", "bk"):
-                _usfx_walk(child, st, emit)      # containers carry content
+                _usfx_walk(child, st, emit, red=red)  # containers carry content
+        elif tag in ("f", "x"):
+            body = " ".join("".join(child.itertext()).split())
+            if body:
+                kind = "crossReference" if tag == "x" else "explanation"
+                ref = ""
+                for part in child.iter():
+                    if part.tag.rsplit("}", 1)[-1] in ("fr", "xo"):
+                        ref = " ".join("".join(part.itertext()).split())
+                        break
+                st.segs.append(Seg("note", body, ref, kind,
+                                   {"placement": "foot"}))
+            if child.tail:
+                st.segs.append(Seg("red" if red else "text", child.tail))
+        elif tag == "wj":
+            _usfx_walk(child, st, emit, red=True)
+            if child.tail:
+                st.segs.append(Seg("red" if red else "text", child.tail))
         elif tag == "w":
             txt = "".join(child.itertext())
             if txt:
                 snum = (child.get("s") or "").strip()
-                st.segs.append(Seg("strongs" if snum else "text", txt, snum,
-                                   lemma=(child.get("lemma") or "").strip()))
+                st.segs.append(Seg("strongs" if snum else ("red" if red else "text"),
+                                   txt, snum, lemma=(child.get("lemma") or "").strip(),
+                                   attrs={"wj": True} if red else {}))
             if child.tail:
-                st.segs.append(Seg("text", child.tail))
+                st.segs.append(Seg("red" if red else "text", child.tail))
         elif tag in ("transChange", "seg", "add"):
             txt = "".join(child.itertext())
             if txt:
@@ -154,9 +173,9 @@ def _usfx_walk(el, st, emit):
             if child.tail:
                 st.segs.append(Seg("text", child.tail))
         else:
-            _usfx_walk(child, st, emit)
+            _usfx_walk(child, st, emit, red=red)
             if child.tail:
-                st.segs.append(Seg("text", child.tail))
+                st.segs.append(Seg("red" if red else "text", child.tail))
 
 
 def _usfx_units(root):
@@ -217,9 +236,9 @@ def _osis_nums(el, want: int):
     return (ref.chapter if want == 1 else ref.verse) or 0
 
 
-def _osis_walk(el, st, emit):
+def _osis_walk(el, st, emit, red=False):
     if (el.text or "").strip():
-        st.segs.append(Seg("text", el.text))
+        st.segs.append(Seg("red" if red else "text", el.text))
     for child in list(el):
         tag = _local(child.tag)
         if tag == "chapter":
@@ -229,9 +248,9 @@ def _osis_walk(el, st, emit):
             # The verses live inside the chapter (div > chapter > verse), so
             # recurse: without this the chapter's own text and every verse in
             # it are never visited and the document yields no units at all.
-            _osis_walk(child, st, emit)
+            _osis_walk(child, st, emit, red=red)
             if child.tail:
-                st.segs.append(Seg("text", child.tail))
+                st.segs.append(Seg("red" if red else "text", child.tail))
         elif tag == "verse":
             if child.get("eID") and not child.get("osisID"):
                 # A closing milestone for the verse just read.  It ends the verse
@@ -242,28 +261,48 @@ def _osis_walk(el, st, emit):
             _flush(st, emit)
             st.verse = _osis_nums(child, 2)
             if list(child):
-                _osis_walk(child, st, emit)     # <w>, <note>, ... inside
+                _osis_walk(child, st, emit, red=red)  # <w>, <note>, ... inside
             elif child.text:
-                st.segs.append(Seg("text", child.text))
+                st.segs.append(Seg("red" if red else "text", child.text))
             # An OSIS verse is a milestone: <verse osisID="Gen.1.1"/>In the
             # beginning...  -- the words are the element's tail, not its text.
             if child.tail:
-                st.segs.append(Seg("text", child.tail))
+                st.segs.append(Seg("red" if red else "text", child.tail))
+        elif tag == "note":
+            body = " ".join("".join(child.itertext()).split())
+            if body:
+                st.segs.append(Seg("note", body,
+                                   child.get("osisRef") or child.get("osisID") or "",
+                                   child.get("type") or "explanation",
+                                   {"placement": child.get("placement", "foot")}))
+            if child.tail:
+                st.segs.append(Seg("red" if red else "text", child.tail))
+        elif tag == "q" and _speaker_is_jesus(child.get("who", "")):
+            _osis_walk(child, st, emit, red=True)
+            if child.tail:
+                st.segs.append(Seg("red" if red else "text", child.tail))
         elif tag in _OSIS_SKIP:
             if child.tail:
-                st.segs.append(Seg("text", child.tail))
+                st.segs.append(Seg("red" if red else "text", child.tail))
         elif tag == "w":
             txt = "".join(child.itertext())
             if txt:
                 snum = (child.get("strongRef") or child.get("s") or "").strip()
                 st.segs.append(Seg("strongs" if snum else "text", txt, snum,
-                                   lemma=(child.get("lemma") or "").strip()))
+                                   lemma=(child.get("lemma") or "").strip(),
+                                   attrs={"wj": True} if red else {}))
             if child.tail:
-                st.segs.append(Seg("text", child.tail))
+                st.segs.append(Seg("red" if red else "text", child.tail))
         else:
-            _osis_walk(child, st, emit)
+            _osis_walk(child, st, emit, red=red)
             if child.tail:
-                st.segs.append(Seg("text", child.tail))
+                st.segs.append(Seg("red" if red else "text", child.tail))
+
+
+def _speaker_is_jesus(raw: str) -> bool:
+    """Accept explicit OSIS Jesus identifiers; do not infer from context."""
+    return any(re.fullmatch(r"#?Jesus", token, re.I)
+               for token in re.split(r"[\s,;]+", (raw or "").strip()) if token)
 
 
 def _osis_units(root):

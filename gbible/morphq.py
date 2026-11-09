@@ -100,6 +100,49 @@ def parse_code(code: str) -> dict:
       not, the second meaning third person.
     """
     raw = (code or "").strip()
+    # MACULA/PROIEL Greek tags use a compact, explicit POS + feature code
+    # (for example N-NSM, V-AAI-3S, V-PAP-NSM). Decode these before the
+    # Hebrew/Robinson parser; treating them as OSHB codes loses every feature.
+    greek = re.sub(r"^(?:MACULA|PROIEL):", "", raw, flags=re.I)
+    gm = re.fullmatch(r"([A-Z]+)(?:-([A-Z0-9-]+))?", greek.upper())
+    if gm and gm.group(1) in {"N", "V", "A", "C", "D", "I", "P", "RA", "RD", "RI", "RP", "RR", "X", "T"}:
+        pos, codepart = gm.group(1), gm.group(2) or ""
+        f = {"raw": raw, "scheme": "MACULA", "pos": {
+            "N":"noun", "V":"verb", "A":"adjective", "C":"conjunction",
+            "D":"adverb", "I":"interjection", "P":"preposition",
+            "RA":"article", "RD":"demonstrative pronoun", "RI":"interrogative pronoun",
+            "RP":"personal pronoun", "RR":"relative pronoun", "X":"particle", "T":"particle"}.get(pos, pos),
+            "pos_label":"", "gender":None, "number":None, "case":None,
+            "degree":None, "state":None, "conjugation":None, "tense":None,
+            "voice":None, "mood":None, "person":None, "participle":None,
+            "particles":[], "stem":None}
+        names = {"N":"nominative", "G":"genitive", "D":"dative", "A":"accusative", "V":"vocative"}
+        gnames = {"M":"masculine", "F":"feminine", "N":"neuter"}
+        nums = {"S":"singular", "P":"plural", "D":"dual"}
+        if pos in ("N", "A", "RA", "RD", "RI", "RP", "RR"):
+            if codepart and codepart[0] in names: f["case"] = names[codepart[0]]
+            if len(codepart)>1 and codepart[1] in nums: f["number"] = nums[codepart[1]]
+            if len(codepart)>2 and codepart[2] in gnames: f["gender"] = gnames[codepart[2]]
+            if pos == "A" and len(codepart)>0 and codepart[0] in {"C","S"}:
+                f["degree"] = {"C":"comparative", "S":"superlative"}[codepart[0]]
+        elif pos == "V":
+            parts = codepart.split("-")
+            vm = parts[0] if parts else ""
+            f["tense"] = {"P":"present", "I":"imperfect", "F":"future", "A":"aorist", "X":"perfect", "Y":"pluperfect"}.get(vm[:1])
+            f["voice"] = {"A":"active", "M":"middle", "P":"passive", "E":"middle/passive"}.get(vm[1:2])
+            f["mood"] = {"I":"indicative", "S":"subjunctive", "O":"optative", "M":"imperative", "N":"infinitive", "P":"participle"}.get(vm[2:3])
+            tail = parts[-1] if len(parts)>1 else ""
+            if f["mood"] == "participle":
+                if tail and tail[0] in names: f["case"] = names[tail[0]]
+                if len(tail)>1 and tail[1] in nums: f["number"] = nums[tail[1]]
+                if len(tail)>2 and tail[2] in gnames: f["gender"] = gnames[tail[2]]
+                f["participle"] = "participle"
+            else:
+                pm = re.match(r"([123])([SDP])", tail)
+                if pm:
+                    f["person"] = {"1":"first", "2":"second", "3":"third"}[pm.group(1)]
+                    f["number"] = nums[pm.group(2)]
+        return f
     f: dict = {"raw": raw, "scheme": "", "pos": None, "pos_label": "",
                "gender": None, "number": None, "state": None,
                "conjugation": None, "tense": None, "person": None,
@@ -216,8 +259,8 @@ def parse_code(code: str) -> dict:
     return f
 
 
-_FILTERS = ("pos", "gender", "number", "state", "conjugation", "tense",
-            "person", "participle", "scheme", "pos_particle")
+_FILTERS = ("pos", "gender", "number", "case", "degree", "state", "conjugation", "tense",
+            "voice", "mood", "person", "participle", "scheme", "pos_particle")
 
 
 def query(*, limit: int = 300, offset: int = 0, order: str = "count",
@@ -305,12 +348,15 @@ def _plain(f: dict) -> dict:
     return {k: v for k, v in f.items() if k != "raw"}
 
 
-def facets() -> dict:
+def facets(module_id: str = "") -> dict:
     """What is actually installed, with counts, so the form can be built from
     the data rather than from a guess at the grammar."""
     conn = db.connect()
-    rows = conn.execute("SELECT value AS v, count(*) AS n FROM marker "
-                        "WHERE kind='morph' GROUP BY value").fetchall()
+    sql = "SELECT value AS v, count(*) AS n FROM marker WHERE kind='morph'"
+    args = []
+    if module_id:
+        sql += " AND module_id=?"; args.append(module_id)
+    rows = conn.execute(sql + " GROUP BY value", args).fetchall()
     tally: dict[str, dict[str, int]] = {k: {} for k in _FILTERS}
     for r in rows:
         f = parse_code(r["v"])
@@ -327,6 +373,297 @@ def facets() -> dict:
     out["codes"] = len(rows)
     out["total"] = sum(r["n"] for r in rows)
     return out
+
+
+def suggest_lemmas(module_id: str, prefix: str, *, limit: int = 20) -> dict:
+    """Offer only lemma spellings indexed in the chosen tagged resource."""
+    prefix = (prefix or "").strip()
+    if len(prefix) < 2:
+        return {"ok": True, "suggestions": []}
+    limit = max(1, min(50, int(limit)))
+    rows = db.connect().execute(
+        "SELECT value,COUNT(*) AS n FROM marker WHERE module_id=? AND kind='lemma' "
+        "AND value LIKE ? GROUP BY value ORDER BY n DESC,value LIMIT ?",
+        (module_id, prefix + "%", limit)).fetchall()
+    return {"ok": True, "suggestions": [{"lemma":r["value"],"count":r["n"]} for r in rows]}
+
+
+def search_fields(module_id: str) -> dict:
+    """Searchable fields carried by this resource's tagged word markers."""
+    conn = db.connect()
+    rows = conn.execute(
+        "SELECT value,COUNT(*) AS n FROM marker WHERE module_id=? AND kind='field' "
+        "GROUP BY value ORDER BY value", (module_id,)).fetchall()
+    if not rows:
+        # Existing libraries acquire explicit field markers on re-index. Until
+        # then, their known morphology markers are all in the verse text.
+        n = conn.execute("SELECT COUNT(*) FROM marker WHERE module_id=? AND kind='morph'",
+                         (module_id,)).fetchone()[0]
+        if n:
+            return {"fields": [{"value": "main-text", "label": "Main text", "n": n}]}
+    return {"fields": [{"value": r["value"],
+                         "label": r["value"].replace("-", " ").title(),
+                         "n": r["n"]} for r in rows]}
+
+
+def wordforms(module_id: str, word: str, *, limit: int = 20) -> dict:
+    """Every morphology code carried by one word (lemma or surface) in a module.
+
+    This is the engine behind the Logos-style "type a word, press @, pick the
+    grammatical form you want" picker.  A word is looked up by lemma first
+    (Logos defaults to the lemma), then by its surface form.  Each matching code
+    is decoded into its grammatical features so the user can choose by meaning
+    (e.g. "verb, present, active, indicative, 3rd singular") rather than by a
+    raw code such as `V-PAI-3S`.
+    """
+    conn = db.connect()
+    word = (word or "").strip()
+    if not module_id or not word:
+        return {"ok": False, "error": "need a module and a word"}
+
+    # Try by lemma first, then fall back to the surface form.
+    rows = []
+    matched_by = None
+    for by in ("lemma", "surface"):
+        if by == "lemma":
+            rows = conn.execute(
+                "SELECT m.value AS code, m.surface AS surface, COUNT(*) AS n "
+                "FROM marker m JOIN marker l ON l.module_id=m.module_id "
+                "AND l.unit_key=m.unit_key AND l.pos=m.pos "
+                "WHERE m.module_id=? AND m.kind='morph' AND l.kind='lemma' "
+                "AND l.value=? GROUP BY m.value, m.surface ORDER BY n DESC",
+                (module_id, word)).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT value AS code, surface, COUNT(*) AS n FROM marker "
+                "WHERE module_id=? AND kind='morph' AND surface=? "
+                "GROUP BY value, surface ORDER BY n DESC",
+                (module_id, word)).fetchall()
+        if rows:
+            matched_by = by
+            break
+
+    if not rows:
+        return {"ok": True, "word": word, "module_id": module_id,
+                "matched_by": None, "forms": []}
+
+    out = []
+    for r in rows[:limit]:
+        code = r["code"]
+        f = parse_code(code)
+        # Example references where this code occurs for this word.
+        if matched_by == "lemma":
+            ex_q = ("SELECT u.book, u.chapter, u.verse, u.ref_label "
+                    "FROM marker m JOIN unit u "
+                    "ON u.module_id=m.module_id AND u.key=m.unit_key "
+                    "WHERE m.module_id=? AND m.kind='morph' AND m.value=? "
+                    "AND EXISTS (SELECT 1 FROM marker l "
+                    "WHERE l.module_id=m.module_id AND l.unit_key=m.unit_key "
+                    "AND l.pos=m.pos AND l.kind='lemma' AND l.value=?) "
+                    "LIMIT 5")
+            ex_args = [module_id, code, word]
+        else:
+            ex_q = ("SELECT u.book, u.chapter, u.verse, u.ref_label "
+                    "FROM marker m JOIN unit u "
+                    "ON u.module_id=m.module_id AND u.key=m.unit_key "
+                    "WHERE m.module_id=? AND m.kind='morph' AND m.value=? "
+                    "AND m.surface=? LIMIT 5")
+            ex_args = [module_id, code, word]
+        ex_rows = conn.execute(ex_q, ex_args).fetchall()
+        examples = [{"ref": (e["ref_label"] or
+                           f"{e['book']} {e['chapter']}:{e['verse']}"),
+                     "book": e["book"], "chapter": e["chapter"],
+                     "verse": e["verse"]} for e in ex_rows]
+        out.append({
+            "code": code,
+            "surface": r["surface"] or "",
+            "count": r["n"],
+            "features": _plain(f),
+            "examples": examples,
+        })
+
+    return {"ok": True, "word": word, "module_id": module_id,
+            "matched_by": matched_by, "forms": out}
+
+
+def pattern(module_id: str, terms: list[dict], *, ref: str = "", max_gap: int = 0,
+            boundary: str = "verse", search_field: str = "", limit: int = 100,
+            offset: int = 0) -> dict:
+    """Find ordered, word-level morphology patterns within one tagged module."""
+    from . import canon
+    if not module_id:
+        return {"ok": False, "error": "Choose a tagged resource."}
+    if not isinstance(terms, list) or not 1 <= len(terms) <= 6:
+        return {"ok": False, "error": "A pattern needs between one and six word positions."}
+    try: max_gap = max(0, min(10, int(max_gap)))
+    except (TypeError, ValueError): max_gap = 0
+    conn = db.connect()
+    where = "module_id=? AND kind='morph'"
+    args: list = [module_id]
+    if ref:
+        rr = canon.parse_ref(ref)
+        if rr is None:
+            return {"ok": False, "error": "Enter a valid Bible passage."}
+        lo = canon.BOOK_BY_NAME.get(rr.start.book)
+        hi = canon.BOOK_BY_NAME.get(rr.end.book)
+        if lo and hi:
+            books = [b.osis for b in canon.BOOK_BY_ORDINAL.values()
+                     if lo.ordinal <= b.ordinal <= hi.ordinal]
+            if books:
+                marks = ",".join("?" for _ in books)
+                where += f" AND unit_key IN (SELECT key FROM unit WHERE module_id=? AND book IN ({marks}))"
+                args += [module_id, *books]
+    rows = conn.execute("SELECT unit_key,pos,value,surface FROM marker WHERE " + where, args).fetchall()
+    if search_field:
+        field_rows = conn.execute(
+            "SELECT unit_key,pos FROM marker WHERE module_id=? AND kind='field' AND value=?",
+            (module_id, search_field)).fetchall()
+        if field_rows:
+            allowed_positions = {(r["unit_key"], int(r["pos"] or 0)) for r in field_rows}
+            rows = [r for r in rows if (r["unit_key"], int(r["pos"] or 0)) in allowed_positions]
+        elif search_field != "main-text":
+            rows = []
+    ref_keys = None
+    if ref:
+        units = conn.execute("SELECT key,book,chapter,verse FROM unit WHERE module_id=?", (module_id,)).fetchall()
+        lo, hi = canon.parse_ref(ref).start, canon.parse_ref(ref).end
+        def at_or_after(u, r):
+            ub, rb = canon.BOOK_BY_NAME.get(u["book"]), canon.BOOK_BY_NAME.get(r.book)
+            return bool(ub and rb and (ub.ordinal, u["chapter"] or 0, u["verse"] or 0) >=
+                        (rb.ordinal, r.chapter or 0, r.verse or 0))
+        def at_or_before(u, r):
+            ub, rb = canon.BOOK_BY_NAME.get(u["book"]), canon.BOOK_BY_NAME.get(r.book)
+            end_ch = r.chapter or 999999
+            end_vs = r.verse or 999999
+            return bool(ub and rb and (ub.ordinal, u["chapter"] or 0, u["verse"] or 0) <=
+                        (rb.ordinal, end_ch, end_vs))
+        ref_keys = {u["key"] for u in units if at_or_after(u, lo) and at_or_before(u, hi)}
+        rows = [r for r in rows if r["unit_key"] in ref_keys]
+    # Morph Query can constrain a pattern to one verse or let it span a chapter.
+    # Convert chapter scope into a virtual word stream while retaining a map
+    # back to each verse's local marker positions for result links/details.
+    boundary = "chapter" if boundary == "chapter" else "verse"
+    source_units = conn.execute(
+        "SELECT key,book,chapter,verse,ref_label,text,word_count FROM unit WHERE module_id=?",
+        (module_id,)).fetchall()
+    if ref_keys is not None:
+        source_units = [u for u in source_units if u["key"] in ref_keys]
+    unit_info = {u["key"]: u for u in source_units}
+    source_map: dict[str, list[tuple[str, int, int]]] = {}
+    unit_group: dict[str, tuple[str, int]] = {}
+    transformed = []
+    if boundary == "chapter":
+        grouped_units: dict[str, list] = {}
+        for u in source_units:
+            grouped_units.setdefault(f'{u["book"]}.{u["chapter"]}', []).append(u)
+        for group, us in grouped_units.items():
+            us.sort(key=lambda u: (u["verse"] or 0, u["key"]))
+            offset_words = 0
+            for u in us:
+                count = max(1, int(u["word_count"] or 0))
+                unit_group[u["key"]] = (group, offset_words)
+                source_map.setdefault(group, []).append((u["key"], offset_words, count))
+                offset_words += count
+        for r in rows:
+            info = unit_group.get(r["unit_key"])
+            if info:
+                transformed.append({"unit_key": info[0], "pos": int(r["pos"] or 0) + info[1], "value": r["value"], "surface": r["surface"]})
+        rows = transformed
+    else:
+        for u in source_units:
+            source_map[u["key"]] = [(u["key"], 0, max(1, int(u["word_count"] or 0)))]
+            unit_group[u["key"]] = (u["key"], 0)
+        rows = [dict(unit_key=r["unit_key"], pos=int(r["pos"] or 0), value=r["value"], surface=r["surface"]) for r in rows]
+    if not rows:
+        return {"ok": True, "total": 0, "results": [], "message": "No morphology tags are indexed for this resource."}
+    decoded = {}
+    for r in rows:
+        decoded.setdefault(r["value"], parse_code(r["value"]))
+    wanted: list[dict] = []
+    for term in terms:
+        filters = {k: str(v) for k, v in (term or {}).items() if k in _FILTERS and v not in (None, "", "any")}
+        lemma = str((term or {}).get("lemma") or "").strip().casefold()
+        form = str((term or {}).get("form") or "").strip().casefold()
+        if not filters and not lemma and not form:
+            return {"ok": False, "error": "Choose at least one feature or lemma for each word position."}
+        codes = set()
+        for code, f in decoded.items():
+            if all(f.get(k) == v for k, v in filters.items()): codes.add(code)
+        wanted.append({"codes": codes, "has_filter": bool(filters), "lemma": lemma, "form": form,
+                       "exclude": bool((term or {}).get("exclude"))})
+    # Candidate word positions are narrowed by feature/lemma, then joined in
+    # Python on the indexed one-based ordinals. Verse patterns never cross units.
+    hits: list[dict[str, dict[int, set[int]]]] = [dict() for _ in wanted]
+    for i, term in enumerate(wanted):
+        feature_hits: dict[str, set[int]] = {}
+        for r in rows:
+            if r["value"] in term["codes"] and (not term["form"] or str(r["surface"] or "").strip().casefold() == term["form"]):
+                feature_hits.setdefault(r["unit_key"], set()).add(int(r["pos"] or 0))
+        lemma_hits: dict[str, set[int]] = {}
+        if term["lemma"]:
+            lr = conn.execute("SELECT unit_key,pos FROM marker WHERE module_id=? AND kind='lemma' AND lower(value)=?", (module_id, term["lemma"])).fetchall()
+            for r in lr:
+                target = unit_group.get(r["unit_key"])
+                if target:
+                    lemma_hits.setdefault(target[0], set()).add(int(r["pos"] or 0) + target[1])
+        if term["lemma"] and (term["has_filter"] or term["form"]):
+            unitkeys = feature_hits.keys() & lemma_hits.keys()
+            accepted = {k: feature_hits[k] & lemma_hits[k] for k in unitkeys}
+        elif term["lemma"]:
+            accepted = lemma_hits
+        else:
+            accepted = feature_hits
+        for key, ps in accepted.items():
+            for p in ps: hits[i].setdefault(key, {})[p] = {i}
+    positive = [i for i, t in enumerate(wanted) if not t["exclude"]]
+    excluded = [i for i, t in enumerate(wanted) if t["exclude"]]
+    if not positive:
+        return {"ok": False, "error": "Keep at least one included word in the pattern."}
+    keys = set(hits[positive[0]])
+    for i in positive[1:]: keys.intersection_update(hits[i])
+    matches = []
+    for key in keys:
+        if any(hits[i].get(key) for i in excluded):
+            continue
+        starts = sorted(hits[positive[0]][key])
+        for first in starts:
+            positions = [first]
+            for i in positive[1:]:
+                lo, hi = positions[-1] + 1, positions[-1] + max_gap + 1
+                nxt = next((p for p in sorted(hits[i].get(key, {})) if lo <= p <= hi), None)
+                if nxt is None: break
+                positions.append(nxt)
+            if len(positions) != len(positive): continue
+            spans = source_map.get(key, [])
+            if not spans: continue
+            def locate(position):
+                return next(((uk, off, count) for uk, off, count in spans if off < position <= off + count), spans[-1])
+            verse_units = [unit_info[uk] for uk, _, _ in spans if uk in unit_info]
+            if not verse_units: continue
+            u = verse_units[0]
+            detail = []
+            text_offsets: dict[str, int] = {}
+            char_cursor = 0
+            for vu in verse_units:
+                text_offsets[vu["key"]] = char_cursor
+                char_cursor += len(vu["text"] or "") + 1
+            for p in positions:
+                uk, off, _count = locate(p); local_pos = p - off
+                wr = conn.execute("SELECT surface FROM marker WHERE module_id=? AND unit_key=? AND kind='strongs' AND pos=? LIMIT 1", (module_id,uk,local_pos)).fetchone()
+                sr = conn.execute("SELECT value FROM marker WHERE module_id=? AND unit_key=? AND kind='strongs' AND pos=? LIMIT 1", (module_id,uk,local_pos)).fetchone()
+                mr = conn.execute("SELECT value FROM marker WHERE module_id=? AND unit_key=? AND kind='morph' AND pos=? LIMIT 1", (module_id,uk,local_pos)).fetchone()
+                lr = conn.execute("SELECT value,surface FROM marker WHERE module_id=? AND unit_key=? AND kind='lemma' AND pos=? LIMIT 1", (module_id,uk,local_pos)).fetchone()
+                tokens = db.words(unit_info[uk]["text"] or "")
+                char_range = tokens[local_pos - 1][1:] if 0 < local_pos <= len(tokens) else (None, None)
+                base = text_offsets.get(uk, 0)
+                mcode = mr["value"] if mr else ""
+                detail.append({"position":local_pos,"ref":unit_info[uk]["ref_label"],"surface":(wr["surface"] if wr else (lr["surface"] if lr else "")),"morph":mcode,"features":_plain(parse_code(mcode)) if mcode else {},"lemma":(lr["value"] if lr else ""),"strongs":(sr["value"] if sr else ""),"start":(base + char_range[0] if char_range[0] is not None else None),"end":(base + char_range[1] if char_range[1] is not None else None)})
+            text = "\n".join(x["text"] or "" for x in verse_units)
+            result_ref = detail[0]["ref"] if detail else u["ref_label"]
+            matches.append({"key":key,"book":u["book"],"chapter":u["chapter"],"verse":u["verse"],"ref":result_ref,"text":text,"positions":positions,"matched":detail,"verses":[x["ref_label"] for x in verse_units]})
+            break
+    matches.sort(key=lambda x:(canon.BOOK_BY_NAME.get(x["book"]).ordinal if canon.BOOK_BY_NAME.get(x["book"]) else 999, x["chapter"] or 0, x["verse"] or 0))
+    return {"ok":True,"total":len(matches),"offset":offset,"next":offset+limit if offset+limit<len(matches) else 0,"results":matches[offset:offset+limit]}
 
 
 # ------------------------------------------------- reverse interlinear
@@ -363,8 +700,8 @@ def _pick_script(rows, script: str, num: str) -> tuple:
     if not orig_bible:
         note = ("No tagged original-language Bible is installed for this word, "
                 "so what follows is a translation that carries the number. "
-                + ("The Greek New Testament here (SBLGNT) has no morphology or "
-                   "Strong's tagging at all."
+                + ("Install a Greek Bible with word-level morphology tags (such "
+                   "as MACULA Greek) to see original-language results here."
                    if num.upper().startswith("G") else
                    "The Hebrew Bible (Open Scriptures morphhb) is tagged, so a "
                    "Hebrew word does show the Hebrew."))
@@ -435,10 +772,8 @@ def reverse_interlinear(num: str, *, limit: int = 40, offset: int = 0,
 
     On "original language": it can only be one if a tagged original text is
     actually installed.  The Hebrew here is (Open Scriptures morphhb carries both
-    morphology and Strong's), so a Hebrew word gives you Hebrew.  The Greek does
-    not -- the SBLGNT is untagged, and the only Greek module with morphology is a
-    non-biblical text -- so a Greek number comes back showing *English*, and says
-    so rather than pretending otherwise.
+    morphology and Strong's), and Greek MACULA resources can provide Greek word
+    tags when installed. Otherwise this panel explains which text is available.
     """
     from . import canon, study
     num = canon.normalise_strongs(num or "")

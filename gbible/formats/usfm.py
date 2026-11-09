@@ -57,6 +57,8 @@ _XREF_ONLY = {"x", "xdc", "xr", "xnt", "exdc", "ef1", "ef2", "fe1", "fe2"}
 _INLINE_STYLE = {
     "add": "add", "addce": "add", "addsl": "add", "addpn": "add",
     "transChange": "alt", "alt": "alt", "unclear": "text",
+    # USFM explicitly brackets words of Jesus; never infer these from quotes.
+    "wj": "red",
 }
 
 
@@ -202,6 +204,7 @@ class UsfmDoc:
                     style_stack.pop()
                 continue
             if style_stack and closed and _INLINE_STYLE.get(mk):
+                flush_text()
                 style_stack.pop()
             # Unknown marker: pass its text through.
             if rest and not rest.startswith("*"):
