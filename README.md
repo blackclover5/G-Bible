@@ -205,6 +205,14 @@ python3 tools/install_voice.py
 
 ---
 
+## Maintainer version notes
+
+The application version is defined in `gbible/__init__.py`. When preparing a release, update the AppImage version examples in the Linux quick-start section of this README to match. An AppImage's embedded version metadata must also be updated when rebuilding the image; changing only its filename does not change the version reported by the packaged app.
+
+Run `python3 tools/test_version_metadata.py` to check that the README's AppImage version references match the application version.
+
+---
+
 ## Privacy and Ownership
 
 G-Bible is designed to keep your personal study personal.
