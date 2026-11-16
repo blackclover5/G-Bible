@@ -1,4 +1,5 @@
 import uuid
+import zipfile
 
 from .common import *
 
@@ -94,6 +95,26 @@ def _store_install(parts, q):
     return _ok(job=jid)
 
 
+@endpoint("store/updates")
+def _store_updates(parts, q):
+    from ... import db as _db, library as _lib
+    conn = _db.connect()
+    rows = conn.execute(
+        "SELECT si.repo_id, si.item_id, si.title, si.version, si.module_id "
+        "FROM store_item si JOIN module m ON m.id = si.module_id "
+        "WHERE m.installed_at > 0").fetchall()
+    out = []
+    for r in rows:
+        m = _lib.get(r["module_id"])
+        if not m:
+            continue
+        if str(r["version"] or "") and str(r["version"]) != str(m.version or ""):
+            out.append({"repo": r["repo_id"], "item": r["item_id"],
+                        "title": r["title"], "installed_version": m.version,
+                        "available_version": r["version"], "module_id": r["module_id"]})
+    return _ok(updates=out, count=len(out))
+
+
 @endpoint("store/placement")
 def _store_placement(parts, q):
     """Where a catalogue item will go, without installing it."""
@@ -159,9 +180,11 @@ def _recommended_cancel(parts, q):
 def _recommended_install(parts, q):
     from ... import recommended as _rec, store, db
     jid = "job_" + uuid.uuid4().hex[:16]
+    dismiss_on_finish = _flag(q.get("dismiss"))
     _remember_job(jid, {"state": "running", "message": "starting",
                         "done": 0, "total": len(_rec.RECOMMENDED),
-                        "failures": []})
+                        "failures": [],
+                        "dismiss_on_finish": dismiss_on_finish})
     items = list(_rec.RECOMMENDED)
 
     def work():
@@ -200,13 +223,17 @@ def _recommended_install(parts, q):
                              f"failed {failed}"),
                     done=done + skipped + failed,
                     total=len(items), failures=list(failures))
-        # The user explicitly chose Install, then may have chosen Skip. In
-        # either case don't immediately reopen the recommendation prompt after
-        # the page refreshes; resources can still be installed manually later.
-        try:
-            db.set_setting("recommended_prompt_dismissed", True)
-        except Exception:
-            pass
+        # Dismiss only when the user explicitly selected the checkbox.
+        # Failed installations must remain retryable on the next launch.
+        with _job_lock:
+            dismiss_on_finish = bool(
+                _jobs.get(jid, {}).get("dismiss_on_finish")
+            )
+        if dismiss_on_finish:
+            try:
+                db.set_setting("recommended_prompt_dismissed", True)
+            except Exception:
+                pass
         with _job_lock:
             _jobs[jid].update(
                 state="cancelled" if cancelled else "done",
@@ -378,3 +405,338 @@ def _store_import(parts, q):
     threading.Thread(target=work, daemon=True, name=f"import-{jid}").start()
     return _ok(job=jid, sniffed=kind, item_id=reg["item_id"])
 
+
+
+# ------------------------------------------------------------------- local browse
+# An in-app file browser for the local import flow.  The page cannot see
+# absolute paths (browser sandbox), so this endpoint lists directories and
+# hands paths back to the page instead.  Read-only: nothing here writes.
+@endpoint("store/browse")
+def _store_browse(parts, q):
+    """List a folder for the in-app file browser.
+
+    Hidden entries (dotfiles and dotfolders) are not shown — navigate the same
+    as the OS file manager without a wall of system noise.  `only_ext`, a
+    comma-separated allowlist such as `gbz`, restricts the file rows to those
+    extensions; folders always show so navigation keeps working.
+    """
+    raw = (q.get("path") or "").strip()
+    if not raw:
+        raw = str(Path.home())
+    try:
+        p = Path(raw).expanduser().resolve()
+    except (OSError, ValueError) as e:
+        return {"ok": False, "error": "not a usable path: " + str(e)}
+    if not p.exists():
+        return {"ok": False, "error": "no such path: " + str(p)}
+    if not p.is_dir():
+        return {"ok": False, "error": "not a directory: " + str(p)}
+    show_hidden = str(q.get("show_hidden") or "0").strip().lower() in ("1", "true", "yes")
+    only_ext = {e.strip().lower() for e in (q.get("only_ext") or "").split(",")
+                if e.strip()}
+    entries = []
+    try:
+        children = list(p.iterdir())
+    except PermissionError:
+        return {"ok": False, "error": "permission denied: " + str(p)}
+    for child in children:
+        name = child.name
+        if not show_hidden and name.startswith("."):
+            continue
+        try:
+            st = child.stat()
+            is_dir = child.is_dir()
+        except OSError:
+            continue
+        ext = Path(name).suffix.lower().lstrip(".") if not is_dir else ""
+        if only_ext and not is_dir and ext not in only_ext:
+            continue
+        e = {"name": name, "path": str(child), "is_dir": bool(is_dir),
+             "size": int(st.st_size), "mtime": st.st_mtime}
+        if not is_dir:
+            e["ext"] = ext
+        entries.append(e)
+    entries.sort(key=lambda e: (0 if e["is_dir"] else 1, e["name"].lower()))
+    return _ok(path=str(p),
+               parent=(str(p.parent) if p.parent != p else ""),
+               home=str(Path.home()),
+               entries=entries)
+
+
+@endpoint("store/inspect")
+def _store_inspect(parts, q):
+    """Read-only preview of one importable file, before anything is imported.
+
+    Best effort: it never fails the import, only reports what it could learn.
+    """
+    raw = (q.get("path") or "").strip()
+    p = Path(raw).expanduser()
+    if not p.is_file():
+        return {"ok": False, "error": "not a file: " + str(p)}
+    try:
+        st = p.stat()
+        size = st.st_size
+    except OSError as e:
+        return {"ok": False, "error": str(e)}
+    from ...formats import sniff
+    try:
+        with p.open("rb") as fh:
+            head = fh.read(262144)
+    except OSError:
+        head = b""
+    try:
+        kind = sniff(head, path=p)
+    except Exception:
+        kind = "unknown"
+    info = {"path": str(p), "name": p.name, "size": int(size), "format": kind}
+    try:
+        if kind == "sword-zip":
+            info.update(_preview_sword_zip(p))
+        elif kind == "usfm":
+            info.update(_preview_usfm(p, head))
+        elif kind == "epub":
+            info.update(_preview_epub(p))
+        elif kind in ("esword9", "esword-legacy", "esword-zip"):
+            info.update(_preview_esword(p, kind))
+        elif kind == "text":
+            info.update(_preview_text(p))
+    except Exception as e:
+        info["error"] = f"{type(e).__name__}: {e}"
+    return _ok(**info)
+
+
+def _preview_sword_zip(p):
+    out = {"modules": []}
+    with zipfile.ZipFile(p) as zf:
+        confs = [n for n in zf.namelist()
+                 if n.lower().startswith("mods.d/") and n.lower().endswith(".conf")]
+        out["modules"] = confs
+        if confs:
+            text = zf.read(confs[0]).decode("utf-8", errors="replace")
+            import re as _re
+            def get(k):
+                m = _re.search(r"(?im)^%s\s*=\s*(.+)$" % _re.escape(k), text)
+                return m.group(1).strip() if m else ""
+            out["title"] = get("ShortTitle") or get("Description") or Path(confs[0]).stem
+            out["lang"] = get("Lang")
+            about = get("About")
+            if about:
+                out["description"] = about[:400]
+            cp = get("CopyRight")
+            dist = get("DistributionLicense")
+            out["license"] = cp or dist or ""
+            out["abbrev"] = get("ModDrv")
+            out["version"] = get("Version")
+            out["category"] = get("Category")
+            out["About"] = about[:400] if about else ""
+    return out
+
+
+def _preview_usfm(p, head):
+    out = {}
+    for line in head.decode("utf-8", errors="replace").splitlines():
+        if line.startswith("\\id "):
+            out["abbrev"] = line.split()[1] if len(line.split()) > 1 else ""
+            break
+    out["title"] = p.stem
+    if p.suffix.lower() == ".zip" or p.name.lower().endswith((".zip", ".usfm.zip")):
+        try:
+            with zipfile.ZipFile(p) as zf:
+                books = [n for n in zf.namelist() if n.lower().endswith(".usfm")]
+                out["units"] = len(books)
+                out["title"] = p.stem + "  (USFM)"
+        except Exception:
+            pass
+    else:
+        out["units"] = 1
+    return out
+
+
+def _preview_epub(p):
+    import re as _re, xml.etree.ElementTree as ET
+    out = {"title": p.stem}
+    try:
+        with zipfile.ZipFile(p) as zf:
+            container = zf.read("META-INF/container.xml").decode("utf-8", errors="replace")
+            m = _re.search(r'full-path="([^"]+)"', container)
+            if not m:
+                return out
+            opf = zf.read(m.group(1)).decode("utf-8", errors="replace")
+            root = ET.fromstring(opf)
+            ns = {"opf": "http://www.idpf.org/2007/opf",
+                  "dc": "http://purl.org/metadata/dublin_core"}
+            def txt(tag):
+                el = root.find(f".//dc:{tag}", ns)
+                return (el.text or "").strip() if el is not None else ""
+            out["title"] = txt("title") or out["title"]
+            out["author"] = txt("creator")
+            out["lang"] = txt("language")
+            out["publisher"] = txt("publisher")
+            out["license"] = txt("rights")
+            out["description"] = txt("description")[:300]
+    except Exception as e:
+        out["error"] = f"{type(e).__name__}: {e}"
+    return out
+
+
+def _preview_esword(p, kind):
+    out = {"title": p.stem}
+    ext = p.suffix.lower().lstrip(".")
+    kind_guess = {
+        "bbl": "Bible", "bblx": "Bible",
+        "cmt": "Commentary", "cmtx": "Commentary", "dev": "Devotional",
+        "dct": "Dictionary", "dctx": "Dictionary", "bmap": "Map",
+        "mapx": "Map", "mybible": "Bible", "notx": "Note", "brpx": "Biography",
+        "harx": "Harmony", "bzz": "Bible", "bzs": "Bible", "bzu": "Bible",
+    }.get(ext, "Book")
+    out["category"] = kind_guess
+    if kind == "esword9":
+        try:
+            import sqlite3
+            conn = sqlite3.connect(f"file:{p}?mode=ro", uri=True)
+            try:
+                rows = conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+                out["tables"] = [r[0] for r in rows]
+                for cand in ("Entries", "Verses", "Articles", "Tsk", "Maps"):
+                    if cand in out["tables"]:
+                        try:
+                            out["units"] = conn.execute(f"SELECT COUNT(*) FROM {cand}").fetchone()[0]
+                        except Exception:
+                            pass
+                        break
+                try:
+                    meta = conn.execute("SELECT Name, Description FROM Details LIMIT 1").fetchone()
+                    if meta:
+                        out["title"] = meta[0] or out["title"]
+                        if meta[1]:
+                            out["description"] = meta[1]
+                except Exception:
+                    pass
+            finally:
+                conn.close()
+        except Exception as e:
+            out["error"] = f"{type(e).__name__}: {e}"
+    return out
+
+
+def _preview_text(p):
+    out = {}
+    try:
+        size = p.stat().st_size
+        with p.open("rb") as fh:
+            data = fh.read(262144)
+        text = data.decode("utf-8", errors="replace")
+        lines = text.count("\n") + 1
+        out["units"] = lines
+        out["size"] = int(size)
+    except Exception:
+        pass
+    return out
+
+
+# Import every importable file in a folder (optionally recursively).  The files
+# land in "This computer" and are installed exactly as if imported one by one.
+@endpoint("store/folder")
+def _store_folder(parts, q):
+    raw = (q.get("path") or "").strip()
+    if not raw:
+        return {"ok": False, "error": "no path"}
+    p = Path(raw).expanduser()
+    if not p.is_dir():
+        return {"ok": False, "error": "not a directory: " + str(p)}
+    recursive = str(q.get("recursive", "")).lower() in ("1", "true", "yes")
+    from ... import formats as _fmt
+    ext_ok = {
+        "zip", "bzz2", "bbl", "bblx", "cmt", "cmtx", "dct", "dctx", "dev",
+        "bmap", "mybible", "epub", "usfm", "usfx", "osis", "txt", "md",
+        "kmz", "kml", "jpg", "jpeg", "png", "svg", "gif", "tif", "tiff",
+        "htm", "html", "wiki", "wikitext", "notx", "brpx", "memx", "prlx",
+        "harx", "lstx", "ovlx", "bzs", "bzu", "bzz", "mapx",
+    }
+    files = []
+    it = p.rglob("*") if recursive else p.iterdir()
+    for child in it:
+        if not child.is_file() or child.name.startswith("."):
+            continue
+        ext = Path(child.name).suffix.lower().lstrip(".")
+        try:
+            size = child.stat().st_size
+        except OSError:
+            continue
+        if size <= 0 or size > 4 * 1024 * 1024 * 1024:
+            continue
+        if ext not in ext_ok:
+            continue
+        # For archives, sniff the outer name only -- reading every archive in a
+        # folder of thousands to test them costs real time.
+        files.append({"name": child.name, "path": str(child),
+                      "size": int(size),
+                      "format": "sword-zip" if ext == "zip" else (
+                          "esword9" if ext.endswith("x") and ext != "usfx" else {
+                              "bbl": "esword-legacy", "cmt": "esword-legacy",
+                              "dct": "esword-legacy", "usfm": "usfm",
+                              "usfx": "usfx", "osis": "osis",
+                              "epub": "epub", "txt": "text", "md": "text",
+                              "kml": "osm-kml", "kmz": "osm-kml",
+                          }.get(ext, ext))})
+    files.sort(key=lambda f: f["name"].lower())
+    total = sum(f["size"] for f in files)
+    return _ok(path=str(p), files=files, total=len(files), size=int(total))
+
+
+@endpoint("store/import-folder")
+def _store_import_folder(parts, q):
+    paths = q.get("paths") or []
+    if isinstance(paths, str):
+        paths = [x for x in paths.split("|") if x]
+    skip_existing = str(q.get("skip_existing", "1")).lower() not in ("0", "false", "no")
+    files = []
+    for raw in paths:
+        p = Path(str(raw)).expanduser()
+        if p.is_file():
+            files.append(str(p))
+    if not files:
+        return {"ok": False, "error": "no files to import"}
+    jid = "job_" + uuid.uuid4().hex[:16]
+    _remember_job(jid, {"state": "running", "message": "importing files",
+                        "started": time.time(), "total": len(files), "done": 0,
+                        "failed": 0, "folder": True})
+
+    def work():
+        from ...importers import runner
+        imported, failed, skipped = 0, [], 0
+        try:
+            for i, path in enumerate(files, start=1):
+                with _job_lock:
+                    if _jobs.get(jid, {}).get("cancel_requested"):
+                        break
+                base = Path(path)
+                try:
+                    reg = store.register_local(base, fmt="", title=base.stem)
+                    res = store.install("local", reg["item_id"])
+                    imported += 1
+                    msg = f"imported {imported} of {len(files)}: {base.name}"
+                except Exception as e:
+                    failed.append({"path": path,
+                                   "error": f"{type(e).__name__}: {e}"[:300]})
+                    msg = f"failed: {base.name}"
+                with _job_lock:
+                    _jobs[jid].update(state="running", message=msg,
+                                      done=imported, failed_count=len(failed),
+                                      current=str(base))
+        finally:
+            with _job_lock:
+                if _jobs.get(jid, {}).get("cancel_requested"):
+                    _jobs[jid].update(state="cancelled",
+                                      message=f"stopped after {imported} imports",
+                                      done=imported, failed=failed)
+                else:
+                    _jobs[jid].update(state="done",
+                                      message=f"imported {imported} of {len(files)}"
+                                      + (f" ({len(failed)} failed)" if failed else ""),
+                                      done=imported, failed=failed)
+            _prune_jobs()
+
+    threading.Thread(target=work, daemon=True, name=f"import-folder-{jid}").start()
+    return _ok(job=jid, total=len(files))

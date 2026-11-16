@@ -22,7 +22,7 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
-from . import canon, db, markup, redletter, taxonomy
+from . import canon, db, markup, taxonomy
 from .markup import RenderOpts, Seg
 
 
@@ -83,7 +83,6 @@ class Module:
     has_lemma: bool = False
     has_notes: bool = False
     has_xref: bool = False
-    has_redletter: bool = False
     index_types: list[str] = field(default_factory=list)
     priority: int = 0
     favorite: bool = False
@@ -126,20 +125,14 @@ class Module:
             except (json.JSONDecodeError, TypeError):
                 d[k] = {} if k == "raw_meta" else []
         for k in ("has_strongs", "has_morph", "has_lemma", "has_notes",
-                  "has_xref", "has_redletter", "favorite", "enabled", "verified"):
+                  "has_xref", "favorite", "enabled", "verified"):
             if k in d:
                 d[k] = bool(d.get(k))
-        if d.get("type") in ("Bible", "StudyBible", "ParallelBible",
-                              "OriginalLanguage", "Manuscript"):
-            # Whole-verse red-letter references apply to every Bible module,
-            # including ones imported before this list was added.
-            d["has_redletter"] = bool(redletter.RED_LETTER_VERSES) or d.get(
-                "has_redletter", False)
         d.pop("heading_count", None)
         d.pop("notes_count", None)
         d.pop("xrefs_count", None)
         d.pop("heads_count", None)
-        d.pop("redwords", None)
+        d.pop("redwords", None)  # legacy column, dropped by migration 4
         d.pop("error", None) if d.get("error") is None else None
         # Re-derive the language name on the way out, not just on install.  It is
         # stored, so a row written before a code had a friendly name keeps the
@@ -258,13 +251,6 @@ def list_all(*, type_: str | None = None, lang: str | None = None,
     return [Module.from_row(r) for r in conn.execute(q, a)]
 
 
-def languages_present() -> list[tuple[str, int]]:
-    conn = db.connect()
-    return [(r["lang"] or "und", r["n"]) for r in conn.execute(
-        "SELECT lang, COUNT(*) n FROM module WHERE installed_at>0 "
-        "GROUP BY lang ORDER BY n DESC")]
-
-
 # --------------------------------------------------------------------------
 # Link-set compatibility -- the rule the whole workspace rests on
 # --------------------------------------------------------------------------
@@ -284,13 +270,6 @@ def link_map() -> dict[str, list[str]]:
         out[m.id] = [o.id for o in mods
                      if o.id != m.id and (m.link_types() & o.link_types())]
     return out
-
-
-def link_index_types(a: str, b: str) -> list[str]:
-    ma, mb = get(a), get(b)
-    if not ma or not mb:
-        return []
-    return sorted(ma.link_types() & mb.link_types())
 
 
 # --------------------------------------------------------------------------
@@ -377,8 +356,6 @@ def _segs_of(item) -> list[Seg]:
     these are encyclopaedia and grammar articles with no tagging in them to
     lose, and a span table pointing into text that has moved is worse than none.
     """
-    if item.extra.get("_segs"):
-        return item.extra["_segs"]
     text = item.text
     if "{{" in text or "[[" in text:
         ck = (item.extra.get("_mid", ""), item.key)
@@ -412,7 +389,9 @@ def read(module_id: str, cursor: dict | None = None, opts: dict | None = None,
     # keys in the order given is the whole point, so they are not sorted and not
     # grouped -- a list is a path through the Bible, not a concordance.
     keys = cursor.get("keys") or []
-    if keys and m.reader == "verse":
+    if keys and m.reader in ("verse", "date", "article", "book", "topic"):
+        # Explicit key lists are also how a generated reading plan opens several
+        # assigned sections in the resource's own reader, without duplicating it.
         return _read_keys(m, cursor, o, keys)
     if m.reader == "audio":
         from . import audio
@@ -444,8 +423,9 @@ def _read_keys(m: Module, cursor: dict, o: RenderOpts,
         if row is None:
             missing.append(k)
             continue
-        items.append(_mk_item(row, o, mark_redletter=m.is_bible))
-    c = Content(m.id, m.name, "verse", cursor=cursor)
+        items.append(_mk_item(row, o))
+    kind = "verse" if m.reader in ("verse", "date") else m.reader
+    c = Content(m.id, m.name, kind, cursor=cursor)
     c.items = items
     c.ref_label = cursor.get("list_name") or f"{len(items)} passages"
     c.section_title = cursor.get("list_name") or ""
@@ -456,8 +436,7 @@ def _read_keys(m: Module, cursor: dict, o: RenderOpts,
     return c
 
 
-def _mk_item(row, o: RenderOpts, *, with_html=True,
-             mark_redletter=False) -> Item:
+def _mk_item(row, o: RenderOpts, *, with_html=True) -> Item:
     it = Item(key=row["key"], label=row["ref_label"], title=row["title"] or "",
               text=row["text"] or "", extra={})
     try:
@@ -487,8 +466,6 @@ def _mk_item(row, o: RenderOpts, *, with_html=True,
         _b = _c = _v = None
     if _b and _c and _v:
         it.extra["osis"] = f"{_b}.{_c}.{_v}"
-        if mark_redletter and redletter.has_red_letter_verse(_b, _c, _v):
-            it.extra["_segs"] = redletter.mark_verse_segments(_segs_of(it))
     if with_html:
         it.html = _render(it, o)
     return it
@@ -496,6 +473,45 @@ def _mk_item(row, o: RenderOpts, *, with_html=True,
 
 def _read_bible(m: Module, cursor: dict, o: RenderOpts, span: str, context: int) -> Content:
     conn = db.connect()
+    # A devotional day can assign several chapters. Accept an explicit ordered
+    # chapter list so the existing Bible pane can render all of them together,
+    # with a chapter boundary on each first verse. Ordinary Bible navigation
+    # continues through the single-chapter path below.
+    refs = cursor.get("refs")
+    if isinstance(refs, list) and refs:
+        items = []
+        first_ref = None
+        labels = []
+        for ref_text in refs:
+            parsed = canon.parse_ref(str(ref_text or ""), m.v11n or "KJV")
+            f = next(iter(parsed.refs()), None) if parsed else None
+            if not f or not f.book or not f.chapter:
+                continue
+            first_ref = first_ref or f
+            bk = canon.BOOK_BY_OSIS.get(f.book)
+            label = (bk.name if bk else f.book) + " " + str(f.chapter)
+            labels.append(label)
+            rows = conn.execute(
+                "SELECT * FROM unit WHERE module_id=? AND book=? AND chapter=? "
+                "ORDER BY verse", (m.id, f.book, f.chapter)).fetchall()
+            for row in rows:
+                item = _mk_item(row, o)
+                if not any(x.extra.get("new_ch") == label for x in items):
+                    item.extra["new_ch"] = label
+                items.append(item)
+        c = Content(m.id, m.name, "verse",
+                    cursor={"ref": canon.format_ref(first_ref) if first_ref else "",
+                            "refs": refs, "span": "chapter"},
+                    ref_label=" · ".join(labels))
+        c.items = items
+        if first_ref:
+            # Chapter headings below carry the per-chapter Day marker; avoid a
+            # duplicate first-chapter title above the passage.
+            c.section_title = ""
+            c.context = _bible_context(m, first_ref, context)
+        if not items:
+            c.notices.append("No text was found for this devotional reading.")
+        return c
     rr = _cursor_to_range(m, cursor, span)
     rows = conn.execute(
         "SELECT * FROM unit WHERE module_id=? AND book=? AND chapter=? "
@@ -521,11 +537,11 @@ def _read_bible(m: Module, cursor: dict, o: RenderOpts, span: str, context: int)
                     "This module's notes carry chapter:verse but no book name, "
                     "so they cannot be opened by reference. They are listed "
                     "here and are fully searchable.")
-                c.items = [_mk_item(r, o, mark_redletter=m.is_bible) for r in listed]
+                c.items = [_mk_item(r, o) for r in listed]
         return c
     bk = canon.BOOK_BY_OSIS.get(rows[0]["book"])
     c.section_title = (bk.name if bk else rows[0]["book"]) + " " + str(rows[0]["chapter"])
-    c.items = [_mk_item(r, o, mark_redletter=m.is_bible) for r in rows]
+    c.items = [_mk_item(r, o) for r in rows]
     c.context = _bible_context(m, rr.start, context)
     return c
 
@@ -729,6 +745,27 @@ def _read_date(m: Module, cursor: dict, o: RenderOpts) -> Content:
                     "it is a book, so it is shown as one. " + key + " has no entry.")
                 return c
         return c
+    # A generated devotion stores each day's verses as their own units, so the
+    # pane renders exactly what a Bible pane renders: one item per verse,
+    # with the copied span tables for Strong's markings.
+    try:
+        meta = json.loads(r["extra"] or "{}") or {}
+        if not isinstance(meta, dict):
+            meta = {}
+    except (json.JSONDecodeError, TypeError):
+        meta = {}
+    vlist = meta.get("verses") or []
+    if isinstance(vlist, list) and vlist:
+        rows = conn.execute(
+            "SELECT * FROM unit WHERE module_id=? AND key IN (%s) ORDER BY ord"
+            % ",".join(["?"] * len(vlist)), (m.id, *vlist)).fetchall()
+        if rows:
+            c.items = [_mk_item(row, o) for row in rows]
+            c.kind = "verse"
+            c.section_title = r["title"] or ""
+            c.ref_label = r["ref_label"]
+            c.cursor = {"date": key}
+            return c
     c.items = [_mk_item(r, o)]
     c.ref_label = r["ref_label"]
     c.section_title = r["title"] or ""
@@ -978,7 +1015,7 @@ def article_index(m: Module, bucket: str = "", limit: int = 400) -> dict:
 # --------------------------------------------------------------------------
 
 def chapter_list(m: Module) -> list[dict]:
-    if not m.is_bible:
+    if m.reader != "verse":
         return []
     conn = db.connect()
     rows = conn.execute(

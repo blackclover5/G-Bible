@@ -962,12 +962,12 @@ The optional arguments are for the cases that are not the common one:
 | Which words of a source carried a claim | `gbible/ai.py` (`fragments`, `_fragment`, `_sentences`) |
 | JSON endpoints + SSE stream | `gbible/server/app.py` (`ai/*`, `/api/ai/stream`) |
 | Chat panel, actions, scope picker, recent conversations, the passage you are reading, settings screen, usage card | `gbible/web/ai.js`, `#v-ai`, `#v-aisettings` |
-| Selection-card actions | `gbible/web/tools.js` (`SelCard`) |
-| Passage AI section | `gbible/web/app.js` (`Study.openPassage`) |
+| Selection-card actions | `gbible/web/tools-selcard.js` (`SelCard`) |
+| Passage AI section | `gbible/web/app-core.js` (`Study.openGuidePane`) |
 | Smart Search button | `gbible/web/workspace.js` (`Search.smart`), `#s-smart` |
-| Topics AI section, its questions, and the follow-up bridge | `gbible/web/app.js` (`Study.openTopic`, `Study.openFact`, `Study.guideAi`), `#st-sec-ai` |
+| Topics AI section, its questions, and the follow-up bridge | `gbible/web/app-core.js` (`Study.openTopic`, `Study.openFact`, `Study.guideAi`), `#st-sec-ai` |
 | What the two guides share: the topic entries and the verses, glosses, concordance, maps and Strong's | `gbible/study.py` (`_fact_rows`, `_extra_sections`) |
-| Sermon research buttons | `gbible/web/tools.js` (`SermonBuilder`), `#sb-research` |
+| Sermon research buttons | `gbible/web/tools-sermon.js` (`SermonBuilder`), `#sb-research` |
 | Keys | `api-credentials.json`, ids `ai-<provider>` (`gbible/api/registry.py`) |
 | Choice of provider/model | `setting` table, key `ai` |
 | Usage record | `ai_usage` table (`gbible/db.py` schema), one row per call |

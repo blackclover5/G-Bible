@@ -301,7 +301,7 @@ def run() -> str:
     wanted = set(re.findall(r"\$\(\s*'#([A-Za-z0-9_-]+)'\s*\)", src))
     missing_ids = sorted(wanted - known)
     if missing_ids:
-        problems.append("app.js selects ids that exist neither in index.html nor "
+        problems.append("app-core.js selects ids that exist neither in index.html nor "
                         "anywhere in the script: " + ", ".join(missing_ids))
     templates = set(m for m in re.findall(
         r"\$\(\s*'#([A-Za-z0-9_-]+)-[^']*\$\{", src) if m not in known)
@@ -314,7 +314,7 @@ def run() -> str:
         return any(i.startswith(t + "-") for i in ids_in_html)
     templates = sorted(t for t in templates if not stem_covered(t))
     if templates:
-        problems.append("app.js builds ids from a template whose stem is never "
+        problems.append("app-core.js builds ids from a template whose stem is never "
                         "defined: " + ", ".join(templates))
     routes = set()
     for route_file in ROUTE_FILES:
@@ -325,7 +325,7 @@ def run() -> str:
     called |= set(re.findall(r'post\(\s*\'([^\']+)\'', src))
     unknown = sorted(p for p in called if p not in routes and "/" in p)
     if unknown:
-        problems.append("app.js calls endpoints that are not registered: "
+        problems.append("app-core.js calls endpoints that are not registered: "
                         + ", ".join(unknown))
 
     problems.extend(lock_check())

@@ -9,7 +9,7 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from .. import ai, db, publish, sync, tts
+from .. import ai, db, errorlog, publish, sync, tts
 from .routes import (
     CSRF_HEADER, CSRF_TOKEN, FILE_ROUTES, VERSION, _ai_context, route,
 )
@@ -487,7 +487,11 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith("/file/"):
             return self._serve_file(path[6:], params)
         if path.startswith("/api/"):
-            out = route(path[5:], params)
+            try:
+                out = route(path[5:], params)
+            except Exception as e:
+                errorlog.log_exception("api", e)
+                out = {"ok": False, "error": f"{type(e).__name__}: {e}"}
             body = json.dumps(out, ensure_ascii=False, default=str).encode("utf-8")
             self._send(200, body, "application/json; charset=utf-8")
             return
@@ -521,7 +525,11 @@ class Handler(BaseHTTPRequestHandler):
                     urllib.parse.parse_qs(raw.decode("utf-8", "replace")).items()}
         if not isinstance(body, dict):
             body = {"value": body}
-        out = route(u.path[5:] if u.path.startswith("/api/") else u.path, body)
+        try:
+            out = route(u.path[5:] if u.path.startswith("/api/") else u.path, body)
+        except Exception as e:
+            errorlog.log_exception("api", e)
+            out = {"ok": False, "error": f"{type(e).__name__}: {e}"}
         payload = json.dumps(out, ensure_ascii=False, default=str).encode("utf-8")
         self._send(200, payload, "application/json; charset=utf-8")
 
@@ -566,6 +574,8 @@ class Handler(BaseHTTPRequestHandler):
         if target.name == "index.html":
             data = data.replace(b"__GBIBLE_CSRF_TOKEN__",
                                 CSRF_TOKEN.encode("ascii"))
+            data = data.replace(b"__GBIBLE_VERSION__",
+                                VERSION.encode("ascii"))
         self._send(200, data, ctype)
 
 

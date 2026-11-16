@@ -527,7 +527,8 @@ def run() -> bool:
                 tid == "Other", tid
         # The override that motivated the whole module.
         assert placement.type_for("crosswire-tsk", "Commentary") == "CrossReference"
-        assert placement.slot_for("tsk", "Commentary").reader == "verse"
+        assert placement.slot_for_type(
+            placement.type_for("tsk", "Commentary")).reader == "verse"
         # Overrides must resolve on both the bare and the namespaced id.
         for mid in ("tsk", "crosswire-tsk"):
             assert placement.type_for(mid, "Commentary") == "CrossReference", mid
@@ -804,7 +805,7 @@ def run() -> bool:
         # An installed module is a zip, a SWORD directory, or a source file.
         MATERIAL_EXT = {".usfm", ".bzz", ".bzs", ".bzv", ".zip", ".osis", ".sql",
                         ".db", ".mp3", ".ogg", ".m4a", ".wav", ".flac"}
-        # Source is code, and code grows with the app: app.js is 9,700 lines of
+        # Source is code, and code grows with the app: app-core.js is ~1,230 lines of
         # hand-written JavaScript. Holding it to the same 400 KB as a stray
         # archive meant failing on the file the project is named for, so the
         # cap below applies to what it was actually for -- a Bible text or an
@@ -2808,8 +2809,8 @@ def run() -> bool:
         absent the check still runs the cheap structural tests and says so.
         """
         import re
-        src = open("gbible/web/app.js", encoding="utf-8").read()
-        assert "\x00" not in src, "app.js contains a NUL byte"
+        src = open("gbible/web/app-core.js", encoding="utf-8").read()
+        assert "\x00" not in src, "app-core.js contains a NUL byte"
         assert src.count("{") == src.count("}"), \
             f"braces unbalanced: {src.count('{')} vs {src.count('}')}"
         assert src.count("(") == src.count(")"), \
@@ -2826,7 +2827,7 @@ def run() -> bool:
         except Exception as exc:
             line = getattr(exc, "lineNumber", "?")
             ctx = src.splitlines()[int(line) - 1] if str(line).isdigit() else ""
-            raise AssertionError(f"app.js does not parse at line {line}: "
+            raise AssertionError(f"app-core.js does not parse at line {line}: "
                                  f"{exc}\n    {ctx.strip()[:100]}")
         return f"{len(src.splitlines())} lines parse cleanly"
 
@@ -2845,8 +2846,8 @@ def run() -> bool:
         parse perfectly well: only the two together are the bug.
         """
         import re, glob, os
-        # After the front-end split, the call site lives in app.js (mirrored
-        # by app-core.js, which is what index.html actually loads) and the
+        # The call site lives in app-core.js, which is what index.html
+        # actually loads, and the definition lives in speech.js.  Check both.
         # definition lives in speech.js.  Check all of them so a move does not
         # silently drop the guard.
         sources = {}
@@ -4209,8 +4210,11 @@ def run() -> bool:
 
     def t_export_formats():
         from gbible import publish
-        mods = ["open-bibles-eng-kjv", "open-biles-eng-bsb"] \
-            if False else ["open-bibles-eng-kjv", "open-bibles-eng-bsb"]
+        mods = [m for m in ("open-bibles-eng-kjv", "open-bibles-eng-bsb")
+                if _installed(m)]
+        if len(mods) < 2:
+            return Skip("open-bibles-eng-kjv and open-bibles-eng-bsb are "
+                        "not installed")
         for fmt in ("md", "txt", "html", "rtf", "pdf"):
             r = publish.passage_document("John 3:16", mods, fmt=fmt)
             assert r.get("ok"), (fmt, r)
@@ -4239,7 +4243,11 @@ def run() -> bool:
         read that, so there is no second list to forget.
         """
         from gbible import publish
-        mods = ["open-bibles-eng-kjv", "open-bibles-eng-bsb"]
+        mods = [m for m in ("open-bibles-eng-kjv", "open-bibles-eng-bsb")
+                if _installed(m)]
+        if len(mods) < 2:
+            return Skip("open-bibles-eng-kjv and open-bibles-eng-bsb are "
+                        "not installed")
         with a_note():
             for kind in ("passage", "notes", "bibliography"):
                 declared = [f["id"] for f in publish.document_formats(kind)]
@@ -5047,6 +5055,8 @@ def run() -> bool:
         if _skip:
             return Skip(_skip)
         conn = _db.connect()
+        if not _installed("open-bibles-eng-kjv"):
+            return Skip("open-bibles-eng-kjv is not installed")
         row = conn.execute(
             "SELECT uid, key, module_id FROM pos_unit "
             "WHERE module_id='open-bibles-eng-kjv' AND key='John 3:16'").fetchone()

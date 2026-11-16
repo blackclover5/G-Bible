@@ -70,7 +70,7 @@ INVERSE_SOURCES: list[tuple[str, int, int, int]] = [("Luke", 3, 23, 38)]
 # "<name> became the father of <child>" rather than a pronoun with an
 # understood subject.
 PREFERRED = ["open-bibles-eng-web", "open-bibles-eng-bbe", "crosswire-acv",
-             "open-bibles-eng-web", "ebible-eng-web", "open-bibles-eng-kjv",
+             "open-bibles-eng-web", "ebible-engwebp", "open-bibles-eng-kjv",
              "crosswire-kjv"]
 
 # Words that end a name.  Anything capitalised and not in here continues it, so
@@ -152,7 +152,8 @@ VARIANTS = {
     "perez": "perez", "pharez": "perez", "fares": "perez", "peretz": "perez",
     "zeruah": "zeruah", "zeruach": "zeruah",
     "judah": "judah", "jude": "judah",
-    "salmon": "salmon",
+    "abia": "abijah",                    # KJV: 1 Chr 3:10 and Matt 1:7 spell Abijah "Abia"
+    "salmon": "salmon", "salma": "salmon", "sala": "salmon",   # Salma/Sala/Salmon
     "boaz": "boaz",
     "amminadab": "amminadab", "aminadab": "amminadab",
     "nahshon": "nahshon", "nahesson": "nahshon",

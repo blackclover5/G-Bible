@@ -5,6 +5,25 @@ const App = {
     // slow request left the page rendering but completely unresponsive, with no
     // error shown anywhere.  Interactive-but-empty beats dead.
     this.bind();
+    try {
+      const meta = document.querySelector('meta[name="gbible-version"]');
+      const v = meta ? meta.content : '';
+      const last = localStorage.getItem('gbible:last-version');
+      if (v && v !== '__GBIBLE_VERSION__' && last && last !== v) {
+        toast('Updated to ' + v + '. See About for release notes.', 'ok');
+      }
+      if (v) localStorage.setItem('gbible:last-version', v);
+    } catch (e) {}
+    document.addEventListener('keydown', (e) => {
+      if (e.target && /input|textarea|select/i.test(e.target.tagName)) return;
+      if (e.key === '/') { e.preventDefault(); const s = document.getElementById('sq'); if (s) { App.show('search'); s.focus(); } }
+    });
+    /* The pill is the quickest honest answer to "did anything break?". */
+    const pill = document.getElementById('status-errors');
+    if (pill) {
+      pill.onclick = () => { App.show('logs'); };
+    }
+    if (typeof refreshErrorPill === 'function') refreshErrorPill();
     Appearance.init();
     try {
       const st = await api('status');
@@ -14,7 +33,15 @@ const App = {
       const tax = await api('taxonomy');
       S.tax = tax; S.types = tax.types; S.subjects = tax.subjects; S.langs = tax.languages;
       await this.loadLibrary();
-      RecommendedPrompt.maybeShow().catch(() => {});
+      // Tour runs first; the recommended-modules prompt only appears after
+      // the tour complete(s) or is dismissed — they used to fire together.
+      if (typeof Tour !== 'undefined') {
+        Tour.maybeStart()
+            .then(() => RecommendedPrompt.maybeShow().catch(() => {}))
+            .catch(() => {});
+      } else {
+        RecommendedPrompt.maybeShow().catch(() => {});
+      }
       await this.loadWorkspace();
       // Load the highlights up front: mark() reads this cache while painting a
       // pane, so without this a page reload shows no marks at all until
@@ -32,6 +59,7 @@ const App = {
       // that the data is here.
       if (S.view === 'library') Library.load();
       if (S.view === 'today') Dashboard.load();
+      this.restoreNotice();
     } catch (err) {
       // Say so.  A dead UI with a silent console is the hardest kind of bug.
       const msg = (err && err.message) || String(err);
@@ -39,6 +67,63 @@ const App = {
       console.error('gbible boot failed', err);
       toast('Could not reach the local server: ' + msg, 'err');
     }
+  },
+
+  /* A .gbz restore just applied and the page reloaded to pick everything up.
+     Say what landed in a small banner instead of a dialog — modal() replaces
+     whatever it holds, so a restore notice opened beside the guided tour or
+     the recommended-modules prompt would simply erase it, or be erased.
+     A dismissible banner coexists with both without a fight. */
+  async restoreNotice() {
+    let s = null;
+    try { s = JSON.parse(sessionStorage.getItem('gbible:last-restore') || 'null'); } catch (e) { return; }
+    if (!s) return;
+    try { sessionStorage.removeItem('gbible:last-restore'); } catch (e) { /* harmless */ }
+    const applied = Number(s.applied) || 0;
+    const bits = [applied + ' record' + (applied === 1 ? '' : 's') + ' restored'];
+    if (Number(s.existed)) bits.push(s.existed + ' already here');
+    if (Number(s.conflict)) bits.push(s.conflict + ' kept yours');
+    if (s.ai_keys_added || s.ai_keys_kept) {
+      bits.push('AI keys: ' + (s.ai_keys_added || 0) + ' restored, '
+        + (s.ai_keys_kept || 0) + ' already set');
+    }
+    const missing = Array.isArray(s.missing) ? s.missing : [];
+    const notes = Array.isArray(s.notes) ? s.notes.filter(Boolean) : [];
+    const errors = Array.isArray(s.errors) ? s.errors.filter(Boolean) : [];
+
+    const bar = document.createElement('div');
+    bar.style.cssText = 'position:fixed;bottom:22px;left:50%;transform:translateX(-50%);'
+      + 'z-index:150;background:#1d2130;border:1px solid #3a4060;color:#e6e8f0;'
+      + 'border-radius:10px;padding:10px 12px 10px 14px;max-width:80vw;'
+      + 'box-shadow:0 10px 34px #000c;display:flex;gap:12px;align-items:flex-start;'
+      + 'font-size:12.5px;line-height:1.45';
+    const detail = [];
+    detail.push('<div><b>Restore complete.</b><div class="tiny muted" style="margin-top:2px">'
+      + esc(bits.join(' · ')) + '</div>');
+    errors.forEach(x => detail.push('<div class="tiny" style="color:#f0a0a5">Not applied: ' + esc(x) + '</div>'));
+    notes.forEach(x => detail.push('<div class="tiny muted">' + esc(x) + '</div>'));
+    if (missing.length) {
+      detail.push('<div class="tiny" style="color:var(--amber);margin-top:2px">Not installed yet: <b>'
+        + esc(missing.join(', ')) + '</b> — those records stay unreadable until the matching modules are installed.</div>');
+    }
+    detail.push('</div>');
+    bar.innerHTML = detail.join('');
+
+    const right = document.createElement('div');
+    right.style.cssText = 'display:flex;flex-direction:column;gap:6px;flex:none;align-items:flex-end';
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'btn tiny'; closeBtn.textContent = 'Dismiss';
+    closeBtn.onclick = () => { try { bar.remove(); } catch (e) {} };
+    right.appendChild(closeBtn);
+    if (missing.length) {
+      const openBtn = document.createElement('button');
+      openBtn.className = 'btn tiny primary'; openBtn.textContent = 'Open Store';
+      openBtn.onclick = () => { try { bar.remove(); } catch (e) {} App.show('store'); };
+      right.appendChild(openBtn);
+    }
+    bar.appendChild(right);
+    document.body.appendChild(bar);
+    // Let it stay as long as it needs; the reader closes it.
   },
 
   async loadLibrary() {
@@ -97,6 +182,9 @@ const App = {
     S.linkSets = r.link_sets || ['A', 'B', 'C', 'D', 'E', 'F'];
     S.linkGroups = (await api('workspace/linksets')).groups || {};
     this.renderWorkspace();
+    /* Linked panes were saved with their own cursors; bring them into step so
+     * a restored link set shows the same passage everywhere. */
+    try { await Workspace.restoreLinks(); } catch (e) { /* never block a restore */ }
   },
 
   show(v) {
@@ -130,9 +218,13 @@ const App = {
     if (v === 'memorization') { Memorization.load(); }
     if (v === 'workflows') { Flows.load(); }
     if (v === 'sync') Sync.load();
+    if (v === 'logs') Logs.load();
     if (v === 'plans') { Plans.load(); }
+    if (v === 'devotions') { DevotionCreator.load(); }
     if (v === 'prayer') { Prayer.load(); }
     if (v === 'clippings') { Clippings.load(); }
+    if (v === 'favorites') { Favorites.load(); }
+    if (v === 'canvas') { Canvas.load(); }
   },
 
   /* ------------------------------------------------------------ tiles */
@@ -466,7 +558,25 @@ const App = {
     const tools = el('div', 'pane-tools');
     const body = el('div', 'pane-body');
     pane.appendChild(tools); pane.appendChild(body);
-    tools.appendChild(el('span', 'mod', m ? m.name : (p.view === 'guide' ? 'Passage' : '(none)')));
+    const modLabel = el('span', 'mod', m ? m.name : (p.view === 'guide' ? 'Passage' : '(none)'));
+    tools.appendChild(modLabel);
+    /* Translation switcher: swap this pane's Bible for another installed one,
+     * keeping the pane, its link set and its reading position. */
+    if (m && m.is_bible) {
+      const others = (S.modules || []).filter(x => x.is_bible && x.id !== m.id);
+      if (others.length) {
+        const sel = el('select', 'mod-switch');
+        sel.title = 'Switch translation in this pane';
+        sel.innerHTML = '<option value="">→ translation</option>'
+          + others.map(b => '<option value="' + esc(b.id) + '">' + esc(b.name) + '</option>').join('');
+        sel.onchange = async () => {
+          if (!sel.value) return;
+          await Workspace.switchModule(p.id, sel.value);
+          sel.selectedIndex = 0;
+        };
+        tools.appendChild(sel);
+      }
+    }
     /* Resolves the verse a button should act on: the user's clicked selection,
      * falling back to the first item in the pane, then to verse 1 of the current
      * chapter. Defined once here so every verse button (Study, Visual, Compare,
@@ -607,6 +717,137 @@ const App = {
     }
 
     /* -- reader-specific controls -- */
+    /* One suite of controls for every reader: a Bible pane and a devotional
+     * pane differ only in the picker (a calendar instead of books and
+     * chapters); parallax stepping, edition toggle, filters, multiple display,
+     * Visual, the study suite, copy and read-aloud behave the same on both.
+     * `anchor()` is what the study suite reads: a verse on a Bible pane, the
+     * day's first span on a devotional. */
+    const anchor = () => {
+      if (m.reader === 'verse') {
+        const v = here();
+        return v ? { key: v.key, label: v.label, source: m.id } : null;
+      }
+      if (m.reader === 'date') {
+        const c = p._content || {};
+        const it = (c.items || [])[0];
+        const ex = (it && it.extra) || {};
+        const spans = ex.spans || [];
+        return {
+          key: (ex.span_keys && ex.span_keys[0]) || '',
+          label: spans[0] || (c.section_title || (it && it.title) || ''),
+          source: ex.source_id || '',
+          item: it,
+        };
+      }
+      return null;
+    };
+    /* Parallel resources: Bibles cycle Bibles, devotionals cycle devotionals —
+     * the server filters by type, so the same two buttons serve both. */
+    const parP = el('button', '', '‹‖'); parP.title = 'Previous parallel resource';
+    parP.onclick = async () => {
+      const r = await Workspace.parallelStep(p.module_id, -1);
+      if (!r || !r.ok) toast('No parallel resource.', 'warn');
+    };
+    const parN = el('button', '', '‖›'); parN.title = 'Next parallel resource';
+    parN.onclick = async () => {
+      const r = await Workspace.parallelStep(p.module_id, 1);
+      if (!r || !r.ok) toast('No parallel resource.', 'warn');
+    };
+    const ed = el('button', '', '¶'); ed.title = 'Toggle reader’s edition (clean text)';
+    ed.onclick = () => {
+      const clean = !(p.options && p.options.show_notes === false);
+      Workspace.edition(p.id, clean ? 'clean' : 'study');
+    };
+    const vf = el('button', '', 'F'); vf.title = 'Filters — highlight saved queries here (click for list)';
+    vf.onclick = () => VisualFilters.dialog();
+    vf.ondblclick = (e) => {
+      e.stopPropagation();
+      VisualFilters.on = !VisualFilters.on;
+      toast('Filters ' + (VisualFilters.on ? 'on.' : 'off.'));
+      if (S.layout) App.loadWorkspace();
+    };
+    const vis = el('button', '', 'Visual');
+    vis.title = m.reader === 'date'
+      ? 'Visual copy — render this day as an image'
+      : 'Visual copy — render this verse as an image';
+    vis.onclick = async () => {
+      try {
+        const a = anchor();
+        if (!a || !a.key) { toast('Nothing to copy.', 'warn'); return; }
+        /* Read only the key the action needs — a verse on a Bible pane, an
+         * entry on a devotional — not the whole chapter, and not the whole
+         * devotion. */
+        const r = await api('read', { id: m.id, cursor: { keys: [a.key] },
+                                     span: 'verse', context: 0 });
+        if (!r.ok || !r.items || !r.items.length) { toast('Nothing to copy.', 'warn'); return; }
+        const it = r.items[0];
+        const ref = it.title || it.label || a.label || '';
+        let text = (it.text || '').trim();
+        if (m.reader === 'date') {
+          /* A whole devotion day does not fit on a card; its first sentence
+           * does. The image is for sharing one line, not a full devotion. */
+          const mt = /^[^.!?]*[.!?]/.exec(text);
+          text = mt ? mt[0].trim() : text.slice(0, 220);
+        }
+        if (!text) { toast('Nothing to render.', 'warn'); return; }
+        const canvas = document.createElement('canvas');
+        canvas.width = 1080; canvas.height = 540;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { toast('Cannot render image.', 'warn'); return; }
+        const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        grad.addColorStop(0, '#1e2a3a'); grad.addColorStop(1, '#0f1724');
+        ctx.fillStyle = grad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#f5f1e8';
+        ctx.font = 'italic 34px Georgia, serif';
+        ctx.textAlign = 'center';
+        const words = text.split(' ');
+        const lines = []; let line = '';
+        const maxW = canvas.width - 120;
+        words.forEach(w => {
+          const test = line ? line + ' ' + w : w;
+          if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+          else line = test;
+        });
+        if (line) lines.push(line);
+        const lineH = 46;
+        const startY = (canvas.height - lines.length * lineH) / 2 - 10;
+        lines.forEach((ln, i) => ctx.fillText(ln, canvas.width / 2, startY + i * lineH));
+        ctx.font = 'bold 22px Georgia, serif';
+        ctx.fillStyle = '#c9a961';
+        ctx.fillText(ref + (m.name ? '  ·  ' + m.name : ''), canvas.width / 2,
+                     startY + lines.length * lineH + 30);
+        const done = (blob) => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = (ref.replace(/[^a-z0-9]+/gi, '-') || 'verse') + '.png';
+          document.body.appendChild(a); a.click(); a.remove();
+          URL.revokeObjectURL(url);
+          toast('Saved image.');
+        };
+        if (canvas.toBlob) { canvas.toBlob(done, 'image/png'); }
+        else { done(canvas.msToBlob ? canvas.msToBlob() : null); }
+      } catch (e) {
+        toast('Visual copy failed: ' + (e && e.message ? e.message : String(e)), 'warn');
+      }
+    };
+    /* Multiple Book Display: optional parallel resource in this tab. Both
+     * reader kinds filter by their own; a devotional pane pairs with another
+     * devotional. */
+    const parSel = el('select', '');
+    parSel.title = 'Parallel resource in this tab (Multiple Book Display)';
+    parSel.appendChild(new Option('Parallel: none', ''));
+    (S.modules || []).filter(x => x.reader === m.reader && x.id !== m.id)
+      .forEach(x => parSel.appendChild(new Option(x.name || x.id, x.id)));
+    parSel.value = (p.options && p.options.parallel) || '';
+    parSel.onchange = async () => {
+      p.options = p.options || {};
+      p.options.parallel = parSel.value || '';
+      await post('workspace/pane', { pane: p.id, options: p.options });
+      if (S.layout) App.loadWorkspace();
+    };
+    const mkNavBtn = (label, title, fn) => { const b = el('button', '', label); b.title = title; b.onclick = fn; return b; };
+
     if (m.reader === 'verse') {
       const pickerWrap = el('div', 'ref-picker-wrap');
       const box = el('button', 'refbox ref-picker-trigger', 'Choose passage');
@@ -727,132 +968,130 @@ const App = {
       const nc = el('button', '', '❯'); nc.title = 'Next chapter';
       nc.onclick = () => Reader.step(p, 'nextchapter');
       tools.append(prev, pc, pickerWrap, nc, next);
-      /* Pack 6: parallel prev/next steps through same-type resources in
-       * priority order; the edition toggle swaps study/clean rendering. */
-      const parP = el('button', '', '‹‖'); parP.title = 'Previous parallel resource';
-      parP.onclick = async () => {
-        const r = await Workspace.parallelStep(p.module_id, -1);
-        if (!r || !r.ok) toast('No parallel resource.', 'warn');
+    } else if (m.reader === 'date') {
+      /* Same shape as a Bible pane, with a month calendar in place of the
+       * book-and-chapter picker. ◀ ❮ [date] ❯ ▶ — the two pairs both step a
+       * day, exactly as book/chapter step a verse pane. */
+      const parseKey = (s) => {
+        const mm = /^(\d{1,2})\.(\d{1,2})/.exec(String(s || ''));
+        const now = new Date();
+        return mm ? new Date(now.getFullYear(), Number(mm[1]) - 1, Number(mm[2]))
+                  : new Date(now);
       };
-      const parN = el('button', '', '‖›'); parN.title = 'Next parallel resource';
-      parN.onclick = async () => {
-        const r = await Workspace.parallelStep(p.module_id, 1);
-        if (!r || !r.ok) toast('No parallel resource.', 'warn');
+      const pad = (n) => String(n).padStart(2, '0');
+      const mmdd = (d) => pad(d.getMonth() + 1) + '.' + pad(d.getDate());
+      const longDate = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      const cur = parseKey(p.cursor && (p.cursor.date || p.cursor.key));
+      const pickerWrap = el('div', 'ref-picker-wrap');
+      const box = el('button', 'refbox ref-picker-trigger', longDate(cur));
+      box.type = 'button';
+      box.setAttribute('aria-haspopup', 'dialog');
+      box.setAttribute('aria-expanded', 'false');
+      box.title = 'Choose a date';
+      box.setAttribute('aria-label', 'Current date');
+      const picker = el('div', 'ref-picker-popover');
+      picker.hidden = true;
+      picker.setAttribute('role', 'dialog');
+      picker.setAttribute('aria-label', 'Choose a date');
+      picker.innerHTML = '<div class="ref-picker-col" style="min-width:250px">'
+        + '<div class="ref-picker-heading cal-head">'
+        + '<button class="btn tiny" id="pcal-prev" type="button" title="Previous month">‹</button>'
+        + '<span class="tiny" id="pcal-month"></span>'
+        + '<button class="btn tiny" id="pcal-next" type="button" title="Next month">›</button>'
+        + '</div>'
+        + '<div class="pcal-grid" id="pcal-days"></div>'
+        + '<div class="ref-picker-chapters" style="padding:4px">'
+        + '<button class="ref-picker-choice ref-picker-chapter" id="pcal-today" type="button">Today</button>'
+        + '</div></div>';
+      pickerWrap.append(box, picker);
+      tools.appendChild(pickerWrap);
+      let pickerView = new Date(cur.getFullYear(), cur.getMonth(), 1);
+      let pickerCloseEvents = null;
+      const closePicker = () => {
+        picker.hidden = true;
+        box.setAttribute('aria-expanded', 'false');
+        if (pickerCloseEvents) {
+          document.removeEventListener('pointerdown', pickerCloseEvents.outside, true);
+          pickerCloseEvents = null;
+        }
       };
-      const ed = el('button', '', '¶'); ed.title = 'Toggle reader’s edition (clean text)';
-      ed.onclick = () => {
-        const clean = !(p.options && p.options.show_notes === false);
-        Workspace.edition(p.id, clean ? 'clean' : 'study');
-      };
-      const vf = el('button', '', 'F'); vf.title = 'Filters — highlight saved queries here (click for list)';
-      vf.onclick = () => VisualFilters.dialog();
-      vf.ondblclick = (e) => {
-        e.stopPropagation();
-        VisualFilters.on = !VisualFilters.on;
-        toast('Filters ' + (VisualFilters.on ? 'on.' : 'off.'));
-        if (S.layout) App.loadWorkspace();
-      };
-      tools.append(parP, parN, ed, vf);
-      /* Multiple Book Display: optional parallel resource in this tab. */
-      const parSel = el('select', '');
-      parSel.title = 'Parallel resource in this tab (Multiple Book Display)';
-      parSel.appendChild(new Option('Parallel: none', ''));
-      (S.modules || []).filter(x => x.reader === 'verse' && x.id !== m.id)
-        .forEach(x => parSel.appendChild(new Option(x.name || x.id, x.id)));
-      parSel.value = (p.options && p.options.parallel) || '';
-      parSel.onchange = async () => {
-        p.options = p.options || {};
-        p.options.parallel = parSel.value || '';
-        await post('workspace/pane', { pane: p.id, options: p.options });
-        if (S.layout) App.loadWorkspace();
-      };
-      tools.appendChild(parSel);
-      /* Visual Copy: render the current verse as a shareable image. */
-      const vis = el('button', '', 'Visual');
-      vis.title = 'Visual copy — render this verse as an image';
-      vis.onclick = async () => {
-        try {
-          const v = here();
-          if (!v) { toast('No verse selected. Click a verse first.', 'warn'); return; }
-          // Read only the selected verse (by its key), not the whole chapter.
-          const r = await api('read', { id: m.id, cursor: { keys: [v.key] }, span: 'verse', context: 0 });
-          if (!r.ok || !r.items || !r.items.length) { toast('Nothing to copy.', 'warn'); return; }
-          const it = r.items[0];
-          const ref = it.label || v.label || '';
-          const text = (it.text || '').trim();
-          if (!text) { toast('This verse has no text to render.', 'warn'); return; }
-          const canvas = document.createElement('canvas');
-          canvas.width = 1080; canvas.height = 540;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) { toast('Cannot render image.', 'warn'); return; }
-          // background
-          const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-          grad.addColorStop(0, '#1e2a3a'); grad.addColorStop(1, '#0f1724');
-          ctx.fillStyle = grad; ctx.fillRect(0, 0, canvas.width, canvas.height);
-          // text
-          ctx.fillStyle = '#f5f1e8';
-          ctx.font = 'italic 34px Georgia, serif';
-          ctx.textAlign = 'center';
-          // wrap text
-          const words = text.split(' ');
-          const lines = []; let line = '';
-          const maxW = canvas.width - 120;
-          words.forEach(w => {
-            const test = line ? line + ' ' + w : w;
-            if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
-            else line = test;
-          });
-          if (line) lines.push(line);
-          const lineH = 46;
-          const startY = (canvas.height - lines.length * lineH) / 2 - 10;
-          lines.forEach((ln, i) => ctx.fillText(ln, canvas.width / 2, startY + i * lineH));
-          // reference
-          ctx.font = 'bold 22px Georgia, serif';
-          ctx.fillStyle = '#c9a961';
-          ctx.fillText(ref + (m.name ? '  ·  ' + m.name : ''), canvas.width / 2, startY + lines.length * lineH + 30);
-          // download
-          const done = (blob) => {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = (ref.replace(/[^a-z0-9]+/gi, '-') || 'verse') + '.png';
-            document.body.appendChild(a); a.click(); a.remove();
-            URL.revokeObjectURL(url);
-            toast('Saved image.');
+      const drawCalendar = () => {
+        const host = $('#pcal-days', picker);
+        const label = $('#pcal-month', picker);
+        label.textContent = pickerView.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+        host.innerHTML = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+          .map(d => '<div class="pcal-dow">' + d + '</div>').join('');
+        const first = new Date(pickerView.getFullYear(), pickerView.getMonth(), 1).getDay();
+        const dim = new Date(pickerView.getFullYear(), pickerView.getMonth() + 1, 0).getDate();
+        for (let b = 0; b < first; b++) host.appendChild(el('span', 'pcal-blank'));
+        for (let d = 1; d <= dim; d++) {
+          const b = el('button', 'pcal-day', String(d));
+          b.type = 'button';
+          if (cur.getFullYear() === pickerView.getFullYear()
+              && cur.getMonth() === pickerView.getMonth() && cur.getDate() === d) {
+            b.classList.add('current');
+          }
+          b.onclick = (e) => {
+            e.stopPropagation();
+            const chosen = new Date(pickerView.getFullYear(), pickerView.getMonth(), d);
+            closePicker();
+            Reader.go(p, mmdd(chosen));
           };
-          if (canvas.toBlob) { canvas.toBlob(done, 'image/png'); }
-          else { done(canvas.msToBlob ? canvas.msToBlob() : null); }
-        } catch (e) {
-          toast('Visual copy failed: ' + (e && e.message ? e.message : String(e)), 'warn');
+          host.appendChild(b);
         }
       };
-      tools.appendChild(vis);
-      /* Pack 6: reading-plan ribbons — days covering this chapter. Guarded:
-       * a ribbon failure must never break the reader. */
-      try {
-        const mref = (p.cursor && p.cursor.ref) || '';
-        const mm = mref.match(/^(\d?\s?[A-Za-z]+)\s+(\d+)/);
-        if (mm) {
-          api('reading/ribbons', { book: mm[1].trim(), chapter: mm[2] })
-            .then(r => {
-              (r.ribbons || []).slice(0, 3).forEach(rb => {
-                const tag = el('span', 'chip', '◈ ' + (rb.title || rb.plan)
-                  + (rb.day ? ' · day ' + rb.day : ''));
-                tag.title = 'Reading plan: ' + (rb.ref || '');
-                tag.style.cursor = 'pointer';
-                tag.onclick = () => { App.show('workspace'); };
-                tools.appendChild(tag);
-              });
-            }).catch(() => {});
-        }
-      } catch (e) { /* ribbons are decorative */ }
+      box.onclick = (e) => {
+        e.stopPropagation();
+        if (!picker.hidden) { closePicker(); return; }
+        drawCalendar();
+        picker.hidden = false;
+        box.setAttribute('aria-expanded', 'true');
+        pickerCloseEvents = {
+          outside: (ev) => { if (!pickerWrap.contains(ev.target)) closePicker(); },
+        };
+        document.addEventListener('pointerdown', pickerCloseEvents.outside, true);
+      };
+      $('#pcal-prev', picker).onclick = (e) => {
+        e.stopPropagation();
+        pickerView = new Date(pickerView.getFullYear(), pickerView.getMonth() - 1, 1);
+        drawCalendar();
+      };
+      $('#pcal-next', picker).onclick = (e) => {
+        e.stopPropagation();
+        pickerView = new Date(pickerView.getFullYear(), pickerView.getMonth() + 1, 1);
+        drawCalendar();
+      };
+      $('#pcal-today', picker).onclick = (e) => {
+        e.stopPropagation();
+        closePicker();
+        Reader.go(p, mmdd(new Date()));
+      };
+      const step = (days) => {
+        const s = String((p.cursor && (p.cursor.date || p.cursor.key)) || '');
+        const mm = /^(\d{1,2})\.(\d{1,2})/.exec(s);
+        const now = new Date();
+        const d = mm ? new Date(now.getFullYear(), Number(mm[1]) - 1, Number(mm[2]))
+                     : new Date(now);
+        d.setDate(d.getDate() + days);
+        Reader.go(p, mmdd(d));
+      };
+      const prev = mkNavBtn('◀', 'Previous day', () => step(-1));
+      const next = mkNavBtn('▶', 'Next day', () => step(1));
+      const pc = mkNavBtn('❮', 'Previous day', () => step(-1));
+      const nc = mkNavBtn('❯', 'Next day', () => step(1));
+      tools.append(prev, pc, pickerWrap, nc, next);
     } else {
+      /* A map or a search-backed resource: this box takes a place name or a
+       * headword, and the person typing knows which. */
       const box = el('input', 'refbox'); box.style.width = '160px';
-      box.placeholder = m.type === 'Devotional' ? '1.15' : (m.type === 'Map' ? 'place' : 'search…');
+      box.placeholder = m.type === 'Map' ? 'place' : 'search…';
       box.value = p.cursor.key || p.cursor.date || '';
       box.onkeydown = (e) => { if (e.key === 'Enter') Reader.go(p, box.value); };
       tools.appendChild(box);
     }
-
+    tools.append(parP, parN, ed, vf);
+    tools.appendChild(parSel);
+    tools.appendChild(vis);
     const ls = el('select', '');
     ls.appendChild(new Option('Link: none', ''));
     const sets = S.linkSets || ['A', 'B', 'C', 'D', 'E', 'F'];
@@ -888,8 +1127,8 @@ const App = {
       t.onclick = () => { Reader.toggle(p, body, 'show_notes', t); };
       tools.appendChild(t);
     }
-    if (m.has_redletter) {
-      const t = el('button', 'on', 'WJ'); t.title = 'Words of Christ';
+    if (m.reader === 'verse') {
+      const t = el('button', 'on', 'WJ'); t.title = 'Words of Christ (red, where the Bible tags them)';
       t.onclick = () => { Reader.toggle(p, body, 'show_red', t); };
       tools.appendChild(t);
     }
@@ -907,7 +1146,8 @@ const App = {
     const srs = el('button', '', 'SRS'); srs.title = 'Spaced repetition — add this passage';
     srs.onclick = async () => {
       const c = p._content;
-      const ref = (c && c.ref_label) ? c.ref_label : ((p.cursor && p.cursor.ref) || '');
+      const ref = (c && c.section_title) ? c.section_title
+        : ((c && c.ref_label) ? c.ref_label : ((p.cursor && p.cursor.ref) || ''));
       if (!ref) { toast('No reference to add.', 'warn'); return; }
       const r = await api('srs/add', { ref: ref, id: m.id, key: (c && c.items && c.items[0] ? c.items[0].key : '') });
       toast(r.ok ? ('Added to SRS: ' + ref + (r.already ? ' (already there)' : '')) : (r.error || 'failed'));
@@ -922,82 +1162,98 @@ const App = {
       more.onclick = () => PanelMenu(p, m, body);
       tools.appendChild(more);
 
-      /* One click for everything installed that bears on this verse.
+      /* One click for everything installed that bears on this passage.
        *
-       * The current verse is resolved when the button is *clicked*, not now.
+       * The current passage is resolved when the button is *clicked*, not now.
        * It was read here from `r`, a variable that does not exist in this
        * function: the pane is built first and only then read, so there is no
        * result yet.  That threw "r is not defined" on every pane fill, which
        * aborted the rest of the toolbar -- so the Study, Compare and Interlinear
        * buttons had never once appeared in the reader, and the only way into
        * the study panel was right-click. */
-      if (m.reader === 'verse') {
+      if (m.reader === 'verse' || m.reader === 'date') {
+        const v = anchor();
         // If the user has clicked a verse, remember it so buttons use that verse
         // instead of always the first one in the pane.
         p.selectedVerse = p.selectedVerse || null;
         const study = el('button', '', 'Study');
         study.title = 'Commentaries, cross-references, topics, places, words';
-        study.onclick = () => { const v = here(); if (v) Study.openVerse(m.id, v.key, v.label); };
+        study.onclick = () => { if (v) Study.openVerse(v.source, v.key, v.label); };
         tools.appendChild(study);
         const pg = el('button', '', 'Passage');
         pg.title = 'Passage for the open verse';
-        pg.onclick = () => { const v = here(); if (v) Study.openPassage(v.label); };
+        pg.onclick = () => { if (v) Study.openPassage(v.label); };
         tools.appendChild(pg);
         const info = el('button', '', 'Info');
         info.title = 'Follow-pane card: text, people, places, library coverage';
-        info.onclick = () => { const v = here(); if (v) InfoPane.open(v.label); };
+        info.onclick = () => { if (v) InfoPane.open(v.label); };
         tools.appendChild(info);
         const cmp = el('button', '', 'Compare');
-        cmp.title = 'The same verse in several translations';
-        cmp.onclick = () => { const v = here(); if (v) Study.openCompare(v.label); };
+        cmp.title = 'The same passage in several translations';
+        cmp.onclick = () => { if (v) Study.openCompare(v.label); };
         const mrg = el('button', 'btn tiny', 'Merge');
         mrg.title = 'Fuse several translations into one text, marking where they differ';
-        mrg.onclick = () => { const v = here(); if (v) Study.openMerge(v.label); };
+        mrg.onclick = () => { if (v) Study.openMerge(v.label); };
         cmp.after(mrg);
         tools.appendChild(cmp);
         // Interlinear needs a tagged resource; offer it when there is one.
         if (m.has_morph || m.has_strongs) {
           const il = el('button', '', 'Interlinear');
           il.title = 'Word by word: form, lemma, morphology, gloss';
-          il.onclick = () => { const v = here(); if (v) Study.openInterlinear(m.id, v.key, v.label); };
+          il.onclick = () => { if (v) Study.openInterlinear(v.source, v.key, v.label); };
           tools.appendChild(il);
           const ril = el('button', '', 'Rev. interlinear');
           ril.title = 'Reverse interlinear: English on top, original language beneath';
-          ril.onclick = () => { const v = here(); if (v) Study.openReverseInterlinear(m.id, v.key, v.label); };
+          ril.onclick = () => { if (v) Study.openReverseInterlinear(v.source, v.key, v.label); };
           tools.appendChild(ril);
         }
-        // Copy the current chapter's verses to the clipboard, formatted.
+        // Copy the passage to the clipboard, formatted.
         const cpy = el('button', '', 'Copy');
-        cpy.title = 'Copy this chapter\'s verses to the clipboard';
+        cpy.title = m.reader === 'date' ? 'Copy this entry to the clipboard'
+                                        : 'Copy this chapter\'s verses to the clipboard';
         cpy.onclick = async () => {
-          const v = here();
+          if (m.reader === 'date') {
+            const head = (m.name || m.id)
+              + ((p._content && p._content.section_title) ? ' — ' + p._content.section_title : '');
+            const text = (p._content && p._content.items ? p._content.items : [])
+              .map(it => it.text || '').filter(Boolean).join('\n\n');
+            try {
+              await navigator.clipboard.writeText(head + '\n\n' + text);
+              toast('Copied this entry.');
+            } catch (e) {
+              toast('Could not reach the clipboard.', 'warn');
+            }
+            return;
+          }
           if (!v) return;
           const parts = String(v.key || '').split('.');
           const book = parts[0] || '';
           const chapter = parseInt(parts[1] || '0', 10) || 0;
           const r = await api('bible/chapter', { id: m.id, book, chapter });
           if (!r.ok || !r.verses || !r.verses.length) { toast('Nothing to copy.', 'warn'); return; }
-          const head = (m.name || m.id) + ' \u2014 ' + book + ' ' + chapter;
-          const body = r.verses.map(x => (x.verse + '. ' + x.text)).join('\n');
-          const text = head + '\n\n' + body;
+          const head = (m.name || m.id) + ' — ' + book + ' ' + chapter;
+          const body2 = r.verses.map(x => (x.verse + '. ' + x.text)).join('\n');
           try {
-            await navigator.clipboard.writeText(text);
+            await navigator.clipboard.writeText(head + '\n\n' + body2);
             toast('Copied ' + r.verses.length + ' verses.');
           } catch (e) {
             toast('Could not reach the clipboard.', 'warn');
           }
         };
         tools.appendChild(cpy);
-        // Read aloud, in a voice running on this machine.  Where it is not
+        // Read aloud, in a voice running on this machine. Where it is not
         // installed Speech falls back to the browser's own engine.
         const say = el('button', '', '\u25B6\uFE0E');
-        say.title = 'Read this chapter aloud';
+        say.title = 'Read this aloud';
         say.onclick = () => Speech.speak(p, say);
         tools.appendChild(say);
         // Right-click a word in the pane for the same menu.  Same rule as the
         // buttons above: the current verse is read at click time, so this used
         // the same two out-of-scope names and threw "key is not defined" the
-        // first time anybody right-clicked a verse.
+        // first time anybody right-clicked a verse.  Verse-anchored only — a
+        // devotional has no verse spans for the pointer to land on.
+        if (m.reader !== 'verse') body.oncontextmenu = null;
+        else
         body.oncontextmenu = (e) => {
           e.preventDefault();
           const sel = String(window.getSelection() || '').trim()
@@ -1050,8 +1306,14 @@ const App = {
             label = c.ref_label || fb.label || '';
             if (verseNo && label && label.indexOf(':') < 0) label += ':' + verseNo;
           }
+          // Prefer the user's actual text selection. Otherwise use the
+          // complete text of the verse under the pointer.
+          const targetKey = key || fb.key;
+          const targetVerse = (c.items || []).find(it => it.key === targetKey);
+          const highlightText = sel || (targetVerse && targetVerse.text) || '';
+
           Study.wordMenu(e.clientX, e.clientY, word, m,
-                         key || fb.key, label || verseNo, sel);
+                         targetKey, label || verseNo, highlightText);
         };
       }
 
@@ -1068,7 +1330,7 @@ const RecommendedPrompt = {
     { title: 'Explore the original languages', kicker: 'WORD STUDY', body: 'Follow Strong’s numbers, consult lexica, explore morphology and use the concordance to see how a word appears in context.' },
     { title: 'See the bigger picture', kicker: 'GUIDES & MAPS', body: 'Use Passage, cross-references, timelines, Bible places, maps, genealogy and gospel harmony to connect people, places and events.' },
     { title: 'Keep your study together', kicker: 'PERSONAL TOOLS', body: 'Save notes, highlights and clips; organise passages; and build reading plans, word lists and memorisation practice.' },
-    { title: 'Make it your own', kicker: 'OPTIONAL EXTRAS', body: 'Adjust the appearance, read passages aloud, import personal books and explore the optional AI assistant when you choose to configure it.' },
+    { title: 'Make it your own', kicker: 'OPTIONAL EXTRAS', body: 'Adjust the appearance, read passages aloud, import personal books, check for updates, and explore the optional AI assistant when you choose to configure it.' },
   ],
   slideIndex: 0,
   running: false,
@@ -1096,6 +1358,7 @@ const RecommendedPrompt = {
       + '</label><div id="rec-progress" class="tiny muted"></div>',
       [
         { label: 'Install recommended', cls: 'btn primary', close: false,
+          hidePrint: true,
           fn: () => this.install() },
         { label: 'Skip', cls: 'btn', close: false, fn: () => this.skip() },
       ]);
@@ -1165,11 +1428,13 @@ const RecommendedPrompt = {
     this.running = true;
     this.setInstallButton(true);
     const cb = document.getElementById('rec-dismiss');
-    if (cb) cb.checked = true;
+    this.dismissAfterInstall = !!(cb && cb.checked);
     this.renderSlide();
     const prog = document.getElementById('rec-progress');
     if (prog) prog.textContent = 'Starting installation…';
-    const r = await post('recommended/install', {});
+    const r = await post('recommended/install', {
+      dismiss: this.dismissAfterInstall ? 1 : 0
+    });
     if (!r || !r.ok) {
       this.running = false; this.setInstallButton(false);
       if (prog) prog.textContent = 'Could not start: ' + ((r && r.error) || 'unknown error');
@@ -1181,14 +1446,45 @@ const RecommendedPrompt = {
   poll: async function() {
     if (!this.job) return;
     const jr = await api('store/job', { job: this.job });
-    const j = (jr && jr.job) || {};
+    if (!jr || !jr.ok || !jr.job) {
+      this.running = false;
+      this.setInstallButton(false);
+      const prog = document.getElementById('rec-progress');
+      if (prog) prog.textContent =
+        'Could not check installation progress: ' +
+        ((jr && jr.error) || 'server did not return the job');
+      return;
+    }
+
+    const j = jr.job;
     this.lastJobData = j;
     this.updateProgress(j);
+
     if (j.state === 'done' || j.state === 'cancelled') {
       this.running = false;
-      if (j.state === 'done') await post('recommended/dismiss', {});
-      // Refresh after either normal completion or Skip so the page reflects
-      // exactly the resources that completed before the worker stopped.
+
+      const result = j.result || {};
+      const failed = Number(result.failed || (j.failures || []).length || 0);
+
+      if (failed > 0) {
+        this.job = null;
+        this.setInstallButton(false);
+        const btn = document.querySelectorAll('#modal-foot button')[0];
+        if (btn) btn.textContent = 'Retry installation';
+
+        const prog = document.getElementById('rec-progress');
+        if (prog) {
+          prog.textContent =
+            `${failed} module(s) failed. Your successful installations are preserved. ` +
+            'You can retry; already-installed modules will be skipped. ' +
+            ((j.failures || []).slice(0, 3).map(f =>
+              `${f.repo}/${f.item}: ${f.error}`).join(' · '));
+        }
+        return;
+      }
+
+      // Refresh the library after successful completion or cancellation.
+      // The backend dismisses the prompt only if the checkbox was selected.
       setTimeout(() => location.reload(), 900);
       return;
     }

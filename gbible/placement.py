@@ -218,10 +218,6 @@ def slot_for_type(type_id: str) -> Slot:
     return SLOT_BY_ID.get(TYPE_SLOT.get(type_id, "other"), SLOT_BY_ID["other"])
 
 
-def slot_for(module_id: str, category: str) -> Slot:
-    return slot_for_type(type_for(module_id, category))
-
-
 def describe(module) -> dict:
     """Everything the browser and the installer need to say where this goes."""
     t = type_for(module.id, module.type)
@@ -273,14 +269,6 @@ def preview(repo_id: str, item_id: str, category: str, title: str = "") -> dict:
         "module_id_if_installed": future,
         "title": title,
     }
-
-
-def placement_report(module) -> str:
-    """One line for the install toast, naming the pane it landed in."""
-    d = describe(module)
-    note = f" (filed as {d['type_label']}, not {d['reclassified_from']})" \
-        if d["reclassified"] else ""
-    return f"{d['slot_label']} pane{note}"
 
 
 # --------------------------------------------------------------------------
@@ -376,12 +364,3 @@ def panes_using(module_id: str, layouts=()) -> list[dict]:
     return out
 
 
-def conflict_report(module, others, layouts=()) -> dict:
-    """What the browser should warn about before/after installing something."""
-    dups = duplicates_of(module, others)
-    used = panes_using(module.id, layouts)
-    return {
-        "duplicate_of": dups,
-        "used_by_panes": used,
-        "severity": ("duplicate" if dups else "in-use" if used else "none"),
-    }

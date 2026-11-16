@@ -26,7 +26,9 @@ import threading
 import time
 from pathlib import Path
 
-SCHEMA_VERSION = 3
+from . import native
+
+SCHEMA_VERSION = 4
 
 _local = threading.local()
 
@@ -41,12 +43,6 @@ def app_dir() -> Path:
 def db_path() -> Path:
     app_dir().mkdir(parents=True, exist_ok=True)
     return app_dir() / "gbible.db"
-
-
-def cache_dir() -> Path:
-    d = app_dir() / "cache"
-    d.mkdir(parents=True, exist_ok=True)
-    return d
 
 
 def modules_dir() -> Path:
@@ -100,7 +96,6 @@ CREATE TABLE IF NOT EXISTS module (
     has_lemma     INTEGER DEFAULT 0,
     has_notes     INTEGER DEFAULT 0,
     has_xref      INTEGER DEFAULT 0,
-    has_redletter  INTEGER DEFAULT 0,
     index_types   TEXT NOT NULL DEFAULT '[]',-- JSON array
     priority      INTEGER DEFAULT 0,         -- 'Prioritize books' equivalent
     favorite      INTEGER DEFAULT 0,
@@ -109,7 +104,6 @@ CREATE TABLE IF NOT EXISTS module (
     notes_count   INTEGER DEFAULT 0,
     xrefs_count   INTEGER DEFAULT 0,
     heads_count   INTEGER DEFAULT 0,
-    redwords      INTEGER DEFAULT 0,
     heading_count INTEGER DEFAULT 0,
     error         TEXT,
     raw_meta      TEXT NOT NULL DEFAULT '{}'
@@ -691,6 +685,37 @@ CREATE TABLE IF NOT EXISTS tag_item (
 );
 CREATE INDEX IF NOT EXISTS ix_tag_item_tag ON tag_item(tag_id);
 CREATE INDEX IF NOT EXISTS ix_tag_item_verse ON tag_item(book, chapter, verse);
+
+-- A freeform study canvas: draggable cards and the lines between them.
+-- Cards are text or verses; edges connect card ids.  A board is one plane;
+-- boards are named so a reader can keep separate studies apart.
+CREATE TABLE IF NOT EXISTS canvas_board (
+    id         TEXT PRIMARY KEY,
+    name       TEXT NOT NULL,
+    created_at REAL,
+    updated_at REAL
+);
+CREATE TABLE IF NOT EXISTS canvas_node (
+    id         TEXT PRIMARY KEY,
+    board_id   TEXT NOT NULL,
+    kind       TEXT NOT NULL,          -- text | verse
+    x          REAL NOT NULL,
+    y          REAL NOT NULL,
+    w          REAL DEFAULT 200,
+    h          REAL DEFAULT 100,
+    text       TEXT DEFAULT '',
+    ref        TEXT DEFAULT '',
+    color      TEXT DEFAULT '',
+    created_at REAL
+);
+CREATE INDEX IF NOT EXISTS ix_canvas_node_board ON canvas_node(board_id);
+CREATE TABLE IF NOT EXISTS canvas_edge (
+    id         TEXT PRIMARY KEY,
+    board_id   TEXT NOT NULL,
+    from_id    TEXT NOT NULL,
+    to_id      TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_canvas_edge_board ON canvas_edge(board_id);
 """
 
 
@@ -815,7 +840,18 @@ def _migrate_to_3(conn: sqlite3.Connection) -> None:
                 conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
 
 
-_MIGRATIONS = {2: _migrate_to_2, 3: _migrate_to_3}
+def _migrate_to_4(conn: sqlite3.Connection) -> None:
+    # The red-letter feature is removed: drop its module columns and the
+    # 'red-letter' field markers written at index time. Native upstream
+    # <wj>/OSIS annotations in stored span tables are left untouched.
+    have = {r["name"] for r in conn.execute("PRAGMA table_info(module)")}
+    for name in ("has_redletter", "redwords"):
+        if name in have:
+            conn.execute(f"ALTER TABLE module DROP COLUMN {name}")
+    conn.execute("DELETE FROM marker WHERE kind='field' AND value='red-letter'")
+
+
+_MIGRATIONS = {2: _migrate_to_2, 3: _migrate_to_3, 4: _migrate_to_4}
 
 
 def _run_migrations(conn: sqlite3.Connection) -> None:
@@ -992,6 +1028,8 @@ def words(text: str) -> list[tuple[str, int, int]]:
     is what makes `WITHIN n WORDS` and `WITHIN n CHARS` the same engine with two
     metrics.  This is the single most important function in the search stack.
     """
+    if native.core is not None:
+        return native.core.words(text or "")
     out = []
     for m in _TOKEN_RE.finditer(text or ""):
         w = m.group(0)
@@ -1007,6 +1045,8 @@ def stem(word: str) -> str:
     words by their perceived stem can catch words outside the original
     language, so we bias towards under-stemming rather than over-stemming.
     """
+    if native.core is not None:
+        return native.core.stem(word)
     w = word.lower()
     if len(w) <= 3 or w in _NO_STEM:
         return w
@@ -1111,6 +1151,12 @@ def fold(word: str) -> str:
     hit = _FOLD_CACHE.get(word)
     if hit is not None:
         return hit
+    if native.core is not None:
+        w = native.core.fold(word)
+        if len(_FOLD_CACHE) > 400000:
+            _FOLD_CACHE.clear()
+        _FOLD_CACHE[word] = w
+        return w
     w = word.lower().translate(_FOLD_PUNCT)
     if not w.isascii():
         w = "".join(ch for ch in unicodedata.normalize("NFD", w)
@@ -1138,16 +1184,11 @@ def token_key(word: str) -> str:
     hit = _KEY_CACHE.get(word)
     if hit is not None:
         return hit
-    v = stem(fold(word))
+    v = native.core.token_key(word) if native.core is not None else stem(fold(word))
     if len(_KEY_CACHE) > 200000:
         _KEY_CACHE.clear()
     _KEY_CACHE[word] = v
     return v
-
-
-def clear_token_cache() -> None:
-    _KEY_CACHE.clear()
-    _FOLD_CACHE.clear()
 
 
 #: Bumped whenever the library's words change -- a module installed, re-indexed

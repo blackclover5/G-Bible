@@ -46,7 +46,7 @@ from dataclasses import dataclass
 from dataclasses import field as dcfield
 from typing import Iterable
 
-from . import canon, db, markup
+from . import canon, db, markup, native
 from .library import Module, get as get_module, list_all
 
 #: Scripts whose vowel points survive FTS5's `unicode61` tokenizer.
@@ -1719,10 +1719,6 @@ def _note_fallback(e: Exception) -> None:
         _FTS_FALLBACK_NOTE.append(msg)
 
 
-def fts_fallback_note() -> str:
-    return _FTS_FALLBACK_NOTE[0] if _FTS_FALLBACK_NOTE else ""
-
-
 def _fts_fallback(conn, expr: str, mid: str) -> list:
     rows = []
     try:
@@ -1858,6 +1854,8 @@ def _phrase_pos(text: str, phrase: list[str], *, key: str = "",
     for i in range(len(keys) - n + 1):
         if keys[i:i + n] == list(phrase):
             out.append(i)
+    if len(_PHRASE_CACHE) > 2000:      # many phrases in a long search session
+        _PHRASE_CACHE.clear()
     _PHRASE_CACHE[ck] = out
     return out
 
@@ -2463,16 +2461,37 @@ def _corpus_stats() -> tuple[int, float]:
         return _stat_cache["stats"]
     conn = db.connect()
     try:
-        # Persisted rather than recomputed.  AVG(word_count) has to read all
-        # 1.2 million unit rows -- about three seconds -- and it only changes
-        # when something is installed, so it is cached in `meta` and refreshed
-        # by the indexer.  Recomputing it per search meant every fresh process
-        # paid three seconds before ranking a single hit.
+        # The corpus stats are persisted in meta so a fresh process does not
+        # pay to recompute AVG(word_count) over every unit row.  But meta can
+        # go stale -- set to 0,0.0 before any module was installed, say -- so
+        # validate the persisted N against the unit table and fall back to a
+        # live count when they disagree.
         row = conn.execute(
             "SELECT value FROM meta WHERE key='bm25_corpus'").fetchone()
         if row:
             n_s, avg_s = row["value"].split(",", 1)
-            _stat_cache["stats"] = (int(n_s), float(avg_s))
+            n, avg = int(n_s), float(avg_s)
+            # Meta can go stale -- set to 0,0.0 before any module was
+            # installed, say -- so validate against the unit table and
+            # recompute anything that disagrees.
+            actual_n = conn.execute(
+                "SELECT COUNT(*) c FROM unit").fetchone()["c"]
+            if n != actual_n:
+                n = actual_n
+            if avg <= 0:
+                avg = conn.execute(
+                    "SELECT AVG(COALESCE(word_count,0)) a FROM unit"
+                ).fetchone()["a"] or 0.0
+            # Persist the corrected values so the next process does not pay the
+            # recompute cost.
+            try:
+                conn.execute(
+                    "INSERT OR REPLACE INTO meta(key,value) VALUES('bm25_corpus',?)",
+                    (f"{int(n)},{float(avg or 0.0)}",))
+                conn.commit()
+            except Exception:
+                pass
+            _stat_cache["stats"] = (n, avg)
             return _stat_cache["stats"]
         n = conn.execute("SELECT COUNT(*) c FROM unit").fetchone()["c"]
         avg = conn.execute(
@@ -2506,6 +2525,8 @@ def doc_freq(term: str) -> int:
                 df = int(row["doc"] or 0)
         except Exception:
             df = 0
+    if len(_idf_cache) > 5000:
+        _idf_cache.clear()             # still satisfies every query in practice
     _idf_cache[t] = df
     return df
 
@@ -2803,6 +2824,8 @@ def surface_counts(mods: list[Module]) -> dict[str, int]:
                 f"WHERE module_id IN ({marks}) ORDER BY module_id, ord "
                 f"LIMIT 120000", chunk):
             add(r["t"])
+    if len(_VOCAB_CACHE) > 2:
+        _VOCAB_CACHE.clear()
     _VOCAB_CACHE[key] = (time.time(), counts)
     return counts
 
@@ -2923,6 +2946,8 @@ def headword_strongs(mods: list[Module]) -> dict[str, tuple[str, str]]:
                 if len(k) < 3 or k in out:
                     continue
                 out[k] = (num, script)
+    if len(_HEADWORD_CACHE) > 2:
+        _HEADWORD_CACHE.clear()
     _HEADWORD_CACHE[key] = (time.time(), out)
     return out
 
@@ -3142,6 +3167,8 @@ def _vocab(mods: list[Module]) -> set[str]:
             if len(k) > 2:
                 words.add(k)
     out = {w for w in words if len(w) > 2}
+    if len(_VOCAB_CACHE) > 2:
+        _VOCAB_CACHE.clear()
     _VOCAB_CACHE[key] = (time.time(), out)
     return out
 
@@ -3209,6 +3236,8 @@ def _lev(a: str, b: str, cap: int = 3) -> int:
     transpositions only, one pass, no exponential cases.  A typo is a typo, and
     an unrestricted Damerau on arbitrary vocabulary would buy nothing here.
     """
+    if native.core is not None:
+        return int(native.core.damerau_levenshtein(a, b, cap))
     if a == b:
         return 0
     if abs(len(a) - len(b)) > cap:
@@ -3276,6 +3305,8 @@ def _surface_index(mods: list[Module]) -> dict[str, list[str]]:
         lst = out.setdefault(surf, [])
         if r["value"] and r["value"] not in lst and len(lst) < 3:
             lst.append(r["value"])
+    if len(_SURFACE_CACHE) > 2:
+        _SURFACE_CACHE.clear()
     _SURFACE_CACHE[key] = (time.time(), out)
     return out
 
@@ -3348,6 +3379,8 @@ def _prefix_surfaces(mods: list[Module], prefix: str) -> list[str]:
     if got is None or got[0] is not idx:
         keys = sorted(idx)
         got = (time.time(), keys)
+        if len(_SURFACE_KEYS) > 1:
+            _SURFACE_KEYS.clear()
         _SURFACE_KEYS[key] = got
     keys = got[1]
     i = bisect.bisect_left(keys, prefix)

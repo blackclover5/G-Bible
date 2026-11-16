@@ -144,7 +144,7 @@ const Speech = {
         this.stop();
         closeModal();
       } },
-      { label: 'Cancel', fn: () => {} }]);
+      { label: 'Cancel', fn: () => {}, hidePrint: true }]);
 
     $('#rs-speed').oninput = () => $('#rs-val').textContent = $('#rs-speed').value + 'x';
 
@@ -393,6 +393,17 @@ const Speech = {
   _playBrowser(parts, btn, startIdx = 0) {
     if (!('speechSynthesis' in window)) {
       toast('This browser cannot read aloud.', 'warn');
+      return;
+    }
+    /* Without any voices this used to fail silently: the utterance errored on
+     * the first word, the pane just sat there, and the button looked armed
+     * with no reason given. Say so instead. */
+    const voices = speechSynthesis.getVoices ? speechSynthesis.getVoices() : [];
+    if (!voices.length) {
+      this._off();
+      toast('No speech voices are available on this computer. '
+            + 'Install the read-aloud voice in Settings, or a system voice.',
+            'warn');
       return;
     }
     this.on = true;

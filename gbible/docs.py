@@ -893,7 +893,7 @@ def flash_score(known: bool) -> dict:
 
 
 # --------------------------------------------------------------------------
-# Pack 6: reader editions, pronunciation guide, outline export, ribbons.
+# Pack 6: reader editions, pronunciation guide, outline export.
 # --------------------------------------------------------------------------
 
 READER_EDITIONS = {
@@ -1006,40 +1006,6 @@ def export_outline_doc(ref: str) -> dict:
     fname = f"outline-{ref.replace(' ', '-').replace(':', '-')}.html"
     return {"ok": True, "filename": fname, "html": page,
             "note": "HTML opens in Word, Pages, LibreOffice and PowerPoint."}
-
-
-def reading_ribbons(book: str, chapter: int) -> dict:
-    """Plan days covering one chapter — the margin-ribbon data.
-
-    Scans plan overviews for days whose reference resolves to this chapter.
-    Honest about cost: overviews are small (hundreds of rows), so this is a
-    single request, not per-verse.
-    """
-    from . import readingplan as _rp
-    ribbons = []
-    b = canon.lookup_book((book or "").strip())
-    osis = b.osis if b else (book or "").strip()
-    try:
-        plans = _rp.plans()
-    except Exception:  # noqa: BLE001
-        return {"ok": True, "ribbons": []}
-    for p in plans:
-        pid = p.get("id", "")
-        try:
-            ov = _rp.overview(pid)
-        except Exception:  # noqa: BLE001
-            continue
-        for it in ov.get("items") or []:
-            for cand in (it.get("ref") or "", it.get("title") or ""):
-                rr = canon.parse_ref(cand)
-                if rr is None:
-                    continue
-                f = next(iter(rr.refs()), None)
-                if f is not None and f.book == osis and (f.chapter or 0) == chapter:
-                    ribbons.append({"plan": pid, "title": p.get("title"),
-                                    "day": it.get("n"), "ref": cand})
-                    break
-    return {"ok": True, "book": book, "chapter": chapter, "ribbons": ribbons}
 
 
 def sermon_export(note_id: str, kind: str = "slides") -> dict:

@@ -437,7 +437,8 @@ def _lexicon_keys(num: str) -> list[str]:
         return []
     letter = num[0]
     digits = num[1:].lstrip("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-    cands = {num, f"{letter}{digits}"}
+    unpadded = digits.lstrip("0") or "0"
+    cands = {num, f"{letter}{digits}", f"{letter}{unpadded}"}
     if letter == "G":
         # Greek lexicons are keyed "G0025" or bare "00025"
         cands |= {digits, digits.zfill(5)}
@@ -599,7 +600,7 @@ def _surface_for(conn, module_id: str, key: str, code: str,
 
 
 def morph_search(conn, code: str, *, scheme: str = "", limit: int = 400,
-                 module_id: str = "") -> dict:
+                 module_id: str = "", ref: str = "") -> dict:
     """Find every tagged word with this morphology code.
 
     Three tagging schemes are installed and they are not interchangeable, so
@@ -614,25 +615,35 @@ def morph_search(conn, code: str, *, scheme: str = "", limit: int = 400,
     the tagging is already in the text.
 
     Pass ``module_id`` to constrain the search to one morphologically-tagged
-    resource (used for the side-by-side "compare versions" view).
+    resource (used for the side-by-side "compare versions" view).  Pass
+    ``ref`` (e.g. "John 3") to constrain the search to a passage.
     """
     code = (code or "").strip()
     if not code:
         return {"ok": False, "error": "no morphology code"}
+    ref = (ref or "").strip()
     esc = code.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-    where = "kind='morph' AND value LIKE ? ESCAPE '\\'"
+    where = "m.kind='morph' AND m.value LIKE ? ESCAPE '\\'"
     args = [esc + "%"]
     if module_id:
-        where += " AND module_id=?"
+        where += " AND m.module_id=?"
         args.append(module_id)
+    if ref:
+        from . import morphq
+        scoped = [module_id] if module_id else morphq.morph_module_ids(conn)
+        try:
+            morphq.passage_table(conn, ref, scoped)
+        except ValueError as e:
+            return {"ok": False, "error": str(e)}
+        where += morphq._passage_clause("m")
     # exact count first, so "total" is the real number and not the size of the
     # sample the panel happens to have fetched
     total = conn.execute(
-        "SELECT count(*) FROM marker WHERE " + where, args).fetchone()[0]
+        "SELECT count(*) FROM marker m WHERE " + where, args).fetchone()[0]
     rows = conn.execute(
-        "SELECT value, module_id, unit_key, surface FROM marker "
+        "SELECT m.value, m.module_id, m.unit_key, m.surface FROM marker m "
         "WHERE " + where + " "
-        "ORDER BY module_id, unit_key LIMIT ?", (*args, limit)).fetchall()
+        "ORDER BY m.module_id, m.unit_key LIMIT ?", (*args, limit)).fetchall()
     groups: dict[str, dict] = {}
     hits: list[dict] = []
     for r in rows:
@@ -760,7 +771,9 @@ def _gloss_for(conn, num: str) -> str:
 
     row = conn.execute(
         "SELECT u.text FROM unit u JOIN module m ON m.id=u.module_id "
-        "WHERE u.key=? AND m.type='Concordance' AND m.installed_at>0 LIMIT 1", (num,)).fetchone()
+        f"WHERE u.key IN ({','.join('?' * len(_lexicon_keys(num)))}) "
+        "AND m.type='Concordance' AND m.installed_at>0 LIMIT 1",
+        _lexicon_keys(num)).fetchone()
     if row is not None:
         t = re.sub(r"\s+", " ", row["text"] or "").strip()
         m = re.match(r"^.{0,60}?\(([^)]*)\)\s*:\s*(.+)$", t)
@@ -851,6 +864,25 @@ def _original_form(conn, num: str) -> str:
         if m:
             return m.group(0)
     return ""
+
+
+def word_tip(num: str) -> dict:
+    """The hover tooltip for a Strong's number: headword and one-line gloss.
+
+    Deliberately cheap: `_gloss_for` is cached, and the original-language
+    form is one indexed query.  The hover should never wait on a concordance
+    scan or a full lexicon dump.
+    """
+    conn = db.connect()
+    num = canon.normalise_strongs(num or "") or (num or "").strip()
+    if not num:
+        return {"ok": False, "error": "no Strong's number"}
+    form = _original_form(conn, num)
+    gloss = _gloss_for(conn, num)
+    if len(gloss) > 110:
+        cut = gloss.rfind(" ", 0, 109)
+        gloss = gloss[:cut if cut > 40 else 110].rstrip(" ,;") + " …"
+    return {"ok": True, "number": num, "form": form, "gloss": gloss}
 
 
 def reverse_interlinear(conn, module_id: str, book: str, chapter: int,
@@ -1574,6 +1606,72 @@ def fact_guide(query: str, *, per_section: int = 8, lens: str = "") -> dict:
             "matched": len(ordered),
             "factbooks": sorted({m.name for m in mods}),
             "lens": lens, "questions": uniq}
+
+
+def factbook_search(q: str = "", module_ids: list[str] = None,
+                    limit: int = 30) -> dict:
+    """Search the fact books by heading — what the Topics lens searches.
+
+    Fact-book entries are headed by their term (Nave's groups everything
+    about Aaron under one entry), so a heading search finds the entry a
+    reader means, not every paragraph that happens to mention the word.  The
+    rows are the same shape as the flat search results the frontend renders,
+    and clicking one opens the Topics guide for that entry's own term.
+    """
+    q = (q or "").strip()
+    if not q:
+        return {"ok": False, "error": "no query given"}
+    conn = db.connect()
+    mods = [m for m in library.list_all()
+            if m.type == "FactBook" and _is_a_fact_book(m.name)]
+    if module_ids:
+        keep = set(module_ids)
+        mods = [m for m in mods if m.id in keep]
+    if not mods:
+        return {"ok": False,
+                "error": "No fact book is installed. The Store has Nave, "
+                         "Hitchcock, Torrey, Thompson and the Condensed "
+                         "Biblical Cyclopedia."}
+    names = [m.id for m in mods]
+    ph = ",".join("?" * len(names))
+    # Headings are stored in each book's own case -- Hitchcock and Nave are
+    # all caps, Torrey title case -- so match the given and the capitalised
+    # form.  "aaron" has to find AARON.
+    like, like_cap = f"%{q}%", f"%{q.capitalize()}%"
+    rows = conn.execute(
+        f"SELECT module_id, key, title, text FROM unit WHERE module_id IN ({ph}) "
+        f"AND (title LIKE ? OR title LIKE ? OR key LIKE ? OR key LIKE ?) "
+        f"LIMIT ?",
+        [*names, like, like_cap, like, like_cap, max(1, limit) * 4]).fetchall()
+
+    ql = q.lower()
+
+    def rank(r):
+        t = (r["title"] or "").lower().strip()
+        k = (r["key"] or "").lower().strip()
+        if t == ql or k == ql:
+            return 0
+        if t.startswith(ql) or k.startswith(ql):
+            return 1
+        if any(t.startswith(p) or k.startswith(p)
+               for p in (ql + " ", ql + ",", ql + "'")):
+            return 2
+        return 3
+
+    by_id = {m.id: m for m in mods}
+    ordered = sorted(rows, key=lambda r: (rank(r), -len(r["text"] or "")))[:limit]
+    results = []
+    for r in ordered:
+        m = by_id[r["module_id"]]
+        results.append({
+            "module_id": m.id,
+            "module": m.name,
+            "key": r["key"],
+            "title": r["title"] or r["key"],
+            "text": _chunk(r["text"] or "", 220),
+            "length": len(r["text"] or ""),
+        })
+    return {"ok": True, "query": q, "results": results, "count": len(results)}
 
 
 def _geo_for(conn, ql: str) -> list[dict]:
@@ -2802,12 +2900,41 @@ def _import_personal_book(path: str) -> dict:
         (book_id, title, path, fmt, now, len(units)))
     conn.commit()
 
+    # Wire the imported book into the library and the search index so its
+    # contents are searchable and readable like any other module.
+    try:
+        from . import indexer, library, markup
+        lib_units = []
+        for i, u in enumerate(units, 1):
+            lib_units.append(indexer.UnitIn(
+                key=f"{book_id}.{i}", label=f"\u00b6{i}",
+                segs=markup.parse_plain(u), title=""))
+        indexer.run_import(book_id, iter(lib_units),
+                           name=title, type="Book", lang="eng",
+                           source="Personal", format=fmt, author="")
+    except Exception as e:  # noqa: BLE001
+        try:
+            db.log_history("personal-book", f"{book_id}: indexing failed: {e}")
+        except Exception:
+            pass
+
     return {"ok": True, "action": "import", "book_id": book_id,
             "title": title, "format": fmt, "unit_count": len(units)}
 
 
 def _delete_personal_book(book_id: str) -> dict:
     conn = db.connect()
+    try:
+        from . import library
+        library.mark_removed(conn, book_id)
+        conn.commit()
+        try:
+            from . import posindex
+            posindex.forget(book_id)
+        except Exception:
+            pass
+    except Exception:
+        pass
     conn.execute("DELETE FROM personal_books WHERE id=?", (book_id,))
     conn.commit()
     return {"ok": True, "action": "delete", "book_id": book_id}
@@ -2874,7 +3001,10 @@ def _read_pdf(path: str) -> str:
 # Courses — video/audio course player and library
 # ===========================================================================
 
-def courses(action: str = "", course_id: str = "", lesson_id: str = "") -> dict:
+def courses(action: str = "", course_id: str = "", lesson_id: str = "",
+            title: str = "", description: str = "", author: str = "",
+            lesson_title: str = "", content: str = "", video_url: str = "",
+            audio_url: str = "") -> dict:
     """Course library and player.
 
     Actions: list, open, lesson, progress.
@@ -2911,6 +3041,56 @@ def courses(action: str = "", course_id: str = "", lesson_id: str = "") -> dict:
             "FROM courses c LEFT JOIN course_lessons l ON l.course_id=c.id "
             "GROUP BY c.id ORDER BY c.created_at DESC").fetchall()
         return {"ok": True, "action": "list", "courses": [dict(r) for r in rows]}
+
+    if action == "create":
+        t = (title or "").strip()
+        if not t:
+            return {"ok": False, "error": "need a title"}
+        import uuid as _u
+        cid = "course_" + _u.uuid4().hex[:12]
+        conn.execute(
+            "INSERT INTO courses(id, title, description, author, created_at) "
+            "VALUES(?,?,?,?,?)", (cid, t, description or "", author or "",
+                                  time.time()))
+        conn.commit()
+        return {"ok": True, "action": "create", "course_id": cid,
+                "title": t}
+
+    if action == "delete":
+        if not course_id:
+            return {"ok": False, "error": "need a course id"}
+        conn.execute("DELETE FROM course_lessons WHERE course_id=?", (course_id,))
+        conn.execute("DELETE FROM course_progress WHERE course_id=?", (course_id,))
+        conn.execute("DELETE FROM courses WHERE id=?", (course_id,))
+        conn.commit()
+        return {"ok": True, "action": "delete", "course_id": course_id}
+
+    if action == "add-lesson":
+        if not course_id:
+            return {"ok": False, "error": "need a course id"}
+        lt = (lesson_title or title or "").strip()
+        if not lt:
+            return {"ok": False, "error": "need a lesson title"}
+        import uuid as _u
+        lid = "lesson_" + _u.uuid4().hex[:12]
+        pos = conn.execute(
+            "SELECT COALESCE(MAX(position),0)+1 n FROM course_lessons WHERE course_id=?",
+            (course_id,)).fetchone()["n"]
+        conn.execute(
+            "INSERT INTO course_lessons(id, course_id, title, content, video_url, audio_url, position) "
+            "VALUES(?,?,?,?,?,?,?)",
+            (lid, course_id, lt, content or "", video_url or "", audio_url or "", pos))
+        conn.commit()
+        return {"ok": True, "action": "add-lesson", "lesson_id": lid,
+                "course_id": course_id}
+
+    if action == "delete-lesson":
+        if not lesson_id:
+            return {"ok": False, "error": "need a lesson id"}
+        conn.execute("DELETE FROM course_lessons WHERE id=?", (lesson_id,))
+        conn.execute("DELETE FROM course_progress WHERE lesson_id=?", (lesson_id,))
+        conn.commit()
+        return {"ok": True, "action": "delete-lesson", "lesson_id": lesson_id}
 
     if action == "open":
         if not course_id:
@@ -2956,7 +3136,8 @@ def courses(action: str = "", course_id: str = "", lesson_id: str = "") -> dict:
 # Draw on Screen — drawing annotation overlay
 # ===========================================================================
 
-def draw_on_screen(action: str = "", drawing_id: str = "", data: str = "") -> dict:
+def draw_on_screen(action: str = "", drawing_id: str = "", title: str = "",
+                   data: str = "") -> dict:
     """Drawing annotations over Bible text.
 
     Actions: list, save, delete, load.
@@ -2983,12 +3164,13 @@ def draw_on_screen(action: str = "", drawing_id: str = "", data: str = "") -> di
         if not drawing_id:
             import uuid
             drawing_id = "draw_" + uuid.uuid4().hex[:12]
-        title = data  # reuse data field as title if not separate
+        if not title:
+            title = drawing_id
         now = time.time()
         conn.execute(
             "INSERT OR REPLACE INTO drawings(id, title, data, created_at, updated_at) "
             "VALUES(?,?,?,?,?)",
-            (drawing_id, title or drawing_id, data, now, now))
+            (drawing_id, title, data, now, now))
         conn.commit()
         return {"ok": True, "action": "save", "drawing_id": drawing_id}
 
@@ -3089,7 +3271,31 @@ def _do_export(content_type: str, content_id: str, format: str) -> dict:
         return {"ok": True, "action": "export", "format": "html",
                 "content": content, "filename": f"{title}.html"}
     elif format == "pdf":
-        # PDF requires a library; return HTML as fallback with a note.
+        # Prefer a real PDF when a library is available.
+        try:
+            from reportlab.lib.pagesizes import letter
+            from reportlab.pdfgen import canvas as _pcanvas
+            import io as _io
+            buf = _io.BytesIO()
+            c = _pcanvas.Canvas(buf, pagesize=letter)
+            w, h = letter
+            y = h - 50
+            c.setFont("Helvetica-Bold", 14)
+            c.drawString(50, y, title[:80]); y -= 24
+            c.setFont("Helvetica", 10)
+            for line in (body or "").split("\\n"):
+                if y < 60:
+                    c.showPage(); y = h - 50; c.setFont("Helvetica", 10)
+                c.drawString(50, y, line[:110]); y -= 13
+            c.save()
+            import base64 as _b64
+            return {"ok": True, "action": "export", "format": "pdf",
+                    "content_base64": _b64.b64encode(buf.getvalue()).decode("ascii"),
+                    "filename": f"{title}.pdf",
+                    "note": "PDF generated with reportlab."}
+        except Exception:
+            pass
+        # Fallback: HTML with a note.
         content = (f"<html><head><title>{title}</title></head><body>"
                    f"<h1>{title}</h1><div>{body}</div>"
                    f"<p><em>PDF export requires a PDF library installed on this system.</em></p>"
@@ -3264,7 +3470,7 @@ def books_search(q: str = "", module_ids: list[str] = None, limit: int = 20) -> 
             f"SELECT u.text, u.ref_label, u.module_id, m.name FROM unit u "
             f"JOIN module m ON m.id=u.module_id "
             f"WHERE u.text LIKE ? AND m.installed_at>0 "
-            f"AND m.module_id IN ({ph}) LIMIT ?",
+            f"AND u.module_id IN ({ph}) LIMIT ?",
             [f"%{q}%", *module_ids_list, limit]).fetchall()
     else:
         rows = conn.execute(
@@ -3303,6 +3509,7 @@ def search_synopsis(q: str = "", module_ids: list[str] = None) -> dict:
             f"SELECT u.module_id, m.name, COUNT(*) as c FROM unit u "
             f"JOIN module m ON m.id=u.module_id "
             f"WHERE u.text LIKE ? AND m.installed_at>0 "
+            f"AND u.module_id IN ({ph}) "
             f"GROUP BY u.module_id ORDER BY c DESC",
             [f"%{q}%", *module_ids_list])
     else:
@@ -3320,7 +3527,7 @@ def search_synopsis(q: str = "", module_ids: list[str] = None) -> dict:
             (r["module_id"], f"%{q}%")).fetchone()
         synopsis.append({
             "module_id": r["module_id"],
-            "module": r["name"] or module_id,
+            "module": r["name"] or r["module_id"],
             "count": r["c"],
             "sample": row["text"][:200] if row and row["text"] else "",
         })
@@ -3591,3 +3798,63 @@ def popular_quotes(module_ids: list[str] = None, limit: int = 20) -> dict:
             })
 
     return {"ok": True, "quotes": results, "count": len(results)}
+
+
+# ===========================================================================
+# Louw–Nida sense domains (SBLGNT data rebuilt from the TSV).
+# Words tagged with a Strong's number can carry Louw–Nida domain codes in
+# the MACULA Greek module; these read them straight off the marker table.
+# ===========================================================================
+
+_MACULA = "macula-macula-greek-sblgnt"
+
+
+def senses_domains(num: str, limit: int = 12) -> dict:
+    """The Louw–Nida sense domains a Strong's number carries in SBLGNT.
+
+    Each entry is one domain code and how often the words of this Strong's
+    number bear it.  This is the kind of word-level sense index Logos
+    builds into its commercial Bible Sense Lexicon; this one comes from
+    CC BY 4.0 data.
+    """
+    num = canon.normalise_strongs(num or "")
+    if not num:
+        return {"ok": False, "error": "no Strong's number"}
+    conn = db.connect()
+    rows = conn.execute(
+        "SELECT s.value AS sense, COUNT(*) AS n "
+        "FROM marker s "
+        "JOIN marker t ON t.unit_key=s.unit_key AND t.pos=s.pos AND t.module_id=s.module_id "
+        "WHERE s.module_id=? AND s.kind='sense' "
+        "AND t.kind='strongs' AND t.value=? "
+        "GROUP BY s.value ORDER BY n DESC LIMIT ?", (_MACULA, num, int(limit))).fetchall()
+    return {"ok": True, "num": num,
+            "domains": [{"sense": r["sense"], "count": r["n"]} for r in rows]}
+
+
+def sense_occurrences(num: str, code: str = "", limit: int = 60) -> dict:
+    """Every SBLGNT word of this Strong's number, optionally filtered to one
+    Louw–Nida domain, with references readers can follow."""
+    num = canon.normalise_strongs(num or "")
+    code = (code or "").strip()
+    if not num:
+        return {"ok": False, "error": "no Strong's number"}
+    conn = db.connect()
+    sql = ("SELECT t.unit_key, s.value AS sense, t.surface, u.ref_label "
+           "FROM marker s "
+           "JOIN marker t ON t.unit_key=s.unit_key AND t.pos=s.pos AND t.module_id=s.module_id "
+           "JOIN unit u ON u.module_id=s.module_id AND u.key=s.unit_key "
+           "WHERE s.module_id=? AND s.kind='sense' "
+           "AND t.kind='strongs' AND t.value=?")
+    args = [_MACULA, num]
+    if code:
+        sql += " AND s.value=?"
+        args.append(code)
+    sql += " ORDER BY u.ord LIMIT ?"
+    args.append(int(limit))
+    rows = conn.execute(sql, args).fetchall()
+    out = []
+    for r in rows:
+        out.append({"ref": r["ref_label"], "surface": (r["surface"] or "").strip(),
+                    "sense": r["sense"]})
+    return {"ok": True, "num": num, "code": code, "occurrences": out}

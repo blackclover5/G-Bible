@@ -41,7 +41,7 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-from . import db
+from . import db, errorlog
 
 # ------------------------------------------------------------------- layout
 
@@ -76,6 +76,9 @@ KINDS = {
     "workflow": "workflows",
     "srs-card": "srs-cards",
     "citation-meta": "citation-metas",
+    "canvas-board": "canvas-boards",
+    "ai-chat": "ai-chats",
+    "morph-query": "morph-queries",
 }
 
 #: Kinds that can be merged rather than won.  `plan-mark` is a set of days read,
@@ -173,6 +176,12 @@ def credentials_for(name: str) -> dict:
     return _read_credentials().get(name) or {}
 
 
+def encryption_passphrase(cfg: dict | None = None) -> str:
+    c = cfg if cfg is not None else config()
+    name = (c.get("name") or c.get("kind") or "").strip()
+    return str(credentials_for(name).get("passphrase") or "")
+
+
 def save_credentials(name: str, password: str) -> None:
     if not name:
         return
@@ -262,7 +271,7 @@ def _collect_collections() -> list[dict]:
     for c in organise.collections():
         out.append({"id": c["id"], "name": c.get("name") or "",
                     "note": c.get("note") or "",
-                    "pinned": list(organise.collection_items(c["id"]) or [])})
+                    "pinned": list(organise.collection_pinned(c["id"]) or [])})
     return out
 
 
@@ -399,6 +408,73 @@ def _collect_citation_meta() -> list[dict]:
     return out
 
 
+def _collect_canvas_boards() -> list[dict]:
+    """Each Canvas board as one record.
+
+    A board owns its nodes and edges, so it travels as a single record —
+    the same unit of truth the app saves to the database.  Last-writer-wins
+    is the right rule: the board's own updated_at is the revision.
+    """
+    conn = db.connect()
+    out = []
+    for b in conn.execute(
+            "SELECT id, name, created_at, updated_at FROM canvas_board "
+            "WHERE id IS NOT NULL"):
+        bid = b["id"]
+        nodes = [dict(n) for n in conn.execute(
+            "SELECT id, kind, x, y, w, h, text, ref, color, created_at "
+            "FROM canvas_node WHERE board_id=?", (bid,))]
+        edges = [dict(e) for e in conn.execute(
+            "SELECT from_id, to_id FROM canvas_edge WHERE board_id=?", (bid,))]
+        out.append({"id": bid, "name": b["name"] or "Canvas",
+                    "created_at": b["created_at"],
+                    "updated_at": b["updated_at"] or b["created_at"] or 0.0,
+                    "nodes": nodes, "edges": edges})
+    return out
+
+
+def _collect_ai_chats() -> list[dict]:
+    """Each AI conversation, with its turns, as one record.
+
+    Same shape of decision as a canvas board: the turns belong to the chat,
+    so the unit of truth is the chat, and last-writer-wins is its revision.
+    """
+    conn = db.connect()
+    out = []
+    for r in conn.execute(
+            "SELECT id, title, created_at, updated_at FROM ai_chat"):
+        cid = r["id"]
+        turns = [{"ord": t["ord"], "role": t["role"] or "user",
+                  "content": t["content"] or "",
+                  "cites": t["cites"] or ""}
+                 for t in conn.execute(
+                     "SELECT ord, role, content, cites FROM ai_chat_turn "
+                     "WHERE chat_id=? ORDER BY ord", (cid,))]
+        out.append({"id": cid, "title": r["title"] or "",
+                    "created_at": r["created_at"] or 0.0,
+                    "updated_at": r["updated_at"] or r["created_at"] or 0.0,
+                    "turns": turns})
+    return out
+
+
+def _collect_morph_queries() -> list[dict]:
+    """Saved morphological searches — a refined query the reader built."""
+    conn = db.connect()
+    out = []
+    for r in conn.execute(
+            "SELECT id, name, query_json, created_at, updated_at "
+            "FROM saved_morph_query"):
+        try:
+            query = json.loads(r["query_json"])
+        except (ValueError, TypeError):
+            query = r["query_json"]
+        out.append({"id": r["id"], "name": r["name"] or "Saved query",
+                    "created_at": r["created_at"],
+                    "updated_at": r["updated_at"],
+                    "query": query})
+    return out
+
+
 _COLLECTORS = {
     "note": _collect_notes,
     "highlight": _collect_highlights,
@@ -415,6 +491,9 @@ _COLLECTORS = {
     "workflow": _collect_workflows,
     "srs-card": _collect_srs_cards,
     "citation-meta": _collect_citation_meta,
+    "canvas-board": _collect_canvas_boards,
+    "ai-chat": _collect_ai_chats,
+    "morph-query": _collect_morph_queries,
 }
 
 
@@ -610,6 +689,52 @@ def _apply_srs_card(p: dict) -> None:
     conn.commit()
 
 
+def _apply_canvas_board(p: dict) -> None:
+    conn = db.connect()
+    bid = (p.get("id") or "").strip()
+    if not bid:
+        return
+    nodes = p.get("nodes") or []
+    edges = p.get("edges") or []
+    local = conn.execute(
+        "SELECT updated_at FROM canvas_board WHERE id=?", (bid,)).fetchone()
+    remote_rev = float(p.get("updated_at") or p.get("created_at") or 0.0)
+    if local and float(local["updated_at"] or 0.0) >= remote_rev:
+        # Local is already at or ahead of this revision — keep it.
+        return
+    conn.execute("DELETE FROM canvas_node WHERE board_id=?", (bid,))
+    conn.execute("DELETE FROM canvas_edge WHERE board_id=?", (bid,))
+    conn.execute("DELETE FROM canvas_board WHERE id=?", (bid,))
+    conn.execute(
+        "INSERT INTO canvas_board(id,name,created_at,updated_at) "
+        "VALUES(?,?,?,?)",
+        (bid, p.get("name") or "Canvas",
+         float(p.get("created_at") or _now()), remote_rev or _now()))
+    now = time.time()
+    for n in nodes:
+        nid = str(n.get("id") or "")[:12]
+        if not nid:
+            continue
+        conn.execute(
+            "INSERT INTO canvas_node(id,board_id,kind,x,y,w,h,text,ref,color,"
+            "created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+            (nid, bid, str(n.get("kind") or "text"),
+             float(n.get("x", 0)), float(n.get("y", 0)),
+             float(n.get("w", 200)), float(n.get("h", 100)),
+             str(n.get("text") or ""), str(n.get("ref") or ""),
+             str(n.get("color") or "yellow"),
+             float(n.get("created_at") or now)))
+    for e in edges:
+        f = str(e.get("from_id") or "")[:12]
+        t = str(e.get("to_id") or "")[:12]
+        if f and t and f != t:
+            conn.execute(
+                "INSERT INTO canvas_edge(id,board_id,from_id,to_id) "
+                "VALUES(?,?,?,?)",
+                (uuid.uuid4().hex[:12], bid, f, t))
+    conn.commit()
+
+
 def _apply_citation_meta(p: dict) -> None:
     mid = p.get("module_id") or p.get("id") or ""
     if not mid:
@@ -620,6 +745,81 @@ def _apply_citation_meta(p: dict) -> None:
             "INSERT OR REPLACE INTO citation_meta(module_id,field,value,updated_at) "
             "VALUES(?,?,?,?)",
             (mid, field, str(value), _now()))
+    conn.commit()
+
+
+def _apply_ai_chat(p: dict) -> None:
+    conn = db.connect()
+    cid = (p.get("id") or "").strip()
+    if not cid:
+        raise ValueError("an AI chat needs an id")
+    conn.execute(
+        "INSERT OR REPLACE INTO ai_chat(id, title, created_at, updated_at) "
+        "VALUES(?,?,?,?)",
+        (cid, p.get("title") or "",
+         float(p.get("created_at") or 0.0),
+         float(p.get("updated_at") or 0.0)))
+    conn.execute("DELETE FROM ai_chat_turn WHERE chat_id=?", (cid,))
+    for t in p.get("turns") or []:
+        try:
+            ord_ = int(t.get("ord", 0))
+        except (TypeError, ValueError):
+            continue
+        conn.execute(
+            "INSERT OR REPLACE INTO ai_chat_turn"
+            "(chat_id, ord, role, content, cites) VALUES(?,?,?,?,?)",
+            (cid, ord_, t.get("role") or "user",
+             t.get("content") or "", t.get("cites") or ""))
+    conn.commit()
+
+
+def _apply_morph_query(p: dict) -> None:
+    conn = db.connect()
+    rid = (p.get("id") or "").strip()
+    name = (p.get("name") or "").strip() or "Saved query"
+    query = p.get("query")
+    if isinstance(query, str):
+        qjson = query
+    else:
+        try:
+            qjson = json.dumps(query, ensure_ascii=False,
+                               sort_keys=True, separators=(",", ":"))
+        except (TypeError, ValueError):
+            qjson = "{}"
+    # Saved queries are UNIQUE(name); two machines can hold different
+    # queries under one name.  The restored one gets a fresh suffix rather
+    # than erasing the local one or failing outright.
+    clash = conn.execute(
+        "SELECT id FROM saved_morph_query WHERE name=?", (name,)).fetchone()
+    if clash and (not rid or clash["id"] != rid):
+        base, n = name, 2
+        while conn.execute(
+                "SELECT 1 FROM saved_morph_query WHERE name=?",
+                (f"{base} ({n})",)).fetchone():
+            n += 1
+        name = f"{base} ({n})"
+    if rid:
+        hit = conn.execute(
+            "SELECT id FROM saved_morph_query WHERE id=?", (rid,)).fetchone()
+        if hit:
+            conn.execute(
+                "UPDATE saved_morph_query SET name=?, query_json=?, "
+                "created_at=?, updated_at=? WHERE id=?",
+                (name, qjson, float(p.get("created_at") or 0.0),
+                 float(p.get("updated_at") or 0.0), rid))
+        else:
+            conn.execute(
+                "INSERT INTO saved_morph_query"
+                "(id, name, query_json, created_at, updated_at) "
+                "VALUES(?,?,?,?,?)",
+                (rid, name, qjson, float(p.get("created_at") or 0.0),
+                 float(p.get("updated_at") or 0.0)))
+    else:
+        conn.execute(
+            "INSERT INTO saved_morph_query"
+            "(id, name, query_json, created_at, updated_at) VALUES(?,?,?,?,?)",
+            (uuid.uuid4().hex[:12], name, qjson,
+             float(p.get("created_at") or 0.0), float(p.get("updated_at") or 0.0)))
     conn.commit()
 
 
@@ -639,634 +839,22 @@ _APPLIERS = {
     "workflow": _apply_workflow,
     "srs-card": _apply_srs_card,
     "citation-meta": _apply_citation_meta,
+    "canvas-board": _apply_canvas_board,
+    "ai-chat": _apply_ai_chat,
+    "morph-query": _apply_morph_query,
 }
 
-
-def _delete_note(rid: str) -> None:
-    from . import notes
-    notes.remove(rid)
-
-
-def _delete_highlight(rid: str) -> None:
-    conn = db.connect()
-    conn.execute("DELETE FROM highlight WHERE id=?", (rid,))
-    conn.commit()
-
-
-def _delete_plan_mark(rid: str) -> None:
-    from . import readingplan
-    readingplan.clear_progress(rid[len("plan-"):] if rid.startswith("plan-")
-                               else rid)
-
-
-def _delete_layout(rid: str) -> None:
-    """Delete a layout that no longer exists elsewhere.
-
-    `workspace.delete_layout` refuses to delete the layout in use, which is
-    right for a click and wrong for a sync: a layout removed on the other
-    device has to go here too.  If it leaves no current layout, the newest
-    remaining one becomes current, because the app needs a workspace.
-    """
-    from . import workspace
-    conn = db.connect()
-    was_current = conn.execute(
-        "SELECT is_current FROM layout WHERE id=?", (rid,)).fetchone()
-    conn.execute("DELETE FROM pane WHERE layout_id=?", (rid,))
-    conn.execute("DELETE FROM layout WHERE id=?", (rid,))
-    conn.commit()
-    if was_current and was_current["is_current"]:
-        left = workspace.list_layouts()
-        if left:
-            conn.execute("UPDATE layout SET is_current=0")
-            conn.execute("UPDATE layout SET is_current=1 WHERE id=?",
-                         (left[0]["id"],))
-            conn.commit()
-
-
-def _delete_collection(rid: str) -> None:
-    from . import organise
-    organise.delete_collection(rid)
-
-
-def _delete_passage_list(rid: str) -> None:
-    from . import organise
-    organise.delete_passage_list(rid)
-
-
-def _delete_passage(rid: str) -> None:
-    from . import organise
-    organise.remove_passage(rid)
-
-
-def _delete_template(rid: str) -> None:
-    from . import organise
-    organise.delete_template(rid)
-
-
-def _delete_favourite(rid: str) -> None:
-    from . import library
-    library.set_favorite(rid, False)
-
-
-def _delete_setting(rid: str) -> None:
-    conn = db.connect()
-    conn.execute("DELETE FROM setting WHERE key=?", (rid,))
-    conn.commit()
-
-
-def _delete_tag(rid: str) -> None:
-    conn = db.connect()
-    conn.execute("DELETE FROM tag_item WHERE tag_id=?", (rid,))
-    conn.execute("DELETE FROM tag WHERE id=?", (rid,))
-    conn.commit()
-
-
-def _delete_word_list(rid: str) -> None:
-    from . import wordlist
-    try:
-        wordlist.remove(rid)
-    except Exception:
-        pass
-
-
-def _delete_workflow(rid: str) -> None:
-    from . import workflow
-    try:
-        workflow.remove(rid)
-    except Exception:
-        pass
-
-
-def _delete_srs_card(rid: str) -> None:
-    from . import srs
-    try:
-        srs.remove(rid)
-    except Exception:
-        pass
-
-
-def _delete_citation_meta(rid: str) -> None:
-    conn = db.connect()
-    conn.execute("DELETE FROM citation_meta WHERE module_id=?", (rid,))
-    conn.commit()
-
-
-_DELETERS = {
-    "note": _delete_note,
-    "highlight": _delete_highlight,
-    "plan-mark": _delete_plan_mark,
-    "layout": _delete_layout,
-    "collection": _delete_collection,
-    "passage-list": _delete_passage_list,
-    "passage": _delete_passage,
-    "template": _delete_template,
-    "favourite": _delete_favourite,
-    "setting": _delete_setting,
-    "tag": _delete_tag,
-    "word-list": _delete_word_list,
-    "workflow": _delete_workflow,
-    "srs-card": _delete_srs_card,
-    "citation-meta": _delete_citation_meta,
-}
-
-
-# ------------------------------------------------------- merge, and the run
-
-def _merge_payload(kind: str, local: dict, remote: dict) -> dict:
-    """Combine two versions where a combination is the right answer.
-
-    Returns the merged payload, or None to fall through to last-writer-wins.
-    Reading progress is a set of days marked read, and a set is additive: two
-    devices marking different days produce the union of both, and neither
-    reader's tick loses.  The revision is the greater of the two, so the merged
-    record does not look older than either side.
-    """
-    if kind == "plan-mark":
-        days = sorted(set(int(d) for d in (local.get("days") or []))
-                      | set(int(d) for d in (remote.get("days") or [])))
-        return dict(local, days=days)
-    return None
-
-
-def _clock_key(stamp: dict) -> tuple:
-    return (int((stamp or {}).get("ctr") or 0), str((stamp or {}).get("dev") or ""))
-
-
-class Syncer:
-    """One sync run.
-
-    Holds everything the run needs in one object because the run is a
-    conversation with a folder: read the manifest, fetch what is missing, decide
-    each record, write the changed ones, and only then rewrite the manifest.  A
-    run that is interrupted between those steps leaves the old manifest in place
-    and is simply an incomplete sync.
-    """
-
-    def __init__(self, target, dev: str):
-        self.target = target
-        self.dev = dev
-        self.pushed = 0
-        self.pulled = 0
-        self.conflicts = 0
-        self.skipped = 0
-        self.notes: list[str] = []
-        self._manifest: dict = {"records": {}}
-        self._max_ctr = 0
-
-    # -- folder I/O --------------------------------------------------------
-
-    def _read_json(self, relpath: str):
-        raw = self.target.read(relpath)
-        if raw is None:
-            return None
-        try:
-            return json.loads(raw.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            return None
-
-    def _write_json(self, relpath: str, obj) -> None:
-        body = json.dumps(obj, ensure_ascii=False, indent=1).encode("utf-8")
-        self.target.write(relpath, body)
-
-    def _manifest_path(self) -> str:
-        """The manifest sits beside the records, inside the version folder.
-
-        Kept there rather than at the root so that a v2 can be added beside it:
-        a reader understands the version whose directory it can read, and the
-        two manifests are not the same file.
-        """
-        return f"{FOLDER_VERSION}/{MANIFEST}"
-
-    def _read_manifest(self) -> dict:
-        m = self._read_json(self._manifest_path())
-        if not isinstance(m, dict) or not isinstance(m.get("records"), dict):
-            return {"records": {}}
-        return m
-
-    def _fetch_remote(self, entry: dict) -> dict | None:
-        rid = entry.get("id") or entry.get("_id") or ""
-        if not rid:
-            return None
-        return self._read_json(relpath(entry.get("kind") or "", rid))
-
-    # -- the clock ---------------------------------------------------------
-
-    def _observe(self, stamp: dict) -> None:
-        """Take the other device's counter forward, always.
-
-        This is what makes the clock work: a device that has only ever *read*
-        still advances its counter, so the writer's counter can never fall
-        behind something it has already seen.  Wall clocks are never consulted
-        for ordering.
-        """
-        try:
-            self._max_ctr = max(self._max_ctr, int((stamp or {}).get("ctr") or 0))
-        except (TypeError, ValueError):
-            pass
-
-    def _stamp(self) -> dict:
-        return {"dev": self.dev, "ctr": self._max_ctr + 1}
-
-    # -- the run -----------------------------------------------------------
-
-    def run(self) -> dict:
-        started = _now()
-        self._manifest = self._read_manifest()
-        remote = self._manifest.get("records") or {}
-
-        local = self._local()
-        meta = self._meta()
-
-        # Every stamp the other side has ever issued, before anything is
-        # decided: the counter must be ahead of all of it.
-        for entry in remote.values():
-            self._observe(entry.get("clock"))
-        for row in meta.values():
-            self._observe(row.get("clock"))
-
-        ids = set(local) | set(remote)
-
-        for rid in sorted(ids):
-            self._one(rid, local.get(rid), remote.get(rid), meta.get(rid))
-
-        # Tombstones that have outlived their usefulness are forgotten, here
-        # and in the folder.
-        self._gc_tombstones()
-        # The manifest is written from what is known *now*, not from the
-        # snapshot taken at the start: a record pushed during this run is a
-        # record the other side must be able to see next time.
-        self._write_manifest(local, self._meta())
-
-        return {"ok": True, "pushed": self.pushed, "pulled": self.pulled,
-                "conflicts": self.conflicts, "skipped": self.skipped,
-                "records": len(local), "notes": self.notes,
-                "seconds": round(_now() - started, 2)}
-
-    def _local(self) -> dict:
-        out: dict = {}
-        for kind, fn in _COLLECTORS.items():
-            try:
-                for p in fn() or []:
-                    rid = str(p.get("id") or "")
-                    if rid:
-                        out[rid] = {"kind": kind, "payload": p}
-            except Exception as e:                      # keep syncing the rest
-                self.notes.append(f"{kind}: {e}")
-        return out
-
-    def _meta(self) -> dict:
-        conn = db.connect()
-        return {r["id"]: dict(r) for r in conn.execute("SELECT * FROM sync_meta")}
-
-    def _tombstones(self) -> dict:
-        conn = db.connect()
-        return {r["id"]: dict(r) for r in conn.execute(
-            "SELECT * FROM sync_tombstone")}
-
-    def _remember(self, rid: str, kind: str, rev: int, clock: dict, hsh: str,
-                  updated_at: float | None = None, *, base: str = "") -> None:
-        conn = db.connect()
-        conn.execute(
-            "INSERT OR REPLACE INTO sync_meta(id,kind,rev,dev,ctr,updated_at,"
-            "hash,base) VALUES(?,?,?,?,?,?,?,?)",
-            (rid, kind, int(rev), str((clock or {}).get("dev") or ""),
-             int((clock or {}).get("ctr") or 0),
-             float(updated_at or _now()), hsh, base or ""))
-        conn.commit()
-
-    def _tombstone_row(self, rid: str, kind: str) -> None:
-        """Record a delete locally so the next sync sends it on."""
-        conn = db.connect()
-        stamp = self._stamp()
-        self._max_ctr = max(self._max_ctr, stamp["ctr"])
-        conn.execute(
-            "INSERT OR REPLACE INTO sync_tombstone(id,kind,deleted_at,rev,dev,ctr)"
-            " VALUES(?,?,?,?,?,?)",
-            (rid, kind, _now(), 1, stamp["dev"], stamp["ctr"]))
-        conn.commit()
-
-    # -- one record --------------------------------------------------------
-
-    def _one(self, rid: str, lrec, rentry, metarow) -> None:
-        """Decide one record: push it, pull it, keep both, or leave it alone.
-
-        The question is always "did each side change it since they last agreed",
-        and the answer comes from two hashes kept per record: `hash`, the
-        content of the version the folder holds, and `base`, the content that
-        version was written against.  `base` is what makes a concurrent edit
-        visible: if the other device built its change on something that is not
-        the version here, the two changes were made without knowledge of each
-        other, and one of them must be kept rather than dropped.
-        """
-        kind = ((lrec or {}).get("kind") or (metarow or {}).get("kind")
-                or (rentry or {}).get("kind") or "")
-        if not kind or (kind not in _APPLIERS and kind not in _COLLECTORS):
-            # A kind this build does not know travels through untouched.
-            self.skipped += 1
-            return
-
-        lhash = payload_hash(lrec["payload"]) if lrec else ""
-        mhash = (metarow or {}).get("hash") or ""
-        rhash = (rentry or {}).get("hash") or ""
-        rbase = (rentry or {}).get("base") or ""
-        rclock = (rentry or {}).get("clock") or {}
-        rrev = int((rentry or {}).get("rev") or 1)
-
-        local_changed = bool(lrec) and (not metarow or lhash != mhash)
-        remote_changed = bool(rentry) and bool(rhash) and (not metarow
-                                                          or rhash != mhash)
-
-        # Both hold it and it is the same content.
-        if lrec and rentry and rhash and lhash == rhash \
-                and not (rentry or {}).get("deleted"):
-            self._remember(rid, kind, rrev, rclock, lhash,
-                           (rentry or {}).get("updated_at"), base=rbase)
-            self.skipped += 1
-            return
-
-        # ---- we do not have it -------------------------------------------
-        if lrec is None:
-            rec = self._fetch_remote(rentry) if rentry else None
-            if rec is None:
-                # Either a tombstone we have not heard of, or a record whose
-                # file is missing.  Our own delete travels either way.
-                self._push_tombstone(rid, kind)
-                return
-            if rec.get("deleted"):
-                if metarow and not mhash:
-                    # We already hold this delete and it is unchanged: pulling
-                    # it again would be work that never ends, and the manifest
-                    # would otherwise show the same record moving for ever.
-                    self.skipped += 1
-                    return
-                self._delete_local(kind, rid)
-                self._remember(rid, kind, rec.get("rev") or 1,
-                               rec.get("clock") or {}, "",
-                               rec.get("updated_at"), base="")
-                self._tombstone_row(rid, kind)
-                self.pulled += 1
-                return
-            if not remote_changed and metarow:
-                # We deleted it and the other side never touched it: the delete
-                # is newer information, so it wins.
-                self._push_tombstone(rid, kind)
-                return
-            self._apply_remote(kind, rid, rec)
-            return
-
-        # ---- we have it --------------------------------------------------
-        rec = self._fetch_remote(rentry) if rentry else None
-
-        if rec is None:
-            if rentry and (rentry or {}).get("deleted") and not local_changed:
-                self._delete_local(kind, rid)
-                self._remember(rid, kind, rrev, rclock, "",
-                               (rentry or {}).get("updated_at"), base="")
-                self._tombstone_row(rid, kind)
-                self.pulled += 1
-                return
-            self._push(rid, kind, lrec["payload"], base=mhash)
-            return
-
-        if rec.get("deleted"):
-            if not local_changed:
-                self._delete_local(kind, rid)
-                self._remember(rid, kind, rec.get("rev") or 1,
-                               rec.get("clock") or {}, "",
-                               rec.get("updated_at"), base="")
-                self._tombstone_row(rid, kind)
-                self.pulled += 1
-                return
-            # We edited a record the other side deleted.  The edit is newer,
-            # so it wins and the record comes back on the other device.
-            self._push(rid, kind, lrec["payload"], base=mhash)
-            return
-
-        # Both alive, and the content differs.
-        merged = _merge_payload(kind, lrec["payload"], rec.get("payload") or {})
-        if merged is not None:
-            # Additive kinds merge; nothing is won or lost.
-            self._push(rid, kind, merged, base=mhash)
-            return
-
-        if rbase and rbase == lhash:
-            # Their change was written against exactly the version held here,
-            # so it is the newer one and there is nothing of ours to lose.
-            self._apply_remote(kind, rid, rec)
-            return
-
-        if not local_changed and (not rbase or rbase == mhash):
-            # We have not touched it since we last agreed, and their change
-            # starts from that same version: an ordinary advance.
-            self._apply_remote(kind, rid, rec)
-            return
-
-        if not remote_changed:
-            self._push(rid, kind, lrec["payload"], base=mhash)
-            return
-
-        # Both sides changed it since they last agreed.
-        self._resolve_conflict(kind, rid, lrec["payload"], rec, metarow or {})
-
-    # -- moves -------------------------------------------------------------
-
-    def _resolve_conflict(self, kind: str, rid: str, local_payload: dict,
-                          rec: dict, metarow: dict) -> None:
-        """Pick a winner and keep the loser.
-
-        The winner is decided by the clock, then by revision, and only then by
-        wall time -- which is why a device with a dead battery cannot win by
-        being confidently wrong.  The loser is written as an ordinary record
-        under a new id, so both versions exist on both devices afterwards.
-        """
-        mine = _clock_key(metarow.get("clock") or {})
-        theirs = _clock_key(rec.get("clock") or {})
-        mrev = int(metarow.get("rev") or 1)
-        rrev = int(rec.get("rev") or 1)
-        if theirs == mine:
-            theirs_win = rrev > mrev
-        else:
-            theirs_win = theirs > mine
-
-        if theirs_win:
-            self._conflict_copy(kind, rid, local_payload)
-            self._apply_remote(kind, rid, rec)
-        else:
-            self._push(rid, kind, local_payload,
-                       base=metarow.get("hash") or "")
-            self._conflict_copy(kind, rid, rec.get("payload") or {},
-                                keep_id=rec.get("id") or rid)
-
-    def _push(self, rid: str, kind: str, payload, *, base: str = "") -> None:
-        stamp = self._stamp()
-        self._max_ctr = max(self._max_ctr, stamp["ctr"])
-        row = db.connect().execute(
-            "SELECT rev FROM sync_meta WHERE id=?", (rid,)).fetchone()
-        rev = ((row["rev"] if row else 0) or 0) + 1
-        self._write_json(relpath(kind, rid),
-                         _envelope(kind, rid, payload, rev=rev, clock=stamp))
-        self._remember(rid, kind, rev, stamp, payload_hash(payload), base=base)
-        self.pushed += 1
-
-    def _push_tombstone(self, rid: str, kind: str) -> None:
-        entry = (self._manifest.get("records") or {}).get(rid) or {}
-        if entry.get("deleted") and entry.get("clock", {}).get("dev") == self.dev:
-            self.skipped += 1              # already sent, and unchanged
-            return
-        conn = db.connect()
-        row = conn.execute("SELECT * FROM sync_tombstone WHERE id=?",
-                           (rid,)).fetchone()
-        if row is None:
-            if conn.execute("SELECT 1 FROM sync_meta WHERE id=?",
-                            (rid,)).fetchone() is None:
-                return                      # never synced: nothing to remember
-            self._tombstone_row(rid, kind)
-            row = conn.execute("SELECT * FROM sync_tombstone WHERE id=?",
-                               (rid,)).fetchone()
-        stamp = {"dev": row["dev"], "ctr": row["ctr"]}
-        self._observe(stamp)
-        self._write_json(relpath(kind, rid),
-                         _envelope(kind, rid, None, rev=row["rev"],
-                                   clock=stamp, deleted=True))
-        self._remember(rid, kind, row["rev"], stamp, "", base="")
-
-    def _apply_remote(self, kind: str, rid: str, rec: dict) -> None:
-        payload = rec.get("payload") or {}
-        try:
-            _APPLIERS[kind](payload)
-        except Exception as e:
-            self.notes.append(f"could not apply {kind} {rid}: {e}")
-            return
-        self._remember(rid, kind, rec.get("rev") or 1, rec.get("clock") or {},
-                       payload_hash(payload), rec.get("updated_at"),
-                       base=rec.get("base") or "")
-
-    def _delete_local(self, kind: str, rid: str) -> None:
-        fn = _DELETERS.get(kind)
-        if not fn:
-            return
-        try:
-            fn(rid)
-        except Exception as e:
-            self.notes.append(f"could not delete {kind} {rid}: {e}")
-
-    def _conflict_copy(self, kind: str, rid: str, payload: dict,
-                       *, keep_id: str = "") -> None:
-        """Write a losing version as an ordinary record under a new id.
-
-        Silently dropping a reader's words is the one outcome sync must never
-        have.  The copy is a real record from here on, so it travels to the
-        other device and both sides end up holding both versions.
-        """
-        if kind == "setting":
-            # A setting has one value per key, so there is nothing to copy: a
-            # second version of `top_bible` is not a thing a reader can hold.
-            return
-        new_payload = dict(payload)
-        stamp = self._stamp()
-        self._max_ctr = max(self._max_ctr, stamp["ctr"])
-        cid = f"{rid}-conflict-{uuid.uuid4().hex[:6]}"
-        for key in ("title", "name"):
-            if new_payload.get(key):
-                new_payload[key] = f"{new_payload[key]} (conflicted)"
-                break
-        new_payload["id"] = cid
-        self._write_json(relpath(kind, cid),
-                         _envelope(kind, cid, new_payload, rev=1, clock=stamp))
-        # The copy is a real record here too, or the next sync would see it as
-        # something the other device wrote and pull it back for no reason.
-        try:
-            _APPLIERS[kind](new_payload)
-        except Exception as e:
-            self.notes.append(f"could not keep a copy of {keep_id or rid}: {e}")
-            return
-        self._remember(cid, kind, 1, stamp, payload_hash(new_payload),
-                       base=(keep_id and payload_hash(payload)) or "")
-        self.conflicts += 1
-        self.notes.append(f"kept a version of {keep_id or rid} as "
-                          f"{(new_payload.get('title') or new_payload.get('name') or cid)!r}")
-
-    # -- the manifest ------------------------------------------------------
-
-    def _write_manifest(self, local: dict, meta: dict) -> None:
-        """Rewrite the manifest from this device's post-sync knowledge.
-
-        Written last, and atomically, because it is the index everything else
-        is found by.  A run interrupted before this point leaves the old
-        manifest in place, which is simply an incomplete sync.
-        """
-        records: dict = {}
-        for rid, row in meta.items():
-            records[rid] = _manifest_entry(rid, row)
-        tomb = self._tombstones()
-        for rid, row in tomb.items():
-            records[rid] = {"id": rid, "kind": row["kind"], "rev": row["rev"],
-                            "hash": "", "base": "", "deleted": True,
-                            "updated_at": row["deleted_at"],
-                            "clock": {"dev": row["dev"], "ctr": row["ctr"]}}
-        self._write_json(self._manifest_path(), {
-            "schema": 1,
-            "generated_at": round(_now(), 3),
-            "generated_by": self.dev,
-            "records": records,
-        })
-
-    def _gc_tombstones(self) -> None:
-        """Forget deletes old enough that no device can still be behind.
-
-        Keeping them for ever would grow the folder without bound; dropping
-        them too early resurrects a note on a device that was switched off for a
-        season.  Ninety days is the safe side of that trade.
-        """
-        conn = db.connect()
-        cutoff = _now() - TOMBSTONE_KEEP
-        rows = conn.execute(
-            "SELECT id, kind FROM sync_tombstone WHERE deleted_at < ?",
-            (cutoff,)).fetchall()
-        for r in rows:
-            try:
-                self.target.remove(relpath(r["kind"], r["id"]))
-            except Exception:
-                pass
-            conn.execute("DELETE FROM sync_tombstone WHERE id=?", (r["id"],))
-            conn.execute("DELETE FROM sync_meta WHERE id=?", (r["id"],))
-        if rows:
-            conn.commit()
-
-
-def _manifest_entry(rid: str, row: dict) -> dict:
-    return {"id": rid, "kind": row.get("kind") or "",
-            "rev": int(row.get("rev") or 1),
-            "hash": row.get("hash") or "",
-            "base": row.get("base") or "",
-            "deleted": bool(row.get("deleted")),
-            "updated_at": row.get("updated_at") or 0,
-            "clock": {"dev": row.get("dev") or "", "ctr": int(row.get("ctr") or 0)}}
-
-
-# --------------------------------------------------------------- tombstones
 
 def tombstone(rec_id: str, kind: str) -> None:
-    """Record a delete so the next sync does not resurrect it.
+    """Record a delete.  Under the unified backup this is intentionally a no-op.
 
-    Called from the module that owns the row, at the moment of deletion.  Only
-    recorded when the record had been synced: one created and deleted while sync
-    was off was never anywhere else, and remembering it would only grow the
-    folder.
+    A `.gbz` is a complete snapshot of the library, written on every sync.  A
+    record that is gone from the library simply is not in the next backup, and
+    restores apply additively and never delete — so there is nothing for a
+    delete to propagate to.  Kept as a no-op so the call sites that used to
+    notify sync do not need to change.
     """
-    conn = db.connect()
-    if conn.execute("SELECT 1 FROM sync_meta WHERE id=?",
-                    (rec_id,)).fetchone() is None:
-        return
-    conn.execute(
-        "INSERT OR REPLACE INTO sync_tombstone(id,kind,deleted_at,rev,dev,ctr)"
-        " VALUES(?,?,?,?,?,?)",
-        (rec_id, kind, _now(), 1, device_id(), _counter()))
-    conn.commit()
-
-
-def _counter() -> int:
-    return int(db.get_setting(K_COUNTER, 0) or 0)
+    return
 
 
 # ------------------------------------------------------------ configuration
@@ -1314,7 +902,14 @@ def save_config(cfg: dict) -> dict:
         "name": (cfg.get("name") or kind).strip(),
         "interval": interval,
         "wifi_only": bool(cfg.get("wifi_only")),
+        "encrypt": bool(cfg.get("encrypt")),
+        "auto_backup_hours": int(cfg.get("auto_backup_hours") or 0),
     }
+    if cfg.get("passphrase"):
+        save_credentials(out["name"], cfg.get("password") or "")
+        creds = _read_credentials()
+        creds.setdefault(out["name"], {})["passphrase"] = cfg.get("passphrase")
+        _write_credentials(creds)
     if kind == "filesystem":
         out["path"] = (cfg.get("path") or "").strip()
     elif kind in ("webdav", "nextcloud"):
@@ -1376,7 +971,13 @@ _lock = threading.Lock()
 
 
 def run(force: bool = False) -> dict:
-    """Sync once, in this thread.  Returns a summary for the caller to show."""
+    """Build a .gbz and store it on the configured target.
+
+    One artefact, one action: for a filesystem target that means
+    `<folder>/gbible-backup.gbz`; for WebDAV/Nextcloud it means one HTTP
+    upload of the same file to the same path.  The interval worker runs this
+    on its own thread; the lock stops it overlapping a manual press.
+    """
     with _lock:
         cfg = config()
         if not cfg.get("kind"):
@@ -1394,14 +995,31 @@ def run(force: bool = False) -> dict:
                                "found). Sync is paused until it can.")
                 return {"ok": True, "skipped": "unknown-metered"}
 
-        db.set_setting(K_LAST_RUN, _now())
+        started = _now()
+        db.set_setting(K_LAST_RUN, started)
         try:
             from . import synctargets
+            from . import gbz as _gbz
             target = synctargets.from_config(cfg)
-            summary = Syncer(target, device_id()).run()
+            out = _gbz.create_gbz(appearance=None, include_ai=True)
+            data = out["data"]
+            if cfg.get("encrypt"):
+                pw = encryption_passphrase(cfg)
+                if not pw:
+                    raise SyncError("Encryption is on but no passphrase is set.")
+                data = _gbz.encrypt_gbz(data, pw)
+            target.write(_gbz.GBZ_NAME, data)
         except Exception as e:
             db.set_setting(K_LAST_ERROR, str(e))
+            errorlog.log_exception("sync", e)
             raise
+
+        summary = {"ok": True,
+                   "records": sum((out.get("counts") or {}).values()),
+                   "pushed": sum((out.get("counts") or {}).values()),   # compat with older UI builds
+                   "bytes": int(out.get("size") or 0),
+                   "file": _gbz.GBZ_NAME,
+                   "seconds": round(_now() - started, 2)}
         db.set_setting(K_LAST_OK, _now())
         db.set_setting(K_LAST_ERROR, "")
         db.set_setting(K_LAST_SUMMARY, summary)
@@ -1410,15 +1028,7 @@ def run(force: bool = False) -> dict:
 
 def status() -> dict:
     cfg = config()
-    counts: dict = {}
-    try:
-        conn = db.connect()
-        for r in conn.execute("SELECT kind, COUNT(*) c FROM sync_meta "
-                              "GROUP BY kind"):
-            counts[r["kind"]] = r["c"]
-        pending = conn.execute("SELECT COUNT(*) c FROM sync_tombstone").fetchone()["c"]
-    except Exception:
-        pending = 0
+    summary = db.get_setting(K_LAST_SUMMARY, {}) or {}
     return {"configured": bool(cfg.get("kind")), "kind": cfg.get("kind") or "",
             "name": cfg.get("name") or "", "path": cfg.get("path") or "",
             "url": cfg.get("url") or "", "user": cfg.get("user") or "",
@@ -1426,9 +1036,10 @@ def status() -> dict:
             "last_run": db.get_setting(K_LAST_RUN, 0) or 0,
             "last_ok": db.get_setting(K_LAST_OK, 0) or 0,
             "last_error": db.get_setting(K_LAST_ERROR, "") or "",
-            "summary": db.get_setting(K_LAST_SUMMARY, {}) or {},
-            "device_id": device_id(), "metered": metered(),
-            "counts": counts, "tombstones": pending,
+            "summary": summary, "device_id": device_id(), "metered": metered(),
+            "last_file": summary.get("file") or "gbible-backup.gbz",
+            "last_size": int(summary.get("bytes") or 0),
+            "encrypt": bool(cfg.get("encrypt")),
             "intervals": intervals(), "kinds": dict(KINDS)}
 
 
@@ -1482,6 +1093,7 @@ def _loop() -> None:
             run()
         except Exception as e:
             db.set_setting(K_LAST_ERROR, str(e))
+            errorlog.log_exception("sync", e)
 
 
 def _final_sync() -> None:
@@ -1495,9 +1107,7 @@ def _final_sync() -> None:
         return
     try:
         run(force=True)
-    except Exception:
-        pass
+    except Exception as e:
+        errorlog.log_exception("sync", e)
 
 
-def on_quit_interval() -> None:
-    atexit.register(_final_sync)

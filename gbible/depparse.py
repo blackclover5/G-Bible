@@ -133,11 +133,6 @@ def stats() -> dict:
     return {**_stats, "cached": len(_cache), "available": available()[0]}
 
 
-def clear_cache() -> None:
-    with _cache_lock:
-        _cache.clear()
-
-
 # ------------------------------------------------------------------ relations
 
 #: spaCy dependency labels that mean "the object of the verb above it".
@@ -314,7 +309,6 @@ def _build(doc, ref: str, offset: int, text: str) -> list[Sentence]:
         s.root_verb = s.clause_verb[s.clause_of.get(root, 0)] if s.clause_verb else ""
         sents.append(s)
     return sents
-
 
 
 def parse(text: str, ref: str = "") -> dict:
@@ -510,7 +504,3 @@ RELATIONS = (
 )
 
 
-def reset_model_error() -> None:
-    """Forget a load failure, so a later install can be picked up."""
-    global _error
-    _error = ""

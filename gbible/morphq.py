@@ -348,6 +348,24 @@ def _plain(f: dict) -> dict:
     return {k: v for k, v in f.items() if k != "raw"}
 
 
+def morph_decode(code: str) -> dict:
+    """One morphology code as a readable description, for the hover tooltip."""
+    f = parse_code(code or "")
+    parts = []
+    def push(v):
+        if v: parts.append(str(v))
+    push(f.get("pos")); push(f.get("stem")); push(f.get("conjugation"))
+    push(f.get("tense")); push(f.get("voice")); push(f.get("mood"))
+    if f.get("person"):
+        parts.append(str(f["person"]) + " person")
+    push(f.get("gender")); push(f.get("number")); push(f.get("case"))
+    push(f.get("state")); push(f.get("degree"))
+    if f.get("participle") and f.get("mood") != "participle":
+        push(f.get("participle"))
+    label = ", ".join(parts)
+    return {"ok": True, "code": code, "label": label}
+
+
 def facets(module_id: str = "") -> dict:
     """What is actually installed, with counts, so the form can be built from
     the data rather than from a guess at the grammar."""
@@ -406,7 +424,70 @@ def search_fields(module_id: str) -> dict:
                          "n": r["n"]} for r in rows]}
 
 
-def wordforms(module_id: str, word: str, *, limit: int = 20) -> dict:
+def morph_module_ids(conn=None) -> list[str]:
+    """The modules that carry morphology markers, in a stable order."""
+    c = conn or db.connect()
+    return [r["module_id"] for r in
+            c.execute("SELECT DISTINCT module_id FROM marker WHERE kind='morph'")
+            .fetchall()]
+
+
+_PASSAGE_TABLE = "_gbible_passage"
+
+
+def passage_table(conn, ref: str, module_ids, table: str = _PASSAGE_TABLE):
+    """Build a temp table of (module_id, unit key) inside `ref`.
+
+    Raises ValueError with a user-readable message when the reference cannot
+    be parsed or names no books that are present.  Returns the number of unit
+    keys written.  A temp table is used rather than an IN-list because a
+    whole-Bible range is larger than SQLite's bound-parameter ceiling; the
+    table is session-local and dropped before being rebuilt.
+    """
+    from . import canon
+    rr = canon.parse_ref(ref)
+    if rr is None:
+        raise ValueError("Enter a valid Bible passage.")
+    lo, hi = rr.start, rr.end
+    lb = canon.BOOK_BY_OSIS.get(lo.book)
+    hb = canon.BOOK_BY_OSIS.get(hi.book)
+    if not lb or not hb:
+        raise ValueError("Enter a valid Bible passage.")
+    end_ch, end_vs = hi.chapter or 999999, hi.verse or 999999
+    ids = list(module_ids)
+    if not ids:
+        return 0
+    ph = ",".join("?" * len(ids))
+    rows = conn.execute(
+        f"SELECT module_id, key, book, chapter, verse FROM unit "
+        f"WHERE module_id IN ({ph})", ids).fetchall()
+    keep = []
+    for r in rows:
+        ub = canon.BOOK_BY_OSIS.get(r["book"])
+        if not ub:
+            continue
+        tu = (ub.ordinal, r["chapter"] or 0, r["verse"] or 0)
+        if (lb.ordinal, lo.chapter or 0, lo.verse or 0) <= tu \
+                <= (hb.ordinal, end_ch, end_vs):
+            keep.append((r["module_id"], r["key"]))
+    conn.execute(f"DROP TABLE IF EXISTS temp.{table}")
+    conn.execute(f"CREATE TEMP TABLE {table} (module_id TEXT, key TEXT)")
+    conn.executemany(f"INSERT INTO {table} VALUES (?, ?)", keep)
+    conn.execute(f"CREATE INDEX IF NOT EXISTS {table}_i "
+                 f"ON {table}(module_id, key)")
+    return len(keep)
+
+
+def _passage_clause(alias: str = "m") -> str:
+    """SQL for 'this marker sits inside the passage temp table'.
+
+    The marker table is aliased `m` everywhere the clause is used.
+    """
+    return (f" AND EXISTS (SELECT 1 FROM temp.{_PASSAGE_TABLE} p WHERE "
+            f"p.module_id = {alias}.module_id AND p.key = {alias}.unit_key)")
+
+
+def wordforms(module_id: str, word: str, *, limit: int = 20, ref: str = "") -> dict:
     """Every morphology code carried by one word (lemma or surface) in a module.
 
     This is the engine behind the Logos-style "type a word, press @, pick the
@@ -418,10 +499,26 @@ def wordforms(module_id: str, word: str, *, limit: int = 20) -> dict:
     """
     conn = db.connect()
     word = (word or "").strip()
-    if not module_id or not word:
-        return {"ok": False, "error": "need a module and a word"}
+    if not word:
+        return {"ok": False, "error": "need a word"}
+    # An empty module means "every tagged resource" -- the search bar's
+    # "All tagged resources" option, which is what the @ picker has to answer
+    # too.  The two schemes are not interchangeable, but the codes group the
+    # same way either way.
+    scope = [module_id] if module_id else morph_module_ids(conn)
+    if not scope:
+        return {"ok": False,
+                "error": "No morphologically tagged resource is installed."}
+    ref = (ref or "").strip()
+    if ref:
+        try:
+            passage_table(conn, ref, scope)
+        except ValueError as e:
+            return {"ok": False, "error": str(e)}
+    ph = ",".join("?" * len(scope))
 
     # Try by lemma first, then fall back to the surface form.
+    pc = _passage_clause() if ref else ""
     rows = []
     matched_by = None
     for by in ("lemma", "surface"):
@@ -430,22 +527,22 @@ def wordforms(module_id: str, word: str, *, limit: int = 20) -> dict:
                 "SELECT m.value AS code, m.surface AS surface, COUNT(*) AS n "
                 "FROM marker m JOIN marker l ON l.module_id=m.module_id "
                 "AND l.unit_key=m.unit_key AND l.pos=m.pos "
-                "WHERE m.module_id=? AND m.kind='morph' AND l.kind='lemma' "
-                "AND l.value=? GROUP BY m.value, m.surface ORDER BY n DESC",
-                (module_id, word)).fetchall()
+                f"WHERE m.module_id IN ({ph}) AND m.kind='morph' AND l.kind='lemma' "
+                f"AND l.value=?{pc} GROUP BY m.value, m.surface ORDER BY n DESC",
+                (*scope, word)).fetchall()
         else:
             rows = conn.execute(
-                "SELECT value AS code, surface, COUNT(*) AS n FROM marker "
-                "WHERE module_id=? AND kind='morph' AND surface=? "
-                "GROUP BY value, surface ORDER BY n DESC",
-                (module_id, word)).fetchall()
+                f"SELECT value AS code, surface, COUNT(*) AS n FROM marker m "
+                f"WHERE m.module_id IN ({ph}) AND m.kind='morph' AND m.surface=?{pc} "
+                f"GROUP BY value, surface ORDER BY n DESC",
+                (*scope, word)).fetchall()
         if rows:
             matched_by = by
             break
 
     if not rows:
         return {"ok": True, "word": word, "module_id": module_id,
-                "matched_by": None, "forms": []}
+                "matched_by": None, "forms": [], "ref": ref}
 
     out = []
     for r in rows[:limit]:
@@ -456,19 +553,19 @@ def wordforms(module_id: str, word: str, *, limit: int = 20) -> dict:
             ex_q = ("SELECT u.book, u.chapter, u.verse, u.ref_label "
                     "FROM marker m JOIN unit u "
                     "ON u.module_id=m.module_id AND u.key=m.unit_key "
-                    "WHERE m.module_id=? AND m.kind='morph' AND m.value=? "
+                    f"WHERE m.module_id IN ({ph}) AND m.kind='morph' AND m.value=? "
                     "AND EXISTS (SELECT 1 FROM marker l "
                     "WHERE l.module_id=m.module_id AND l.unit_key=m.unit_key "
                     "AND l.pos=m.pos AND l.kind='lemma' AND l.value=?) "
-                    "LIMIT 5")
-            ex_args = [module_id, code, word]
+                    f"{pc} LIMIT 5")
+            ex_args = [*scope, code, word]
         else:
             ex_q = ("SELECT u.book, u.chapter, u.verse, u.ref_label "
                     "FROM marker m JOIN unit u "
                     "ON u.module_id=m.module_id AND u.key=m.unit_key "
-                    "WHERE m.module_id=? AND m.kind='morph' AND m.value=? "
-                    "AND m.surface=? LIMIT 5")
-            ex_args = [module_id, code, word]
+                    f"WHERE m.module_id IN ({ph}) AND m.kind='morph' AND m.value=? "
+                    f"AND m.surface=?{pc} LIMIT 5")
+            ex_args = [*scope, code, word]
         ex_rows = conn.execute(ex_q, ex_args).fetchall()
         examples = [{"ref": (e["ref_label"] or
                            f"{e['book']} {e['chapter']}:{e['verse']}"),
@@ -483,7 +580,7 @@ def wordforms(module_id: str, word: str, *, limit: int = 20) -> dict:
         })
 
     return {"ok": True, "word": word, "module_id": module_id,
-            "matched_by": matched_by, "forms": out}
+            "matched_by": matched_by, "forms": out, "ref": ref}
 
 
 def pattern(module_id: str, terms: list[dict], *, ref: str = "", max_gap: int = 0,
@@ -504,8 +601,8 @@ def pattern(module_id: str, terms: list[dict], *, ref: str = "", max_gap: int = 
         rr = canon.parse_ref(ref)
         if rr is None:
             return {"ok": False, "error": "Enter a valid Bible passage."}
-        lo = canon.BOOK_BY_NAME.get(rr.start.book)
-        hi = canon.BOOK_BY_NAME.get(rr.end.book)
+        lo = canon.BOOK_BY_OSIS.get(rr.start.book)
+        hi = canon.BOOK_BY_OSIS.get(rr.end.book)
         if lo and hi:
             books = [b.osis for b in canon.BOOK_BY_ORDINAL.values()
                      if lo.ordinal <= b.ordinal <= hi.ordinal]
@@ -528,11 +625,11 @@ def pattern(module_id: str, terms: list[dict], *, ref: str = "", max_gap: int = 
         units = conn.execute("SELECT key,book,chapter,verse FROM unit WHERE module_id=?", (module_id,)).fetchall()
         lo, hi = canon.parse_ref(ref).start, canon.parse_ref(ref).end
         def at_or_after(u, r):
-            ub, rb = canon.BOOK_BY_NAME.get(u["book"]), canon.BOOK_BY_NAME.get(r.book)
+            ub, rb = canon.BOOK_BY_OSIS.get(u["book"]), canon.BOOK_BY_OSIS.get(r.book)
             return bool(ub and rb and (ub.ordinal, u["chapter"] or 0, u["verse"] or 0) >=
                         (rb.ordinal, r.chapter or 0, r.verse or 0))
         def at_or_before(u, r):
-            ub, rb = canon.BOOK_BY_NAME.get(u["book"]), canon.BOOK_BY_NAME.get(r.book)
+            ub, rb = canon.BOOK_BY_OSIS.get(u["book"]), canon.BOOK_BY_OSIS.get(r.book)
             end_ch = r.chapter or 999999
             end_vs = r.verse or 999999
             return bool(ub and rb and (ub.ordinal, u["chapter"] or 0, u["verse"] or 0) <=

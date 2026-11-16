@@ -167,9 +167,12 @@ def _suggested_controls() -> list[dict]:
     if len(avail) < 2:
         return avail
     first = avail[0]
-    second = max(avail[1:],
-                 key=lambda p: _haversine(first["lat"], first["lon"],
-                                          p["lat"], p["lon"]))
+    close = [p for p in avail[1:]
+             if _haversine(first["lat"], first["lon"], p["lat"], p["lon"]) <= 400]
+    pool = close if len(close) >= 1 else avail[1:]
+    second = max(pool,
+                  key=lambda p: _haversine(first["lat"], first["lon"],
+                                           p["lat"], p["lon"]))
     return [first, second]
 
 
@@ -471,10 +474,12 @@ def map_detail(module_id: str) -> dict:
         out["places"] = []
         return out
     if not cal:
+        names = ", ".join(c["name"] for c in _suggested_controls())
         out["note"] = ("This map has not been aligned yet, so the places have "
                        "no position on it. A scanned historical map carries no "
                        "coordinates of its own: click two places you can find on "
-                       "the picture and the rest will fall into place.")
+                       "the picture and the rest will fall into place. "
+                       "Suggested places to look for: " + names + ".")
         out["places"] = []
         return out
     ps = []

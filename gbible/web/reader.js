@@ -19,6 +19,7 @@ const Reader = {
       const pm = modById(parId);
       if (pm && pm.reader === 'verse') {
         await this.renderParallel(p, m, pm, body, tools, opts);
+        if (typeof DevotionalContext !== 'undefined') DevotionalContext.decorate(p, m, body);
         return;
       }
     }
@@ -35,6 +36,7 @@ const Reader = {
     p._content = r;
     body.className = 'pane-body' + (opts.verse_per_line ? ' verseperline' : '');
     this.paint(r, m, body, p.options || {}, p);
+    if (typeof DevotionalContext !== 'undefined') DevotionalContext.decorate(p, m, body);
     /* Factbook tags: a hover definition on a name, without leaving the page.
      * Proper nouns only here, because a tooltip on every word that happens to
      * match a head trains you to ignore it. */
@@ -77,6 +79,7 @@ const Reader = {
       sp.dataset.label = it.label; sp.dataset.k = it.key;
       sp.innerHTML = '<a class="vnum" data-k="' + esc(it.key) + '">'
         + esc(it.label.split(' ').pop()) + '</a>' + it.html;
+      Highlights.mark(sp, m.id, it.key, it.extra && it.extra.osis);
       v1.appendChild(sp);
       const it2 = byKey2[it.key];
       const sp2 = el('span', 'verse');
@@ -87,6 +90,8 @@ const Reader = {
       } else {
         sp2.innerHTML = '<span class="muted">—</span>';
       }
+      if (it2) Highlights.mark(sp2, pm.id, it2.key,
+        it2.extra && it2.extra.osis);
       v2.appendChild(sp2);
     });
     col1.appendChild(v1); col2.appendChild(v2);
@@ -102,11 +107,18 @@ const Reader = {
       const h = el('div', 'docheading', esc(r.section_title));
       body.appendChild(h);
     }
-    if (m.reader === 'verse') {
+    if (m.reader === 'verse' || (m.reader === 'date' && r.kind === 'verse')) {
       // Clear any previously selected verse when the pane re-renders
       if (p) p.selectedVerse = null;
       const v = el('div', 'verses');
       r.items.forEach(it => {
+        /* A generated devotional marks the first verse of each chapter in
+         * its items, so the rune-head appears exactly where the Bible reader
+         * starts Gen 2, Exod 3, etc. A real Bible pane has no such markers
+         * and simply renders its verses. Respect the Headings option. */
+        if (opts.show_headings !== false && it.extra && it.extra.new_ch) {
+          v.appendChild(el('h3', 'chapter-head', esc(it.extra.new_ch)));
+        }
         const sp = el('span', 'verse');
         /* data-label is the full reference -- "Gen 1:1", not "1".  The selection
          * card and the word list both need to cite where a selection came from,
@@ -169,7 +181,18 @@ const Reader = {
       Reader.map(r, m, body);
     } else if (m.reader === 'date') {
       const a = el('div', 'article');
-      r.items.forEach(it => { a.appendChild(el('div', 'docheading', esc(it.title || it.label))); a.insertAdjacentHTML('beforeend', it.html); });
+      r.items.forEach(it => {
+        /* The pane already renders r.section_title as a docheading, so for a
+         * devotional the article-level heading would be the same words twice.
+         * Only repeat it when it differs (a different title, or none on the
+         * pane). */
+        const paneShows = r.section_title &&
+          r.section_title === (it.title || it.label);
+        if (!paneShows) {
+          a.appendChild(el('div', 'docheading', esc(it.title || it.label)));
+        }
+        a.insertAdjacentHTML('beforeend', it.html);
+      });
       body.appendChild(a);
     } else if (m.reader === 'article') {
       Reader.article(r, m, body);
@@ -758,6 +781,25 @@ const Reader = {
     }
   },
 
+  /* Refresh Bible readers after a highlight changes.
+   * Other resource panes do not display Bible highlights and should not
+   * be reloaded for this operation. */
+  async repaintHighlights() {
+    const panes = (S.layout && S.layout.panes) || [];
+    for (const p of panes) {
+      const m = modById(p.module_id);
+      if (!m || !m.is_bible) continue;
+
+      const paneEl = document.querySelector(
+        '.pane[data-pane="' + p.id + '"]'
+      );
+      if (!paneEl) continue;
+
+      const body = paneEl.querySelector('.pane-body');
+      if (body) await this.render(p, m, body, null);
+    }
+  },
+
   async toggle(p, body, key, btn) {
     p.options = p.options || {};
     p.options[key] = !p.options[key];
@@ -961,7 +1003,13 @@ const Reader = {
     } catch (err) { /* best effort */ }
     const unitKey = it.key || '';
     const ref = it.label || '';
-    Study.wordMenu(e.clientX, e.clientY, word, m, unitKey, ref, '', strongs);
+    /* Capture the selection before Study.wordMenu builds and focuses its
+     * context-menu buttons. Focusing a button can collapse the browser's live
+     * selection; passing an empty string here made Highlights.add() see no
+     * quote, so the action appeared to do nothing. */
+    const selection = window.getSelection ? String(window.getSelection() || '') : '';
+    const selectedText = selection.replace(/\s+/g, ' ').trim();
+    Study.wordMenu(e.clientX, e.clientY, word, m, unitKey, ref, selectedText, strongs);
   },
 
   /* Open a Word Study pane for a Strong's number, in the workspace. */

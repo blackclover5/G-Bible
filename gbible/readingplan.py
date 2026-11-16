@@ -30,6 +30,7 @@ store less than a JSON value does.
 from __future__ import annotations
 
 import re
+import json
 
 from . import canon, db, library
 
@@ -158,6 +159,7 @@ def plans() -> list[dict]:
             "sub": f"{len(days)} days · from this devotional",
             "days": len(days),
             "module_id": m.id,
+            "source_id": (m.raw_meta or {}).get("source_id", ""),
         })
     bt = bible_plan()
     if bt["days"]:
@@ -196,19 +198,48 @@ def plans() -> list[dict]:
 
 def _devotional_days(module_id: str) -> list[dict]:
     """A devotional's entries in the order they were meant to be read."""
-    rows = db.connect().execute(
-        "SELECT key, title, book, chapter, verse, ord FROM unit "
+    conn = db.connect()
+    rows = conn.execute(
+        "SELECT key, title, book, chapter, verse, ord, extra FROM unit "
         "WHERE module_id=? ORDER BY ord", (module_id,)).fetchall()
+    module_row = conn.execute("SELECT raw_meta FROM module WHERE id=?", (module_id,)).fetchone()
+    try:
+        module_meta = json.loads((module_row["raw_meta"] if module_row else "") or "{}")
+    except (TypeError, ValueError):
+        module_meta = {}
+    source_id = module_meta.get("source_id", "")
     out = []
     for i, r in enumerate(rows, 1):
         key = r["key"] or ""
         rr = canon.parse_ref(key)
         f = next(iter(rr.refs()), None) if rr else None
+        try:
+            extra = json.loads(r["extra"] or "{}")
+        except (TypeError, ValueError):
+            extra = {}
+        spans = extra.get("spans") or []
+        span_keys = extra.get("span_keys") or []
+        source_keys = []
+        if source_id and span_keys:
+            for span_key in span_keys:
+                sr = canon.parse_ref(span_key)
+                sf = next(iter(sr.refs()), None) if sr else None
+                if not (sf and sf.book and sf.chapter):
+                    continue
+                source_unit = conn.execute(
+                    "SELECT key FROM unit WHERE module_id=? AND book=? AND chapter=? "
+                    "ORDER BY ord LIMIT 1", (source_id, sf.book, sf.chapter)).fetchone()
+                if source_unit and source_unit["key"] not in source_keys:
+                    source_keys.append(source_unit["key"])
+        source_key = source_keys[0] if source_keys else ""
         out.append({
             "n": i,
             "key": key,
             "title": r["title"] or key,
-            "ref": (f"{f.book} {f.chapter}" if f and f.book else ""),
+            "ref": (f"{f.book} {f.chapter}" if f and f.book else (spans[0] if spans else "")),
+            "passages": spans or ([f"{f.book} {f.chapter}"] if f and f.book else []),
+            "source_key": source_key,
+            "source_keys": source_keys,
             "osis": (f.osis_id() if f else ""),
         })
     return out
@@ -376,7 +407,11 @@ def day(plan_id: str, n: int = 0) -> dict:
             "total": len(days), "day": row["n"], "done": row["n"] in done,
             "head": row["title"], "ref": row["ref"], "osis": row["osis"],
             "text": ((reading["text"] or "") if reading else ""),
-            "passages": ([row["ref"]] if row["ref"] else []),
+            "passages": (row.get("passages") or ([row["ref"]] if row["ref"] else [])),
+            "source_id": ((m.raw_meta or {}).get("source_id", "") if m else ""),
+            "source_key": row.get("source_key", ""),
+            "source_keys": row.get("source_keys", []),
+            "source_kind": "bible" if (m and (source := library.get((m.raw_meta or {}).get("source_id", ""))) and source.is_bible) else "resource",
         }
 
     if plan_id.startswith("lection:"):

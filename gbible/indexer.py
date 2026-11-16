@@ -67,7 +67,7 @@ class Indexer:
         self._buf_xrefs: list[tuple] = []
         self._buf_fts: list[tuple] = []
         self.stats = dict(units=0, words=0, chars=0, strongs=0, lemmas=0,
-                          morphs=0, notes=0, xrefs=0, headings=0, redwords=0,
+                          morphs=0, notes=0, xrefs=0, headings=0,
                           chapters=set(), books=set())
 
     # ------------------------------------------------------------------ main
@@ -83,7 +83,7 @@ class Indexer:
         blob = markup.spans_to_json(text, spans, notes=note_segs)
         full, _ = markup.segs_flatten(u.segs, notes=True)
         extra = dict(u.extra or {})
-        markers, strongs, lemmas, morphs, notes, xrefs, reds, heads = \
+        markers, strongs, lemmas, morphs, notes, xrefs, heads = \
             self._scan(u.segs, text, u.key)
         self.stats["units"] += 1
         self.stats["words"] += len(text.split())
@@ -93,7 +93,6 @@ class Indexer:
         self.stats["morphs"] += morphs
         self.stats["notes"] += notes
         self.stats["xrefs"] += len(xrefs)
-        self.stats["redwords"] += reds
         self.stats["headings"] += heads
         if u.book:
             self.stats["books"].add(u.book)
@@ -105,7 +104,7 @@ class Indexer:
             0, len(full), len(text.split()),
             json.dumps({**extra, "has_strongs": bool(strongs),
                         "lemmas": lemmas, "morphs": morphs,
-                        "notes": notes, "has_red": bool(reds)}),
+                        "notes": notes}),
         ))
         for m in markers:
             self._buf_markers.append(m)
@@ -156,7 +155,7 @@ class Indexer:
         metrics, exactly as this index distinguishes WORDS from CHARS.
         """
         markers: list[tuple] = []
-        n_strongs = n_lemma = n_morph = n_notes = n_xref = n_red = n_head = 0
+        n_strongs = n_lemma = n_morph = n_notes = n_xref = n_head = 0
         xrefs: list[str] = []
 
         # One pass over the text gives a word ordinal per character offset, so a
@@ -170,9 +169,7 @@ class Indexer:
                 chunk = s.text
                 if not chunk:
                     continue
-                if s.kind == "red" or s.attrs.get("wj"):
-                    n_red += len(chunk.split())
-                if s.kind in ("title", "heading"):
+                if s.kind in ("title", "heading", "chapter"):
                     n_head += 1
                 char_i += len(chunk)
             elif s.kind in ("break", "para"):
@@ -194,7 +191,7 @@ class Indexer:
                 attrs = s.attrs or {}
                 if s.value or s.lemma:
                     search_field = str(attrs.get("search_field") or attrs.get("field") or
-                                       ("red-letter" if attrs.get("wj") else "main-text")).strip().lower()
+                                       "main-text").strip().lower()
                     if search_field:
                         markers.append((self.mid, "field", search_field, unit_key,
                                         widx, s.text or search_field))
@@ -221,7 +218,7 @@ class Indexer:
                     markers.append((self.mid, "lemma", lemma, unit_key,
                                     widx, s.text or lemma))
                     n_lemma += 1
-        return markers, n_strongs, n_lemma, n_morph, n_notes, xrefs, n_red, n_head
+        return markers, n_strongs, n_lemma, n_morph, n_notes, xrefs, n_head
 
     # A dead branch used to sit here.  `_topic_markers` returned `[]`, so the loop
     # over its result never ran, so nothing noticed that it appended an
@@ -298,7 +295,6 @@ class Indexer:
             "morphs": s["morphs"],
             "notes": s["notes"],
             "xrefs": s["xrefs"],
-            "redwords": s["redwords"],
             "headings": s["headings"],
             "books": len(s["books"]),
             "chapters": len(s["chapters"]),
@@ -393,11 +389,11 @@ def run_import(module_id: str, units: Iterator[UnitIn], *,
     # ---- apply derived capabilities -------------------------------------
     conn.execute(
         "UPDATE module SET chapters=?, verses=?, entries=?, has_strongs=?, "
-        "has_morph=?, has_notes=?, has_xref=?, has_redletter=?, heading_count=?, "
+        "has_morph=?, has_notes=?, has_xref=?, heading_count=?, "
         "v11n_source=?, error=NULL WHERE id=?",
         (st["chapters"], st["units"] if st["books"] else 0, st["units"],
          int(st["strongs"] > 0), int(st["morphs"] > 0), int(st["notes"] > 0),
-         int(st["xrefs"] > 0), int(st["redwords"] > 0), st["headings"],
+         int(st["xrefs"] > 0), st["headings"],
          "module" if st["books"] else "builtin", mid))
     conn.commit()
     m = library.get(mid)

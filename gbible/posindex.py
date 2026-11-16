@@ -48,7 +48,7 @@ import threading
 import time
 from bisect import bisect_left
 
-from . import db
+from . import db, native
 
 #: Occurrences of one term in one unit whose positions are kept.
 MAX_POS = 512
@@ -88,6 +88,8 @@ def _put_varint(out: bytearray, n: int) -> None:
 
 def _get_varints(buf: bytes) -> list[int]:
     """Decode a run of varints, treating the first as an absolute position."""
+    if native.core is not None:
+        return list(native.core.unpack_varints(buf))
     out, val, shift = [], 0, 0
     for byte in buf:
         val |= (byte & 0x7F) << shift
@@ -100,6 +102,8 @@ def _get_varints(buf: bytes) -> list[int]:
 
 
 def _pack(positions: list[int]) -> bytes:
+    if native.core is not None:
+        return bytes(native.core.pack_positions(positions, MAX_POS))
     out = bytearray()
     prev = -1
     for p in positions[:MAX_POS]:
@@ -391,7 +395,6 @@ def _unit_uids(conn) -> dict:
             "WHERE rowid NOT IN (SELECT uid FROM pos_unit)")
         conn.commit()
     return n
-
 
 
 def _region_terms(region: str) -> dict[str, tuple[list[int], list[int], list[int]]]:
@@ -1190,42 +1193,6 @@ def satisfies(terms: list[str], *, metric: str = "words", lo: int = 0,
     return {u for u, g in gaps.items() if lo <= g <= hi}
 
 
-def order_ok(terms: list[str], metric: str = "words",
-             *, ordered: bool = True, limit: int = 100000,
-             part: int = PART_BODY, stem: bool = True) -> set[int]:
-    """Units where the terms occur in the given order (or in any order).
-
-    Distance alone cannot answer BEFORE and AFTER: two words can be close and
-    still be the wrong way round, and "close" knows nothing about which came
-    first.
-    """
-    if len(terms) < 2:
-        return set()
-    getter = _getter(metric, stem)
-    lists = [getter(t, limit=limit, part=part) for t in terms]
-    if any(not p for p in lists):
-        return set()
-    keys = set(lists[0])
-    for p in lists[1:]:
-        keys &= set(p)
-    out = set()
-    for uid in keys:
-        seq = [ps[uid] for ps in lists]
-        ok = True
-        for k in range(len(seq) - 1):
-            if ordered:
-                if not any(a < b for a in seq[k] for b in seq[k + 1]):
-                    ok = False
-                    break
-            else:
-                if not any(a != b for a in seq[k] for b in seq[k + 1]):
-                    ok = False
-                    break
-        if ok:
-            out.add(uid)
-    return out
-
-
 def _needle_forms(word: str) -> list[str]:
     """The surface forms a word as written is allowed to match.
 
@@ -1594,19 +1561,6 @@ def known(term: str) -> bool:
     return _term_id(conn, term) is not None
 
 
-def term_frequency(term: str, uid: int, *, part: int = PART_BODY) -> int:
-    conn = db.connect()
-    tid = _term_id(conn, term)
-    if tid is None:
-        return 0
-    row = conn.execute(
-        "SELECT tf, pos FROM pos WHERE term_id=? AND uid=? AND part=?",
-        (tid, uid, part)).fetchone()
-    if row is None:
-        return 0
-    return row["tf"] or (len(_unpack(row["pos"])) if row["pos"] else 0)
-
-
 def intersect(*terms: str, limit: int = 100000) -> list[int]:
     """Units containing every one of `terms`.  Posting-list intersection.
 
@@ -1625,58 +1579,6 @@ def intersect(*terms: str, limit: int = 100000) -> list[int]:
         lists.append(set(p))
     acc = set.intersection(*lists)
     return sorted(acc)[:limit]
-
-
-def min_gap(terms: list[str], *, limit: int = 100000) -> list[tuple[int, int]]:
-    """(uid, smallest token gap between any two of the terms).
-
-    The gap is measured the way `NEAR` means it here -- a difference of token
-    indices, so 0 is adjacency.  Only units where every term occurs are
-    considered, because a unit missing a term has no pair to measure.
-    """
-    if len(terms) < 2:
-        return []
-    lists = [postings(t, limit=limit) for t in terms]
-    if any(not p for p in lists):
-        return []
-    keys = set(lists[0])
-    for p in lists[1:]:
-        keys &= set(p)
-    out = []
-    for uid in sorted(keys)[:limit]:
-        best = None
-        for i in range(len(lists)):
-            for j in range(i + 1, len(lists)):
-                a, b = lists[i][uid], lists[j][uid]
-                # Merge walk over both sorted lists, and record the absolute
-                # difference at every comparison.  Recording only the
-                # non-negative branch was the bug: with `faith` at [12] and
-                # `love` at [10], the walk advanced past the end of the first
-                # list having never stored the gap of 2 that was sitting right
-                # there, so the unit was dropped from the result entirely.
-                x = y = 0
-                while x < len(a) and y < len(b):
-                    d = b[y] - a[x]
-                    ad = -d if d < 0 else d
-                    if best is None or ad < best:
-                        best = ad
-                        if best == 0:
-                            break
-                    # Advance whichever pointer holds the *larger* value, since
-                    # only moving that list towards the other can narrow the
-                    # gap.  These branches were the wrong way round: when
-                    # a[x] > b[y] the code advanced a, walking off the end of a
-                    # and discarding a closer value sitting at b[y+1].  With
-                    # lord at [386] and faith at [315, 361] that reported 71
-                    # instead of 25, and 275 real proximity matches vanished
-                    # with nothing to indicate it.
-                    if d < 0:
-                        y += 1
-                    else:
-                        x += 1
-        if best is not None:
-            out.append((uid, best))
-    return out
 
 
 def phrase(term_forms: list[str], *, limit: int = 100000,
@@ -1771,23 +1673,6 @@ def _phrase_region(term_forms: list[str], *, limit: int, part: int,
         if ok:
             out.append(uid)
     return out
-
-
-def unit_row(conn, uid: int):
-    return conn.execute(
-        "SELECT u.* FROM pos_unit pu JOIN unit u "
-        "ON u.module_id = pu.module_id AND u.key = pu.key WHERE pu.uid=?",
-        (uid,)).fetchone()
-
-
-def uids_for_keys(module_id: str, keys: list[str]) -> list[int]:
-    if not keys:
-        return []
-    conn = db.connect()
-    ph = ",".join("?" * len(keys))
-    return [r["uid"] for r in conn.execute(
-        f"SELECT uid FROM pos_unit WHERE module_id=? AND key IN ({ph})",
-        [module_id, *keys])]
 
 
 def keys_for_uids(uids: list[int]) -> list[tuple[str, str]]:

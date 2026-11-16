@@ -346,53 +346,102 @@ const Highlights = {
     if (S.view === 'today') Dashboard.paintHighlights();
   },
 
-  /* Wrap each stored quote for this unit in <mark>.  First occurrence per text
-   * node only, so a repeated word does not end up with a stripe down the page.
+  /* Restore saved quotations across inline formatting boundaries.
    *
-   * The tree is re-walked for every highlight rather than collected once:
-   * marking splits a text node into three, and those new nodes are not in a
-   * list captured beforehand, so a second highlight in the same text node would
-   * search a detached node and silently do nothing. */
+   * Build a normalized text stream while retaining offsets into the original
+   * text nodes. A match can therefore span Strong's spans, italics, and other
+   * inline elements without rewriting their HTML. Each matched text segment
+   * receives its own mark, preserving the original element structure. */
   mark(root, moduleId, unitKey, osis) {
     const hs = this.for(moduleId, unitKey, osis);
-    if (!hs.length) return;
+    if (!hs.length || !root) return;
+
     hs.forEach(h => {
-      const quote = (h.quote || '').replace(/\s+/g, ' ');
+      const quote = String(h.quote || '').replace(/\s+/g, ' ').trim();
       if (quote.length < 2) return;
-      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
-      let n;
-      let found = false;
-      while ((n = walker.nextNode())) {
-        if (!n.nodeValue) continue;
-        const t = n.nodeValue;
-        let i = t.indexOf(quote);
-        if (i < 0) i = t.toLowerCase().indexOf(quote.toLowerCase());
-        if (i < 0) continue;
-        found = true;
-        const mk = document.createElement('mark');
-        mk.className = 'hl hl-' + (h.color || 'yellow');
-        mk.dataset.hid = h.id;
-        mk.title = (h.label ? '[' + h.label + '] ' : '') + (h.note || 'highlight');
-        mk.textContent = t.slice(i, i + quote.length);
-        const after = document.createTextNode(t.slice(i + quote.length));
-        const before = document.createTextNode(t.slice(0, i));
-        /* Hold the parent first.  replaceChild() detaches `n`, so afterwards
-         * n.parentNode is null and inserting through it threw
-         * "Cannot read properties of null (reading 'insertBefore')" -- which
-         * aborted Reader.paint and left the chapter blank.  Any highlight for
-         * the chapter being read broke the reader. */
-        const parent = n.parentNode;
-        parent.replaceChild(mk, n);
-        if (after.nodeValue) parent.insertBefore(after, mk.nextSibling);
-        if (before.nodeValue) parent.insertBefore(before, mk);
-        return;                       // first match only, for this highlight
+
+      const raw = [];
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      let node;
+
+      while ((node = walker.nextNode())) {
+        if (!node.nodeValue) continue;
+        const parent = node.parentElement;
+        if (parent && parent.closest(
+          'a.vnum, mark.hl, script, style, button, .no-highlight'
+        )) continue;
+
+        for (let i = 0; i < node.nodeValue.length; i++) {
+          raw.push({ node, offset: i, char: node.nodeValue[i] });
+        }
       }
-      /* The words are not in this translation -- it says the same thing in
-       * other words.  The verse is still the same verse, so the highlight
-       * follows it, and the whole verse is tinted rather than the words
-       * marked.  A highlight that is meant to travel should not disappear
-       * because the translation words them differently. */
-      if (!found && h.book) {
+
+      // Collapse whitespace but retain the complete original range for it.
+      let text = '';
+      const spans = [];
+      raw.forEach((ch, i) => {
+        if (/\s/.test(ch.char)) {
+          if (text && text[text.length - 1] === ' ') {
+            spans[spans.length - 1].end = i + 1;
+          } else {
+            text += ' ';
+            spans.push({ start: i, end: i + 1 });
+          }
+        } else {
+          text += ch.char;
+          spans.push({ start: i, end: i + 1 });
+        }
+      });
+
+      const normalizedQuote = quote.replace(/\s+/g, ' ').trim();
+      let at = text.indexOf(normalizedQuote);
+      if (at < 0) {
+        at = text.toLowerCase().indexOf(normalizedQuote.toLowerCase());
+      }
+
+      if (at >= 0) {
+        const rawStart = spans[at].start;
+        const rawEnd = spans[at + normalizedQuote.length - 1].end;
+        const selected = raw.slice(rawStart, rawEnd);
+        const segments = [];
+
+        selected.forEach(ch => {
+          const last = segments[segments.length - 1];
+          if (last && last.node === ch.node &&
+              last.end === ch.offset) {
+            last.end++;
+          } else {
+            segments.push({
+              node: ch.node,
+              start: ch.offset,
+              end: ch.offset + 1
+            });
+          }
+        });
+
+        // Work backwards so splitting a node cannot invalidate later offsets.
+        segments.reverse().forEach(seg => {
+          const n = seg.node;
+          if (!n.parentNode) return;
+
+          if (seg.end < n.nodeValue.length) n.splitText(seg.end);
+          const middle = seg.start > 0
+            ? n.splitText(seg.start) : n;
+
+          const mk = document.createElement('mark');
+          mk.className = 'hl hl-' + (h.color || 'yellow');
+          mk.dataset.hid = h.id;
+          mk.title = (h.label ? '[' + h.label + '] ' : '')
+            + (h.note || 'highlight');
+
+          middle.parentNode.replaceChild(mk, middle);
+          mk.appendChild(middle);
+        });
+        return;
+      }
+
+      // Translation fallback: retain the existing whole-verse tint behavior.
+      if (h.book) {
         root.classList.add('hlv');
         root.classList.add('hlv-' + (h.color || 'yellow'));
       }
@@ -480,19 +529,33 @@ const Tags = {
   },
 
   async add(tagId, moduleId, unitKey) {
-    await post('tags', { action: 'add', tag_id: tagId, module_id: moduleId,
+    const r = await post('tags', { action: 'add', tag_id: tagId, module_id: moduleId,
                           unit_key: unitKey });
+    if (!r || r.ok === false) {
+      toast((r && r.error) || 'Could not tag this verse.', 'err');
+      return false;
+    }
     await this.load();
+    return true;
   },
 
   async removeItem(itemId) {
-    await post('tags', { action: 'remove', id: itemId });
+    const r = await post('tags', { action: 'remove', id: itemId });
+    if (!r || r.ok === false) {
+      toast((r && r.error) || 'Could not remove that tag.', 'err');
+      return false;
+    }
     await this.load();
+    return true;
   },
 
   async create(name, color) {
     const r = await post('tags', { action: 'create', name: name,
                                    color: color || '' });
+    if (!r || r.ok === false) {
+      toast((r && r.error) || 'Could not create the tag.', 'err');
+      return null;
+    }
     await this.load();
     return r && r.tag ? r.tag : null;
   },
@@ -534,7 +597,7 @@ const Tags = {
       + 'background:var(--bg-3);border:1px solid var(--line-2);color:var(--fg);'
       + 'padding:6px 9px;border-radius:7px">'
       + '<button class="btn tiny" id="tag-make">Add</button></div>',
-      [{ label: 'Done', cls: 'btn primary' }]);
+      [{ label: 'Done', cls: 'btn primary', hidePrint: true }]);
     const save = async (id, on) => {
       if (on) await this.add(id, moduleId, unitKey);
       else {
@@ -562,7 +625,7 @@ const Tags = {
     await this.load();
     if (!this.tags.length) {
       modal('Tags', '<div class="empty">No tags yet. Right-click a verse '
-        + '&rarr; <b>Tag this verse</b>.</div>', [{ label: 'Close', cls: 'btn' }]);
+        + '&rarr; <b>Tag this verse</b>.</div>', [{ label: 'Close', cls: 'btn', hidePrint: true }]);
       return;
     }
     const body = this.tags.map(t => {
@@ -582,7 +645,7 @@ const Tags = {
         + '<button class="btn tiny danger" data-del-tag="' + esc(t.id) + '">Delete</button>'
         + '</div></div>';
     }).join('');
-    modal('Tags', body, [{ label: 'Close', cls: 'btn' }]);
+    modal('Tags', body, [{ label: 'Close', cls: 'btn', hidePrint: true }]);
     $$('#modal-body [data-rename-tag]').forEach(b => b.onclick = async () => {
       const t = this.tags.find(x => x.id === b.dataset.renameTag);
       const name = prompt('Rename this tag:', t ? t.name : '');

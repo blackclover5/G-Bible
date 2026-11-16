@@ -96,10 +96,20 @@ class UsfmDoc:
             buf.clear()
             if not t:
                 return
-            seg = Seg(style_stack[-1] if style_stack else "text", t)
+            kind = style_stack[-1] if style_stack else "text"
+            # Words of Christ: inherit wj from the enclosing \wj block so
+            # narration colouring never leaks and no words lose the marker.
+            attrs = {"wj": "1"} if "red" in style_stack else {}
+            seg = Seg(kind, t, attrs=attrs)
             (notes[-1]["segs"] if notes else segs).append(seg)
 
         def push(seg: Seg) -> None:
+            # Segments pushed directly (Strong's words and inline styles) would
+            # otherwise lose the \wj colour of the block they sit in.
+            if "red" in style_stack and seg.is_text():
+                d = dict(seg.attrs or {})
+                d["wj"] = "1"
+                seg = seg._replace(attrs=d)
             (notes[-1]["segs"] if notes else segs).append(seg)
 
         # A generator cannot both yield and be nested inside flush_text, so the
@@ -289,6 +299,19 @@ def usfm_from_zip(zf: zipfile.ZipFile, *, keep_notes: bool = True,
         if doc.book is None:
             continue
         yield from doc.units()
+
+
+def usfm_from_text(raw: str, *, usfm_id: str = "", name: str = "",
+                   keep_notes: bool = True) -> Iterator[UnitIn]:
+    """Parse a single USFM book (e.g. an uploaded `.usfm` file)."""
+    m_id = re.search(r"^\\id\s+(\S+)", raw, re.M)
+    uid = usfm_id or (m_id.group(1) if m_id else "")
+    doc = UsfmDoc(raw, usfm_id=uid, keep_notes=keep_notes)
+    if doc.book is None and name:
+        b = canon.lookup_book(Path(name).stem.split("-")[0])
+        if b is not None:
+            doc.book = b
+    return iter(doc.units())
 
 
 def _bookfile_sort(n: str) -> tuple:

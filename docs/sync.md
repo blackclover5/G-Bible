@@ -1,5 +1,17 @@
 # Annotation Sync — Specification
 
+> **2026-11-14 — this document is now historical.**
+> The unified backup/sync flow replaced the v1 folder layout with a single artefact:
+> `gbible-backup.gbz`, a zip built by `gbible/gbz.py` and stored verbatim by whatever
+> target is configured (filesystem, WebDAV, Nextcloud). The envelope inside it is the
+> same record format described in §3–§5 (schema 1, one file per record, manifest of
+> hashes, hybrid clock) — so the sections on records, kinds and merge rules still
+> describe the inside of the `.gbz`. §2 (folder layout) and §8 (targets, still accurate
+> for WebDAV/Nextcloud authentication) describe the superseded v1 *layout*. Anyone
+> building against this should target `gbz.FORMAT` and `GBZ_NAME` instead of the folder
+> layout, and should expect additive-only restore semantics, not the v1 push/pull
+> merge. The mobile client is unaffected: it consumes the same `.gbz`.
+
 Status: **partly implemented.** The engine, the filesystem target, the WebDAV
 target (with the Nextcloud preset), the interval worker and the settings screen
 exist; the mobile client does not yet. This document is the contract for moving
@@ -72,6 +84,7 @@ codebase. Nothing here is private to this app.
 | `workflow` | `workflows/<id>.json` | `workflow` + `workflow_step` | `wf…` | last-writer-wins |
 | `srs-card` | `srs-cards/<id>.json` | `srs_card` table | 12-hex uuid | last-writer-wins |
 | `citation-meta` | `citation-metas/<module_id>.json` | `citation_meta` table | module id | last-writer-wins |
+| `canvas-board` | `canvas-boards/<id>.json` | `canvas_board` + `canvas_node` + `canvas_edge` | 12-hex id | last-writer-wins (whole board is the record) |
 | `tombstone` | `tombstones/<id>.json` | derived from deletes | — | GC after 90 days |
 
 Not synced, deliberately:
@@ -99,7 +112,14 @@ The settings allowlist for v1, in full:
 `reading-plan/progress`, `module_tags`, `highlight_palettes`, `top_bible`,
 `prioritize_rules`, `visual_filters`, `plan_paces`, `plans_archived`,
 `sermon_calendar`, `notebooks`, `clippings`, `canvases`, `print_books`,
-`guide_configs`, `collection_rules`, `search_panel_link`, `prayer_templates`.
+`guide_configs`, `collection_rules`, `search_panel_link`, `prayer_templates`,
+`installed_modules`.
+
+Canvas boards are not a setting key — they are their own record kind
+(`canvas-board`, see above). Earlier drafts mentioned `canvases` in the
+allowlist; the Canvas feature stores boards as normal sync records, so
+that entry refers to the community-shelf "canvases" reference list and may
+be cleared.
 
 A key not in this list does not sync. Adding one is an additive change: an
 older client ignores the record it does not know.

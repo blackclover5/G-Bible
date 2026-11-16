@@ -414,10 +414,6 @@ def verse_count(scheme: str, osis: str, chapter: int) -> int:
     return 0
 
 
-def last_verse(scheme: str, osis: str, chapter: int) -> int:
-    return verse_count(scheme, osis, chapter)
-
-
 # --------------------------------------------------------------------------
 # References
 # --------------------------------------------------------------------------
@@ -694,10 +690,6 @@ def parse_ref(text: str, scheme: str = "KJV") -> RefRange | None:
     return None
 
 
-def is_valid_ref(text: str) -> bool:
-    return parse_ref(text) is not None
-
-
 def scan_refs(text: str, *, dedupe: bool = True) -> list[dict]:
     """Find Bible references embedded in arbitrary text.
 
@@ -811,19 +803,6 @@ def normalise_strongs(raw: str) -> str:
     if not digits.isdigit():
         return ""
     return f"{prefix}{int(digits):04d}"
-
-
-def strongs_osis(raw: str) -> str:
-    """Strong's number -> OSIS lemma form used in modules: 'H0430' / 'G0011'."""
-    return normalise_strongs(raw)
-
-
-def strongs_num(strongs: str) -> tuple[str, int]:
-    """'H0430' -> ('H', 430)."""
-    s = normalise_strongs(strongs)
-    if not s:
-        return ("", 0)
-    return (s[0], int(s[1:]))
 
 
 # --------------------------------------------------------------------------

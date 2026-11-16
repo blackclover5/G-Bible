@@ -155,11 +155,6 @@ TYPE_GROUPS = ("Text", "Commentary", "Language", "Reference", "Devotional",
                "Book", "Visual", "Audio", "Other")
 
 
-def reader_for(type_id: str) -> str:
-    t = TYPE_BY_ID.get(type_id)
-    return t.reader if t else "book"
-
-
 def index_types_for(type_id: str) -> tuple[str, ...]:
     return TYPE_INDEX_TYPES.get(type_id, (INDEX_SECTION,))
 

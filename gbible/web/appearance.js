@@ -72,7 +72,7 @@ const Appearance = {
       + '<label class="st-lbl">Header size</label><input id="app-head-size" type="number" min="14" max="26" step="1" value="'+(current.headerSize||18)+'">'
       + '<label class="st-lbl">Header color</label><input id="app-head-color" type="color" value="'+(current.headerColor||'#ffd166')+'">'
       + '<div class="tiny muted" style="margin-top:8px">These affect the page layout and panes globally.</div>',
-      [{ label: 'Save', cls: 'primary', fn: () => {
+      [{ label: 'Save', cls: 'primary', hidePrint: true, fn: () => {
         const o = {
           theme: $('#app-theme').value,
           bodyFont: $('#app-body-font').value,

@@ -170,7 +170,6 @@ const Cite = {
         '<div class="ct-exports">' + this._formats('bibliography').map(f =>
           '<button class="ct-fmt" data-fmt="' + f[0] + '" title="' + esc(f[1]) +
           '">' + esc(f[0].toUpperCase()) + '</button>').join('') +
-        '<button class="ct-fmt ct-print" data-fmt="__print">Print</button>' +
         '</div>';
       $$('.ct-style', body).forEach(b => {
         b.onclick = () => draw(b.dataset.style, fmt);
@@ -263,7 +262,7 @@ const Cite = {
       '<div class="ct-exports">' + this._formats('passage').map(f =>
         '<button class="ct-fmt" data-fmt="' + f[0] + '" title="' + esc(f[1]) +
         '">' + esc(f[0].toUpperCase()) + '</button>').join('') +
-      '<button class="ct-fmt ct-print" data-fmt="__print">Print</button></div>';
+      '</div>';
     $$('.ct-fmt', body).forEach(b => {
       b.onclick = () => {
         if (b.dataset.fmt === '__print') {

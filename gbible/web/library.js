@@ -1221,26 +1221,462 @@ const Apis = {
  * whole request is "click Jerusalem on this sheet", and offering a lat/lon box
  * for it would be asking the reader to do the map's job.
  */
+/* ============================================================== Maps
+ *
+ * A map, not a directory of places.  The gazetteer -- 359 named Bible
+ * places with coordinates, verse references and notes (CC BY 4.0, OpenBible
+ * Geography) -- is drawn as pins on a canvas OpenStreetMap.  Clicking a pin
+ * opens its card; hovering one names it; the basemap degrades to a
+ * coordinate grid when there is no network; a straight-line measure tool
+ * and a scale bar round out what Logos' Atlas has and eSword's map viewer
+ * does not, without shipping a single tile ourselves.
+ *
+ * Three things live on the same screen, deliberately separate:
+ *   1. the base map + pins (the default);
+ *   2. the installed historical scans, aligned with two control points --
+ *      a flat scan has no coordinate system until a person says where two
+ *      known places are on the sheet, so it cannot be more than a mode;
+ *   3. the modern-world lookup (Nominatim) for the names a Bible reader
+ *      has that the Bible refuses to name -- labelled as modern data, never
+ *      presented as a biblical site.
+ *
+ * Picking a Bible place from the sidebar always returns to mode 'atlas'.
+ */
 const MapsUI = {
-  cur: null,          // the map detail as the server last sent it
+  cur: null,          // the historical map detail as the server last sent it
   cal: null,          // being calibrated: {a:{place,x,y}, b:{...}}
-  find: '',
+  find: '',           // sidebar filter text
+  era: 'all',         // all | ot | nt | shared
+  gaz: null,          // the gazetteer, fetched once per session
+  shown: [],          // the places visible right now (after filters)
+  mode: 'atlas',      // atlas | scan | modern
+  wired: false,
+
+  /* ---------------------------------------------- testaments, by book -- */
+  /* The gazetteer's references use short English book names with an
+   * optional leading digit ("2 Kgs 5:12").  A place is an Old Testament
+   * place, a New Testament place or both; a reference whose book cannot be
+   * recognised casts no vote -- it never invents an era. */
+  OT: new Set(['gen', 'exod', 'exo', 'ex', 'lev', 'num', 'deut', 'josh',
+    'judg', 'ruth', '1sam', '1samuel', '2sam', '2samuel', '1kgs', '1kings',
+    '2kgs', '2kings', '1chr', '1chron', '1chronicles', '2chr', '2chron',
+    '2chronicles', 'ezra', 'neh', 'esth', 'esther', 'job', 'ps', 'psa',
+    'psalm', 'psalms', 'prov', 'eccl', 'ecc', 'song', 'songofsolomon',
+    'songofsongs', 'isa', 'isaiah', 'jer', 'jeremiah', 'lam', 'lament',
+    'lamentations', 'ezek', 'ezekiel', 'dan', 'daniel', 'hos', 'hosea',
+    'joel', 'amos', 'obad', 'obadiah', 'jonah', 'mic', 'micah', 'nah',
+    'nahum', 'hab', 'habakkuk', 'zeph', 'zephaniah', 'hag', 'haggai',
+    'zech', 'zechariah', 'mal', 'malachi']),
+  NT: new Set(['matt', 'matthew', 'mark', 'luke', 'john', 'acts', 'rom',
+    'romans', '1cor', '1corinthians', '2cor', '2corinthians', 'gal',
+    'galatians', 'eph', 'ephesians', 'phil', 'philippians', 'col',
+    'colossians', '1thess', '1thessalonians', '2thess', '2thessalonians',
+    '1tim', '1timothy', '2tim', '2timothy', 'titus', 'philem', 'philemon',
+    'phlm', 'heb', 'hebrews', 'jas', 'james', '1pet', '1peter', '2pet',
+    '2peter', '1john', '2john', '3john', 'jude', 'rev', 'revelation']),
+
+  bookKey(ref) {
+    const m = String(ref || '').trim().match(/^(\d)?\s*([A-Za-z]+)/);
+    if (!m) return '';
+    return ((m[1] || '') + m[2]).toLowerCase();
+  },
+
+  testamentOf(ref) {
+    const k = MapsUI.bookKey(ref);
+    if (!k) return '';
+    if (MapsUI.OT.has(k)) return 'ot';
+    if (MapsUI.NT.has(k)) return 'nt';
+    return '';
+  },
+
+  eraOf(p) {
+    let ot = false, nt = false;
+    (p.passages || []).forEach((r) => {
+      const t = MapsUI.testamentOf(r);
+      if (t === 'ot') ot = true;
+      if (t === 'nt') nt = true;
+    });
+    if (ot && nt) return 'shared';
+    if (ot) return 'ot';
+    if (nt) return 'nt';
+    return 'none';          /* no verse in the gazetteer says; shown in All only */
+  },
+
+  eraVisible(p) {
+    const e = p.__era || (p.__era = MapsUI.eraOf(p));
+    if (MapsUI.era === 'all') return true;
+    if (MapsUI.era === 'shared') return e === 'shared';
+    return e === MapsUI.era || e === 'shared';
+  },
+
+  weight(p) {
+    return Math.max(1, Math.min(3, (p.passages || []).length));
+  },
+
+  /* A stable id for a place, for pin highlighting across remounts. */
+  keyOf(p) {
+    return String(p.id || p.slug
+      || ((p.name || '') + '@' + p.lat + ',' + p.lon));
+  },
 
   async load() {
     if (!MapsUI.gaz) await MapsUI.gazetteer();
-    if (!MapsUI.cur) await MapsUI.list();
-    await MapsUI.search();
+    MapsUI.wire();
+    MapsUI.applyFilters();
+    MapsUI.renderList();
+    MapsUI.renderScans();
   },
 
-  /* The whole gazetteer, fetched once.  334 places is a small response and
-   * having it here means naming a clicked point is a local lookup rather than a
-   * round trip, and works on a map that has no places placed on it yet. */
-  gaz: null,
+  gazetteer() {
+    const r = MapsUI.gaz
+      ? Promise.resolve({ places: MapsUI.gaz })
+      : api('maps/places', { limit: 1000 });
+    return r.then((res) => {
+      MapsUI.gaz = (res && res.places) || [];
+      MapsUI.gaz.forEach((p) => { p.__era = MapsUI.eraOf(p); });
+      return MapsUI.gaz;
+    });
+  },
 
-  async gazetteer() {
-    const r = await api('maps/places', { limit: 1000 });
-    MapsUI.gaz = (r && r.places) || [];
-    return MapsUI.gaz;
+  wire() {
+    if (MapsUI.wired) return;
+    MapsUI.wired = true;
+    const find = $('#mp-find');
+    if (find) {
+      find.addEventListener('input', () => {
+        MapsUI.find = find.value;
+        MapsUI.applyFilters();
+        MapsUI.renderList();
+      });
+      find.addEventListener('keydown', (e) => {
+        /* Enter on a filter with results means "take me there". */
+        if (e.key === 'Enter' && MapsUI.shown.length) {
+          e.preventDefault();
+          MapsUI.gotoPlace(MapsUI.shown[0]);
+        }
+      });
+    }
+    $$('.maps-era button').forEach((b) => {
+      b.onclick = () => {
+        MapsUI.era = b.dataset.era || 'all';
+        $$('.maps-era button').forEach((x) =>
+          x.classList.toggle('on', x === b));
+        MapsUI.applyFilters();
+        MapsUI.renderList();
+      };
+    });
+    const back = $('#mp-back');
+    if (back) back.onclick = () => MapsUI.backToAtlas();
+    /* The modern lookup keeps its own ids; it renders into the one panel and
+     * never touches the Bible gazetteer's state. */
+    const go = $('#mp-geo-go');
+    if (go) go.onclick = () => MapsUI.geocode();
+    const geoQ = $('#mp-geo-q');
+    if (geoQ) geoQ.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') MapsUI.geocode();
+    });
+    const near = $('#mp-geo-near');
+    if (near) near.addEventListener('change', () => {
+      if (($('#mp-geo-q') || {}).value && $('#mp-geo-q').value.trim())
+        MapsUI.geocode();
+    });
+  },
+
+  applyFilters() {
+    const q = (MapsUI.find || '').trim().toLowerCase();
+    let list = (MapsUI.gaz || []).filter((p) => {
+      if (!isFinite(p.lat) || !isFinite(p.lon)) return false;
+      if (!MapsUI.eraVisible(p)) return false;
+      if (!q) return true;
+      if ((p.name || '').toLowerCase().includes(q)) return true;
+      if ((p.alt_names || []).some((a) => (a || '').toLowerCase().includes(q)))
+        return true;
+      if ((p.passages || []).some((r) => (r || '').toLowerCase().includes(q)))
+        return true;
+      return (p.comment || '').toLowerCase().includes(q);
+    });
+    if (q) {
+      /* Places whose name starts with the query first, the rest after,
+       * alphabetical within each group. */
+      const starts = (p) => (p.name || '').toLowerCase().startsWith(q) ? 0 : 1;
+      list = list.slice().sort((a, b) =>
+        starts(a) - starts(b) || (a.name || '').localeCompare(b.name || ''));
+    }
+    MapsUI.shown = list;
+    const c = $('#mp-count');
+    if (c) {
+      c.textContent = q || MapsUI.era !== 'all'
+        ? list.length + ' shown'
+        : list.length + ' places';
+    }
+    if (MapsUI.mode === 'atlas') MapsUI.mountAtlas();
+  },
+
+  mountAtlas() {
+    const stage = $('#mp-stage');
+    if (!stage) return;
+    stage.innerHTML = '';
+    const host = el('div', 'atlas-host');
+    stage.appendChild(host);
+    const shown = MapsUI.shown;
+    if (!shown.length) {
+      const none = el('div', 'maps-none');
+      none.appendChild(el('p', '', 'No place matches that.'));
+      const clear = el('button', 'btn', 'Clear the search');
+      clear.onclick = () => {
+        const find = $('#mp-find');
+        if (find) find.value = '';
+        MapsUI.find = '';
+        MapsUI.era = 'all';
+        $$('.maps-era button').forEach((x) =>
+          x.classList.toggle('on', x.dataset.era === 'all'));
+        MapsUI.applyFilters();
+        MapsUI.renderList();
+      };
+      none.appendChild(clear);
+      stage.appendChild(none);
+    }
+    const markers = shown.map((p) => ({
+      lat: p.lat,
+      lon: p.lon,
+      label: p.name,
+      hint: (p.passages || [])[0] || '',
+      key: MapsUI.keyOf(p),
+      weight: MapsUI.weight(p),
+      onPick: () => MapsUI.openPlace(p),
+    }));
+    /* Wide views keep the Holy Land framing; a narrow filter fits its pins. */
+    const fit = shown.length > 0 && shown.length <= 90;
+    Atlas.mount(host, markers,
+      { lat: 31.7, lon: 34.9, z: 6, height: '100%',
+        basemap: 'standard', fit: fit });
+    /* The filter or the search remounts the map; a picked place stays
+     * highlighted for as long as it is still on it. */
+    Atlas.select(MapsUI.activeKey);
+    $('#mp-back').style.display = 'none';
+    $('#mp-badges').innerHTML = '';
+    const t = $('#mp-title');
+    if (t) t.textContent = 'Bible lands';
+    const note = $('#mp-mapnote');
+    if (note) note.innerHTML = '';
+    const attr = $('#mp-attr');
+    if (attr) {
+      attr.innerHTML = 'Place data CC BY 4.0 · OpenBible Geography · '
+        + 'Map tiles © Esri (when online)';
+    }
+  },
+
+  /* fly to a place from the sidebar list */
+  gotoPlace(p) {
+    MapsUI.backToAtlas();
+    Atlas.flyTo(p.lat, p.lon, Math.max(Atlas._st ? Atlas._st.z : 8, 8));
+    MapsUI.openPlace(p);
+  },
+
+  backToAtlas() {
+    if (MapsUI.mode !== 'atlas') {
+      MapsUI.mode = 'atlas';
+      MapsUI.applyFilters();   /* remounts the atlas */
+    }
+    $('#mp-back').style.display = 'none';
+  },
+
+  renderList() {
+    const host = $('#mp-places');
+    if (!host) return;
+    host.innerHTML = '';
+    const shown = MapsUI.shown;
+    const h = el('div', 'maps-listhead tiny muted');
+    h.textContent = (MapsUI.find || MapsUI.era !== 'all'
+      ? 'Places matching — ' : 'All places — ') + shown.length;
+    host.appendChild(h);
+    shown.forEach((p) => host.appendChild(MapsUI.placeRow(p)));
+  },
+
+  placeRow(p) {
+    const row = el('div', 'mp-row2');
+    row.setAttribute('role', 'button');
+    row.setAttribute('tabindex', '0');
+    const top = el('div', 'mp-row2-top');
+    top.appendChild(el('span', 'nm', esc(p.name)));
+    const meta = el('span', 'meta');
+    meta.textContent = (p.lat != null ? p.lat.toFixed(2) : '?') + ', '
+      + (p.lon != null ? p.lon.toFixed(2) : '?');
+    top.appendChild(meta);
+    row.appendChild(top);
+    if (p.comment) {
+      const c = el('div', 'meta cmt');
+      c.textContent = p.comment;
+      row.appendChild(c);
+    }
+    const refs = el('span', 'mp-refs');
+    (p.passages || []).slice(0, 4).forEach((ref) => {
+      const a = el('a', 'mp-ref', esc(ref));
+      a.href = '#';
+      a.dataset.openref = ref;
+      a.addEventListener('click', (ev) => ev.stopPropagation());
+      refs.appendChild(a);
+    });
+    if ((p.passages || []).length > 4) {
+      refs.appendChild(el('span', 'tiny muted',
+        '+' + (p.passages.length - 4) + ' more'));
+    }
+    if (refs.childNodes.length) row.appendChild(refs);
+    const go = () => MapsUI.gotoPlace(p);
+    row.addEventListener('click', go);
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); }
+    });
+    return row;
+  },
+
+  /* The card for the pin the reader just clicked. */
+  activeKey: null,    // the place currently picked on the map (for highlighting)
+
+  openPlace(p) {
+    const stage = $('#mp-stage');
+    if (!stage) return;
+    MapsUI.activeKey = MapsUI.keyOf(p);
+    Atlas.select(MapsUI.activeKey);
+    stage.querySelectorAll('.maps-card').forEach((x) => x.remove());
+    const card = el('div', 'maps-card');
+    const head = el('div', 'maps-card-h');
+    head.appendChild(el('b', '', esc(p.name)));
+    const x = el('button', 'mp-x', '×');
+    x.title = 'Close';
+    x.onclick = () => { card.remove(); MapsUI.activeKey = null; Atlas.select(null); };
+    head.appendChild(x);
+    card.appendChild(head);
+    const coords = el('div', 'tiny muted maps-card-coords');
+    coords.innerHTML = (p.lat != null ? p.lat.toFixed(4) : '?') + ', '
+      + (p.lon != null ? p.lon.toFixed(4) : '?') + ' · '
+      + '<a href="https://www.openstreetmap.org/?mlat=' + esc(String(p.lat))
+      + '&amp;mlon=' + esc(String(p.lon)) + '#map=12/' + esc(String(p.lat))
+      + '/' + esc(String(p.lon)) + '" target="_blank" rel="noopener noreferrer">'
+      + 'OpenStreetMap ↗</a>';
+    card.appendChild(coords);
+    if (p.comment) {
+      const note = el('p', 'maps-card-note');
+      note.textContent = p.comment;
+      card.appendChild(note);
+    }
+    if (p.alt_names && p.alt_names.length) {
+      const alt = el('p', 'tiny muted maps-card-note');
+      alt.textContent = 'Also called: ' + p.alt_names.join(', ');
+      card.appendChild(alt);
+    }
+    const refs = el('div', 'mp-refs maps-card-refs');
+    (p.passages || []).forEach((ref) => {
+      const a = el('a', 'mp-ref', esc(ref));
+      a.href = '#';
+      a.dataset.openref = ref;
+      refs.appendChild(a);
+    });
+    if (refs.childNodes.length) card.appendChild(refs);
+    /* Neighbours straight from the in-memory gazetteer: no round trip. */
+    const near = (MapsUI.gaz || []).map((n) => {
+      const dx = (n.lon - p.lon) * Math.cos(p.lat * Math.PI / 180);
+      const dy = n.lat - p.lat;
+      return { n, km: Math.hypot(dx, dy) * 111 };
+    }).filter((x) => x.n.name !== p.name && x.km < 50)
+      .sort((a, b) => a.km - b.km).slice(0, 8);
+    if (near.length) {
+      const h = el('div', 'tiny muted maps-card-near-h',
+        'Within 50 km');
+      card.appendChild(h);
+      near.forEach(({ n, km }) => {
+        const b = el('button', 'mp-nearrow2');
+        b.appendChild(el('span', '', esc(n.name)));
+        b.appendChild(el('span', 'tiny muted', Math.round(km) + ' km'));
+        b.onclick = () => { Atlas.flyTo(n.lat, n.lon, 10); MapsUI.openPlace(n); };
+        card.appendChild(b);
+      });
+    }
+    stage.appendChild(card);
+  },
+
+  showModern(p) {
+    const stage = $('#mp-stage');
+    if (!stage) return;
+    MapsUI.mode = 'modern';
+    stage.innerHTML = '';
+    const host = el('div', 'atlas-host');
+    stage.appendChild(host);
+    /* Neighbours come from the gazetteer in the browser, and are capped for
+     * the same reason they are elsewhere: 129 places within 60 km of one
+     * modern town is a yellow blob, not an answer. */
+    const nearAll = (MapsUI.gaz || []).filter((b) => {
+      if (!isFinite(b.lat) || !isFinite(b.lon)) return false;
+      const dx = (b.lon - p.lon) * Math.cos(p.lat * Math.PI / 180);
+      const dy = b.lat - p.lat;
+      return Math.hypot(dx, dy) * 111 < 40;
+    }).sort((a, b) =>
+      Math.hypot(a.lon - p.lon, a.lat - p.lat) - Math.hypot(b.lon - p.lon, b.lat - p.lat));
+    const near = nearAll.slice(0, 40);
+    const markers = near.map((b) => ({
+      lat: b.lat, lon: b.lon, label: b.name, hint: (b.passages || [])[0] || '',
+      key: MapsUI.keyOf(b),
+      weight: MapsUI.weight(b),
+      onPick: () => MapsUI.openPlace(b),
+    }));
+    markers.unshift({
+      lat: p.lat, lon: p.lon, label: p.name, color: '#3f8f4f', weight: 3,
+      hint: 'modern location',
+      onPick: () => {},
+    });
+    Atlas.mount(host, markers, { lat: p.lat, lon: p.lon, z: 8, height: '100%',
+                                 basemap: 'standard' });
+    Atlas.select(MapsUI.activeKey);
+    $('#mp-back').style.display = '';
+    const t = $('#mp-title');
+    if (t) t.textContent = p.name + ' — modern location';
+    const badges = $('#mp-badges');
+    if (badges) {
+      badges.innerHTML = '';
+      badges.appendChild(el('span', 'mp-tag', 'modern'));
+    }
+    const note = $('#mp-mapnote');
+    if (note) {
+      note.innerHTML = '<p class="mp-note">' + esc(p.display || p.name)
+        + (near.length ? ' · ' + near.length + ' Bible place'
+          + (near.length === 1 ? '' : 's') + ' within 40 km'
+          + (nearAll.length > near.length ? ' of ' + nearAll.length
+            + '; nearest shown' : '') : ' · no Bible place within 40 km')
+        + '</p><p class="tiny muted">A modern location from OpenStreetMap, '
+        + 'not a biblical site. Tiles © Esri.</p>';
+    }
+    const attr = $('#mp-attr');
+    if (attr) {
+      attr.innerHTML = 'Map tiles © Esri · '
+        + 'Place data CC BY 4.0 · OpenBible Geography';
+    }
+  },
+
+  /* Historical scans: same flow as before, kept behind a collapsed section of
+   * the sidebar so they never crowd the map.  The 2-point alignment is still
+   * the only honest way to place points on a flat scan. */
+  async renderScans() {
+    const host = $('#mp-maps');
+    if (!host) return;
+    host.innerHTML = '<div class="tiny muted">Loading…</div>';
+    const r = await api('maps/list');
+    if (!r.ok) {
+      host.innerHTML = '<p class="tiny muted">No historical maps installed.</p>';
+      return;
+    }
+    host.innerHTML = '';
+    r.maps.forEach((m) => {
+      const b = el('button', 'mp-mapbtn' + (MapsUI.cur && MapsUI.cur.map.id === m.id ? ' on' : ''));
+      b.appendChild(el('span', 'mp-mapname', esc(m.name)));
+      const tags = el('span', 'mp-tags');
+      tags.appendChild(el('span', 'mp-tag' + (m.calibrated ? ' good' : ' warn'),
+        m.calibrated ? 'aligned' : 'not aligned'));
+      if (!m.size) tags.appendChild(el('span', 'mp-tag bad', 'image missing'));
+      tags.appendChild(el('span', 'mp-tag', (m.size ? m.size.width + '×' + m.size.height : '—')));
+      b.appendChild(tags);
+      b.onclick = () => MapsUI.open(m.id);
+      host.appendChild(b);
+    });
   },
 
   async findPlace(name) {
@@ -1267,34 +1703,14 @@ const MapsUI = {
   },
 
   /* ---------------------------------------------------- the map list */
-  async list() {
-    const host = $('#mp-places');
-    host.innerHTML = '<div class="loading">Loading maps…</div>';
-    const r = await api('maps/list');
-    if (!r.ok) { host.innerHTML = '<p class="muted">No maps available.</p>'; return; }
-    const head = el('div', 'mp-maps');
-    head.appendChild(el('h3', 'tiny muted', 'Installed maps'));
-    r.maps.forEach((m) => {
-      const b = el('button', 'mp-mapbtn' + (MapsUI.cur && MapsUI.cur.map.id === m.id ? ' on' : ''));
-      b.appendChild(el('span', 'mp-mapname', esc(m.name)));
-      const tags = el('span', 'mp-tags');
-      tags.appendChild(el('span', 'mp-tag' + (m.calibrated ? ' good' : ' warn'),
-        m.calibrated ? 'aligned' : 'not aligned'));
-      if (!m.size) tags.appendChild(el('span', 'mp-tag bad', 'image missing'));
-      tags.appendChild(el('span', 'mp-tag', (m.size ? m.size.width + '×' + m.size.height : '—')));
-      b.appendChild(tags);
-      b.onclick = () => MapsUI.open(m.id);
-      head.appendChild(b);
-    });
-    host.appendChild(head);
-  },
 
-  /* ---------------------------------------------- one map, and its places */
   async open(id) {
     const stage = $('#mp-stage');
     stage.innerHTML = '<div class="loading">Loading…</div>';
     const d = await api('maps/get', { id });
     if (!d.ok) { stage.innerHTML = '<p class="muted">' + esc(d.error || 'No such map.') + '</p>'; return; }
+    MapsUI.mode = 'scan';
+    $('#mp-back').style.display = '';
     MapsUI.cur = d;
     MapsUI.cal = null;
     $('#mp-title').textContent = d.map.title || d.map.name;
@@ -1325,10 +1741,11 @@ const MapsUI = {
       stage.appendChild(MapsUI.calibrateBar());
       stage.onclick = null;
     }
-    await MapsUI.list();
+    await MapsUI.renderScans();
   },
 
   /* The image with the places on it, in a box that keeps the sheet's shape. */
+
   paint(d) {
     const stage = $('#mp-stage');
     stage.innerHTML = '';
@@ -1348,7 +1765,7 @@ const MapsUI = {
       dot.title = p.name + (p.comment ? ' — ' + p.comment : '');
       dot.onclick = (ev) => {
         ev.stopPropagation();
-        MapsUI.showPlace(p);
+        MapsUI.openPlace(p);
       };
       frame.appendChild(dot);
     });
@@ -1357,6 +1774,7 @@ const MapsUI = {
   },
 
   /* ------------------------------------------------------- calibration */
+
   calibrateBar() {
     const bar = el('div', 'mp-calbar');
     const d = MapsUI.cur;
@@ -1385,9 +1803,11 @@ const MapsUI = {
     start.onclick = () => MapsUI.beginCalibration();
     bar.appendChild(start);
     bar.appendChild(el('span', 'tiny muted',
-      'Click two places you can find on the picture.'));
+      'Suggested: ' + (d.controls || []).map((c) => c.name).join(' and ')
+      + ' — click two places you can find on the picture.'));
     return bar;
   },
+
 
   beginCalibration() {
     const d = MapsUI.cur;
@@ -1397,6 +1817,7 @@ const MapsUI = {
     toast('Click ' + (d.controls[0] ? d.controls[0].name : 'the first place')
       + ' on the map.', 'ok');
   },
+
 
   paintCalibration() {
     const d = MapsUI.cur;
@@ -1449,6 +1870,7 @@ const MapsUI = {
     $('#mp-mapnote').innerHTML = '';
   },
 
+
   promptText() {
     const c = MapsUI.cal;
     if (!c) return '';
@@ -1464,6 +1886,7 @@ const MapsUI = {
    * is.  Guessing from the nearest dot would be the other obvious thing to do
    * and it is wrong: the dot is at the gazetteer's coordinate, and the label on
    * a historical sheet is often a mile from the modern fix. */
+
   pickAt(name, x, y) {
     const c = MapsUI.cal;
     if (!c) return;
@@ -1506,11 +1929,13 @@ const MapsUI = {
     inp.focus();
   },
 
+
   afterPick() {
     const c = MapsUI.cal;
     if (c.picks.length >= 2) return MapsUI.commit();
     MapsUI.paintCalibration();
   },
+
 
   async commit() {
     const c = MapsUI.cal;
@@ -1528,101 +1953,7 @@ const MapsUI = {
   },
 
   /* ------------------------------------------------- the gazetteer side */
-  async search() {
-    const host = $('#mp-places');
-    /* The map list is kept and the place list replaced *below* it, rather than
-     * the map list being removed and re-added.  Removing it put the maps at the
-     * bottom of the column, under four hundred places, so the first thing the
-     * reader had to find to use the feature was last. */
-    const keep = host.querySelector('.mp-maps');
-    const r = await api('maps/places', { q: MapsUI.find, limit: 400 });
-    if (!r.ok) return;
-    const list = el('div', 'mp-list');
-    list.appendChild(el('h3', 'tiny muted', esc(
-      (MapsUI.find ? 'Places matching “' + MapsUI.find + '”' : 'All places')
-      + ' — ' + (r.places || []).length)));
-    (r.places || []).forEach((p) => list.appendChild(MapsUI.placeRow(p)));
-    if (keep) host.replaceChildren(keep, list);
-    else host.replaceChildren(list);
-    $('#mp-count').textContent = (r.places || []).length + ' places';
-  },
 
-  placeRow(p) {
-    const row = el('div', 'mp-row');
-    row.appendChild(el('span', 'mp-pname', p.name));
-    const meta = el('span', 'tiny muted');
-    const bits = [];
-    if (p.distance_km !== undefined && p.distance_km !== null) {
-      bits.push(Math.round(p.distance_km) + ' km away');
-    }
-    bits.push(p.lat.toFixed(2) + ', ' + p.lon.toFixed(2));
-    meta.textContent = bits.join(' · ');
-    row.appendChild(meta);
-    if (p.comment) row.appendChild(el('span', 'tiny muted', esc(p.comment)));
-    const refs = el('span', 'mp-refs');
-    (p.passages || []).slice(0, 4).forEach((ref) => {
-      const a = el('a', 'mp-ref', esc(ref));
-      a.href = '#';
-      a.dataset.openref = ref;
-      refs.appendChild(a);
-    });
-    if ((p.passages || []).length > 4) {
-      refs.appendChild(el('span', 'tiny muted',
-        '+' + (p.passages.length - 4) + ' more'));
-    }
-    row.appendChild(refs);
-    return row;
-  },
-
-  async showPlace(p) {
-    const host = $('#mp-places');
-    const d = el('div', 'mp-pop');
-    d.appendChild(el('h3', '', esc(p.name)));
-    if (p.comment) d.appendChild(el('p', 'tiny muted', esc(p.comment)));
-    d.appendChild(el('p', 'tiny muted',
-      (p.lat != null ? p.lat.toFixed(4) : '?') + ', ' + (p.lon != null ? p.lon.toFixed(4) : '?')));
-    const refs = el('div', 'mp-refs');
-    (p.passages || []).forEach((ref) => {
-      const a = el('a', 'mp-ref', esc(ref));
-      a.href = '#';
-      a.dataset.openref = ref;
-      refs.appendChild(a);
-    });
-    d.appendChild(refs);
-    const near = await api('maps/places', {
-      lat: p.lat, lon: p.lon, radius_km: 25, limit: 12,
-    });
-    if (near.ok && (near.places || []).length > 1) {
-      d.appendChild(el('h4', 'tiny muted', 'Within 25 km'));
-      const ul = el('div', 'mp-near');
-      near.places.forEach((n) => {
-        if (n.name === p.name) return;
-        const b = el('button', 'mp-nearrow');
-        b.appendChild(el('span', '', esc(n.name)));
-        b.appendChild(el('span', 'tiny muted',
-          Math.round(n.distance_km) + ' km'));
-        b.onclick = () => MapsUI.showPlace(n);
-        ul.appendChild(b);
-      });
-      d.appendChild(ul);
-    }
-    host.appendChild(d);
-    d.scrollIntoView({ block: 'nearest' });
-  },
-
-  /* ------------------------------------------- the modern map, by name
-   *
-   * The gazetteer above is the Bible's: 334 places, and Gilead, Jericho,
-   * Hebron, Beersheba, Nazareth, Moab are all missing from it.  Nominatim is
-   * the other kind of gazetteer -- the modern one -- and the two are kept apart
-   * in the UI as well as in the response, because "Bethlehem" the modern town in
-   * Judea and "Bethlehem" the modern town in Pennsylvania are both on the
-   * modern map and only one is in the Bible.
-   *
-   * The search is bounded to the Near East by default, which is a choice the
-   * reader can see and undo: Nominatim ranks by modern prominence, so an
-   * unbounded search for Bethlehem returns Pennsylvania four times before Judea.
-   */
   async geocode() {
     const box = $('#mp-geo-q');
     const out = $('#mp-geo-out');
@@ -1682,60 +2013,6 @@ const MapsUI = {
    * the place card does: 334 places is not worth a round trip, and "which Bible
    * places are near this modern town" is the question the reader arrived with.
    */
-  showModern(p) {
-    const stage = $('#mp-stage');
-    if (!stage) return;
-    stage.innerHTML = '';
-    const host = el('div', 'atlas-map');
-    stage.appendChild(host);
-    /* Neighbours come from the gazetteer in the browser, for the same reason the
-     * place card does: 334 places is not worth a round trip, and "which Bible
-     * places are near this modern town" is the question the reader arrived with.
-     * Forty kilometres and a cap, because Kiryat Ekron has 129 gazetteer places
-     * within sixty and drawing all of them is a solid yellow blob with the one
-     * answer in the middle of it -- which is the opposite of an answer. */
-    const nearAll = (MapsUI.gaz || []).filter((b) => {
-      if (!isFinite(b.lat) || !isFinite(b.lon)) return false;
-      const dx = (b.lon - p.lon) * Math.cos(p.lat * Math.PI / 180);
-      const dy = b.lat - p.lat;
-      return Math.hypot(dx, dy) * 111 < 40;
-    }).sort((a, b) => Math.hypot(a.lon - p.lon, a.lat - p.lat)
-      - Math.hypot(b.lon - p.lon, b.lat - p.lat));
-    const near = nearAll.slice(0, 40);
-    const markers = near.map((b) => ({
-      lat: b.lat, lon: b.lon, label: b.name,
-      onPick: () => MapsUI.showPlace(b),
-    }));
-    markers.unshift({
-      lat: p.lat, lon: p.lon, label: p.name, color: '#3f8f4f', onPick: () => {},
-    });
-    Atlas.mount(host, markers, { lat: p.lat, lon: p.lon, z: 8, height: 420 });
-    $('#mp-title').textContent = p.name + ' — modern location';
-    const note = el('div', 'mp-mapnote');
-    note.innerHTML = '<p class="mp-note">'
-      + esc(p.display || p.name)
-      + (near.length ? ' · ' + near.length + ' Bible place'
-        + (near.length === 1 ? '' : 's') + ' from the gazetteer within 40 km'
-        + (nearAll.length > near.length ? ' of ' + nearAll.length
-          + '; the nearest are marked' : '')
-        + (nearAll.length === 1 ? '' : ' and yellow')
-        : ' · no Bible gazetteer place within 40 km')
-      + '</p><p class="tiny muted">A modern location from OpenStreetMap, not a '
-      + 'biblical site: the Bible gazetteer is the list on the left. Tiles '
-      + '© OpenStreetMap contributors, ODbL.</p>';
-    stage.appendChild(note);
-    const bar = el('div', 'mp-calbar');
-    const back = el('button', 'btn', 'Back to the scanned maps');
-    back.onclick = async () => {
-      MapsUI.cur = null;
-      await MapsUI.list();
-      $('#mp-stage').innerHTML = '<p class="muted">Pick a map on the left, '
-        + 'or search for a place.</p>';
-      $('#mp-title').textContent = 'Choose a map';
-    };
-    bar.appendChild(back);
-    stage.appendChild(bar);
-  },
 
   attribution(m) {
     const bits = [];

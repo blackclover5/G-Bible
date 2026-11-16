@@ -485,6 +485,12 @@ def _morph_fields(parts, q):
     return _ok(**morphq.search_fields(q.get("module_id", "")))
 
 
+@endpoint("morph/decode")
+def _morph_decode(parts, q):
+    """One morphology code as a readable description."""
+    return _ok(**morphq.morph_decode(q.get("code", "")))
+
+
 @endpoint("morph/wordforms")
 def _morph_wordforms(parts, q):
     """Every morphology code carried by one word (lemma or surface) in a module.
@@ -497,7 +503,7 @@ def _morph_wordforms(parts, q):
     except ValueError:
         limit = 20
     return _ok(**morphq.wordforms(q.get("module_id", ""), q.get("word", ""),
-                                  limit=limit))
+                                  limit=limit, ref=q.get("ref", "")))
 
 
 @endpoint("morph/saved")
@@ -805,7 +811,14 @@ def _courses(parts, q):
     return _ok(**study.courses(
         action=q.get("action", "list"),
         course_id=q.get("course_id", ""),
-        lesson_id=q.get("lesson_id", "")))
+        lesson_id=q.get("lesson_id", ""),
+        title=q.get("title", ""),
+        description=q.get("description", ""),
+        author=q.get("author", ""),
+        lesson_title=q.get("lesson_title", ""),
+        content=q.get("content", ""),
+        video_url=q.get("video_url", ""),
+        audio_url=q.get("audio_url", "")))
 
 
 # ------------------------------------------------------------------ Draw on Screen
@@ -815,6 +828,7 @@ def _draw_on_screen(parts, q):
     return _ok(**study.draw_on_screen(
         action=q.get("action", "list"),
         drawing_id=q.get("drawing_id", ""),
+        title=q.get("title", ""),
         data=q.get("data", "")))
 
 
@@ -843,7 +857,7 @@ def _info_tool(parts, q):
 @endpoint("bibliography")
 def _bibliography(parts, q):
     return _ok(**study.bibliography(
-        module_ids=q.get("module_ids", []),
+        module_ids=_obj(q.get("module_ids"), []) or [],
         style=q.get("style", "sbl")))
 
 
@@ -853,7 +867,7 @@ def _bibliography(parts, q):
 def _books_search(parts, q):
     return _ok(**study.books_search(
         q=q.get("q", ""),
-        module_ids=q.get("module_ids", []),
+        module_ids=_obj(q.get("module_ids"), []) or [],
         limit=q.get("limit", 20)))
 
 
@@ -863,7 +877,17 @@ def _books_search(parts, q):
 def _search_synopsis(parts, q):
     return _ok(**study.search_synopsis(
         q=q.get("q", ""),
-        module_ids=q.get("module_ids", [])))
+        module_ids=_obj(q.get("module_ids"), []) or []))
+
+
+# ------------------------------------------------------------------ factbook search
+# Factbook search: search the fact books by heading, for the Topics lens.
+@endpoint("factbook-search")
+def _factbook_search(parts, q):
+    return _ok(**study.factbook_search(
+        q=q.get("q", ""),
+        module_ids=_obj(q.get("module_ids"), []) or [],
+        limit=int(q.get("limit") or 30)))
 
 
 # ------------------------------------------------------------------ Insights
@@ -927,6 +951,6 @@ def _catholic_daily_readings(parts, q):
 def _popular_quotes(parts, q):
     return _ok(**study.popular_quotes(
         limit=q.get("limit", 20),
-        module_ids=q.get("module_ids", [])))
+        module_ids=_obj(q.get("module_ids"), []) or []))
 
 

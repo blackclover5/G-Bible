@@ -439,19 +439,3 @@ def _legacy_plain(path: Path, cat: str) -> Iterator[UnitIn]:
 # Zip handling
 # --------------------------------------------------------------------------
 
-def find_esword_payload(zf: zipfile.ZipFile) -> tuple[str, bytes, str]:
-    """Return (modname, mod bytes, payload name) from a .bzu-style zip."""
-    mod_name = payload = ""
-    for n in zf.namelist():
-        low = n.lower()
-        if low.endswith(".mod"):
-            mod_name = n
-        elif low.endswith((".bbl", ".cmt", ".dct", ".dev", ".bblx", ".cmtx",
-                           ".dctx", ".devx", ".bmap", ".mapx")):
-            payload = n
-    if not payload:
-        for n in zf.namelist():
-            if n.lower().endswith((".bzz", ".bzs", ".bzv")):
-                payload = n
-                break
-    return mod_name, (zf.read(mod_name) if mod_name else b""), payload

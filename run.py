@@ -64,10 +64,15 @@ def main() -> int:
     ap.add_argument("--host", default=os.environ.get("GBIBLE_HOST", "127.0.0.1"))
     ap.add_argument("--no-open", action="store_true")
     ap.add_argument("--check", action="store_true", help="run the self-test and exit")
+    ap.add_argument("--rust-status", action="store_true", help="show whether the optional Rust core is active")
     ap.add_argument("--sync", action="store_true", help="refresh the Store catalogues")
     ap.add_argument("--desktop", action="store_true",
                     help="open a native window instead of the system browser")
     args = ap.parse_args()
+    if args.rust_status:
+        from gbible import native
+        print(native.status())
+        return 0
     desktop = args.desktop or os.environ.get("GBIBLE_DESKTOP") == "1"
 
     from gbible import db
@@ -207,7 +212,35 @@ def main() -> int:
         time.sleep(0.5)
         try:
             import webview
-            webview.create_window("G-Bible", url, width=1280, height=860)
+
+            class GBibleAPI:
+                def checkForUpdates(self):
+                    import json, urllib.request, webbrowser
+                    try:
+                        with urllib.request.urlopen(
+                                "https://api.github.com/repos/blackclover5/G-Bible/releases/latest",
+                                timeout=15) as r:
+                            data = json.load(r)
+                    except Exception as exc:
+                        return {"ok": False, "error": str(exc)}
+                    tag = data.get("tag_name", "")
+                    asset = None
+                    for a in (data.get("assets") or []):
+                        if "AppImage" in (a.get("name") or "") or (a.get("name") or "").endswith(".exe"):
+                            asset = a
+                            break
+                    if asset is None and data.get("assets"):
+                        asset = data["assets"][0]
+                    link = (asset or {}).get("browser_download_url") or data.get("html_url")
+                    if link:
+                        try:
+                            webbrowser.open(link)
+                        except Exception:
+                            pass
+                    return {"ok": True, "tag": tag, "url": link}
+
+            api = GBibleAPI()
+            webview.create_window("G-Bible", url, width=1280, height=860, js_api=api)
             webview.start()
         except Exception as exc:
             print(f"Desktop window unavailable ({exc}); opening browser.")
@@ -220,6 +253,49 @@ def main() -> int:
         httpd.shutdown()
         httpd.server_close()
         return 0
+
+    # Optional scheduled local backup.  Runs in the background and writes a
+    # timestamped .gbz into data/backups so a bad day is never a lost day.
+    # Off by default; turn it on with GBIBLE_AUTO_BACKUP=1 (or hours=N).
+    try:
+        _ab = os.environ.get("GBIBLE_AUTO_BACKUP", "")
+        _hours = 0
+        try:
+            from gbible import db as _db
+            _hours = int(_db.get_setting("auto_backup_hours", 0) or 0)
+        except Exception:
+            _hours = 0
+        if _ab.lower() in ("1", "true", "yes", "on"):
+            _hours = int(os.environ.get("GBIBLE_AUTO_BACKUP_HOURS", "24"))
+        elif _ab.isdigit():
+            _hours = int(_ab)
+        if _hours > 0:
+            def _auto_backup():
+                import time as _t
+                from pathlib import Path
+                from gbible import gbz as _gbz
+                bdir = db.app_dir() / "backups"
+                bdir.mkdir(parents=True, exist_ok=True)
+                while True:
+                    _t.sleep(_hours * 3600)
+                    try:
+                        out = _gbz.create_gbz(appearance=None, include_ai=True)
+                        stamp = time.strftime("%Y%m%d-%H%M%S")
+                        (bdir / f"gbible-backup-{stamp}.gbz").write_bytes(out["data"])
+                        # keep only the last 7
+                        files = sorted(bdir.glob("gbible-backup-*.gbz"))
+                        for f in files[:-7]:
+                            try:
+                                f.unlink()
+                            except OSError:
+                                pass
+                    except Exception as exc:
+                        print(f"Auto-backup skipped: {exc}", flush=True)
+            threading.Thread(target=_auto_backup, name="gbible-autobackup",
+                             daemon=True).start()
+            print(f"Auto-backup: every {_hours}h -> {db.app_dir() / 'backups'}")
+    except Exception as exc:
+        print(f"Auto-backup not started: {exc}")
 
     print("Ctrl-C to stop.")
     if not args.no_open:

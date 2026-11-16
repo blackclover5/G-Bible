@@ -17,6 +17,8 @@ import functools
 import re
 from typing import Iterable, NamedTuple
 
+from . import native
+
 
 class Seg(NamedTuple):
     kind: str          # text|strongs|note|xref|heading|title|add|alt|red|name|img|break|para
@@ -26,7 +28,10 @@ class Seg(NamedTuple):
     attrs: dict = {}
 
     def is_text(self) -> bool:
-        return self.kind in ("text", "add", "alt", "red", "name", "title", "strongs")
+        # "chapter" counts as text, exactly as "title" does: its words are part
+        # of the unit's content, not a decoration around it.
+        return self.kind in ("text", "add", "alt", "red", "name", "title",
+                             "chapter", "strongs")
 
 
 # --------------------------------------------------------------------------
@@ -60,6 +65,8 @@ _ENTITY_RE = re.compile(r"&(#x?[0-9A-Fa-f]+|[A-Za-z][A-Za-z0-9]*);")
 
 
 def unescape(text: str) -> str:
+    if native.core is not None:
+        return native.core.unescape_entities(text or "")
     if "&" not in text:
         return text
 
@@ -90,6 +97,8 @@ def _strip_tags(s: str) -> str:
 
 
 def collapse(text: str) -> str:
+    if native.core is not None:
+        return native.core.collapse_spaces(text or "")
     return re.sub(r"[ \t\u00a0]+", " ", text or "")
 
 
@@ -671,7 +680,8 @@ def parse_osis(src: str, *, keep_footnotes: bool = True) -> list[Seg]:
                 if name_l == "q" and not _osis_speaker_is_jesus(
                         attrs.get("who", "")):
                     # OSIS uses <q> for ordinary quotations too. Only an
-                    # explicit Jesus speaker attribution means red letters.
+                    # explicit Jesus speaker attribution marks the span as
+                    # words of Christ (kept as data; rendered as plain text).
                     kind = "seg"
                 stack.append(_Frame(kind, attrs, _EMIT.get(kind, _emit_transparent),
                                     tag=name_l))
@@ -1007,6 +1017,36 @@ _HTML_KEEP = {
 }
 
 
+_HTML_RED_COLORS = frozenset({
+    "red", "#f00", "#ff0000", "#c00", "#cc0000", "#a00", "#aa0000",
+    "#d00", "#dd0000", "#e00", "#ee0000",
+})
+
+
+def _is_jesus_tag(name: str, attrs: dict) -> bool:
+    """Is this HTML element a span of Jesus' words?
+
+    HTML Bibles and e-Sword 9+ store the words of Christ as a coloured run;
+    OSIS-in-HTML keeps <q who="Jesus">.  Silent by construction: a colour or a
+    class that is not one of the agreed markers carries on as plain text.
+    """
+    cls = (attrs.get("class") or "").lower()
+    if any(tok in ("wj", "words-of-christ", "words_of_christ",
+                   "words-of-jesus", "words_of_jesus")
+           for tok in re.split(r"[\s,]+", cls) if tok):
+        return True
+    if name == "q" and re.fullmatch(r"#?jesus",
+                                    (attrs.get("who") or "").strip(), re.I):
+        return True
+    style = (attrs.get("style") or "").lower()
+    m = re.search(r"(?:^|;)\s*color\s*:\s*(#?[0-9a-f]{3,8}|[a-z]+)\s*(?:;|$)", style)
+    if m and m.group(1).lower() in _HTML_RED_COLORS:
+        return True
+    if name == "font" and (attrs.get("color") or "").lower() in _HTML_RED_COLORS:
+        return True
+    return False
+
+
 def parse_html(src: str) -> list[Seg]:
     """Tolerant HTML/RTF-fragment reader.
 
@@ -1020,11 +1060,14 @@ def parse_html(src: str) -> list[Seg]:
     s = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", src)
     s = re.sub(r"(?is)<!--.*?-->", " ", s)
     pos = 0
-    stack: list[tuple[str, dict]] = []
+    stack: list[tuple[str, dict, bool]] = []
+    red_open = 0
     for m in _TAG_RE.finditer(s):
         txt = s[pos:m.start()]
         if txt:
-            segs.append(Seg("text", collapse(unescape(_strip_tags(txt)))))
+            attrs = {"wj": "1"} if red_open else {}
+            segs.append(Seg("text", collapse(unescape(_strip_tags(txt))),
+                            attrs=attrs))
         pos = m.end()
         closing, name, rawattrs, selfclose = m.group(1), m.group(2).lower(), m.group(3), m.group(4)
         attrs = {}
@@ -1033,6 +1076,8 @@ def parse_html(src: str) -> list[Seg]:
         if closing:
             for i in range(len(stack) - 1, -1, -1):
                 if stack[i][0] == name:
+                    if stack[i][2]:
+                        red_open -= 1
                     stack.pop(i)
                     break
             continue
@@ -1044,10 +1089,15 @@ def parse_html(src: str) -> list[Seg]:
         elif name == "p" or name == "div":
             segs.append(Seg("para", "\n"))
         elif not selfclose:
-            stack.append((name, attrs))
+            red = _is_jesus_tag(name, attrs)
+            stack.append((name, attrs, red))
+            if red:
+                red_open += 1
     tail = s[pos:]
     if tail:
-        segs.append(Seg("text", collapse(unescape(_strip_tags(tail)))))
+        attrs = {"wj": "1"} if red_open else {}
+        segs.append(Seg("text", collapse(unescape(_strip_tags(tail))),
+                        attrs=attrs))
     return _run([x for x in segs
                  if x.text or x.kind in ("strongs", "note", "img", "break", "para")])
 
@@ -1127,13 +1177,43 @@ def parse_wikitext(src: str) -> list[Seg]:
     segs: list[Seg] = []
     if not src:
         return segs
-    lines = src.split("\n")
+    # multi-line blocks with no prose land in one shot, before the line pass
+    src = re.sub(r"\{\s*GHGheader\s*\|[^}]*\}\}", "", src, flags=re.S | re.I)
+    src = re.sub(r"<noinclude>.*?</noinclude>", "", src, flags=re.S | re.I)
+    src = re.sub(r"<section\b[^>]*/>", "", src, flags=re.I)
+    src = re.sub(r"</?section\b[^>]*>", "", src, flags=re.I)
+    src = re.sub(r"<!--.*?-->", "", src, flags=re.S)
+
+    # collapse any `{{…}}` block spanning more than one line onto one logical
+    # line before the line-by-line pass sees them (else a line that opens a
+    # block would fail the `{{…}}` close-of-line check).
+    joined: list[str] = []
+    buf: list[str] = []
+    depth = 0
+    for line in src.split("\n"):
+        if depth == 0 and not line.strip():
+            joined.append("")
+            continue
+        buf.append(line)
+        depth += line.count("{{") - line.count("}}")
+        if depth <= 0:
+            joined.append(" ".join(buf))
+            buf = []; depth = 0
+    if buf: joined.append(" ".join(buf))
+    lines = joined
     in_ref = False
+    at_break = False
     for raw in lines:
         line = raw.rstrip()
         s = line.strip()
         if not s:
+            at_break = True
             continue
+        if at_break and segs:
+            last = segs[-1]
+            if last.kind not in ("break", "para", "img"):
+                segs.append(Seg("break", "\n"))
+            at_break = False
         # strip trailing navigation / metadata blocks
         if s in ("{{TOC right}}", "{{ppb}}", "}}", "{{header") or s.startswith("|{{") \
            or s.startswith("| title") or s.startswith("| author") or s.startswith("| section") \
@@ -1148,6 +1228,10 @@ def parse_wikitext(src: str) -> list[Seg]:
         if in_ref:
             continue
         if s.startswith("<references/>") or s.startswith("{{cite"):
+            continue
+        # strip HTML comments anywhere in the line before processing
+        s = re.sub(r"<!--.*?-->", "", s, flags=re.S).strip()
+        if not s:
             continue
         # headings
         m = re.match(r"^(={2,6})\s*(.+?)\s*\1\s*$", s)
@@ -1164,6 +1248,12 @@ def parse_wikitext(src: str) -> list[Seg]:
         if s.startswith("{{") and s.endswith("}}"):
             inner = s[2:-2]
             name = inner.split("|")[0].strip().lower()
+            if name == "ghgpar-heading":
+                parts = [p.strip() for p in inner.split("|", 2)]
+                if len(parts) >= 3 and parts[2]:
+                    segs.append(Seg("heading", "", "", "", {"level": 2}))
+                    segs.append(Seg("title", _wt_inline(parts[2])))
+                continue
             if name in ("rh", "center", "sc", "small", "big", "blockquote"):
                 segs.append(Seg("text", _wt_inline(inner.split("|", 1)[1] if "|" in inner else "")))
             continue
@@ -1193,8 +1283,25 @@ _WT_REF_PATTERNS = [
 ]
 
 
+def _inner_template(text: str) -> str:
+    # Repeat until no balanced `{{…}}` remains.  Nested-inner-first is what
+    # the Wikipedia lexer expects: the inner cite expands, then the outer
+    # block consumes the result.
+    import re as _re
+    for _ in range(12):
+        nxt = _re.sub(r"\{\{([^{}]*?)\}\}", lambda m: _expand_template(m.group(1)), text)
+        if nxt == text:
+            break
+        text = nxt
+    return text
+
+
 def _wt_inline(s: str) -> str:
     out = s or ""
+    out = re.sub(r"<!--.*?-->", "", out, flags=re.S)
+    out = re.sub(r"</?section\b[^>]*>", "", out, flags=re.I)
+    out = re.sub(r"<noinclude>.*?</noinclude>", "", out, flags=re.S | re.I)
+    out = _inner_template(out)
     for pat, rep in _WT_REF_PATTERNS:
         out = pat.sub(rep, out)
     out = re.sub(r"\[(?:[^\]]*)\]\s*", "", out)
@@ -1368,7 +1475,7 @@ def segs_html(segs: Iterable[Seg], o: RenderOpts | None = None) -> str:
         return f'<span class="wj">{h}</span>' if marked and o.show_red else h
 
     for s in segs:
-        wj = bool(s.attrs.get("wj"))
+        wj = s.kind == "red" or bool(s.attrs.get("wj"))
         if s.kind == "text":
             h = esc(s.text)
             out.append(f'<span class="wj">{h}</span>' if (wj and o.show_red) else h)
@@ -1378,21 +1485,25 @@ def segs_html(segs: Iterable[Seg], o: RenderOpts | None = None) -> str:
         elif s.kind == "alt":
             out.append(with_red(f'<span class="alt">{esc(s.text)}</span>', wj))
         elif s.kind == "red":
-            out.append(f'<span class="wj">{"".join(esc(t) for t in s.text)}</span>'
-                       if o.show_red else esc(s.text))
+            out.append(f'<span class="wj">{esc(s.text)}</span>' if o.show_red else esc(s.text))
         elif s.kind == "name":
             h = f'<span class="pname" data-kind="{esc(s.value)}">{esc(s.text)}</span>'
             out.append(with_red(h, wj))
         elif s.kind == "strongs":
+            nums = s.value.split() if s.value else []
+            # Tagged words get a wrapper so hovering the word itself works,
+            # not just the superscript. Always rendered, even with the
+            # Strong's toggle off.
             w = esc(s.text)
-            if o.show_strongs and s.value:
-                nums = s.value.split()
+            if nums:
+                w = '<span class="tword" data-s="' + esc(nums[0]) + '">' + esc(s.text) + '</span>'
+            if o.show_strongs and nums:
                 w += ('<sup class="snums">'
                       + " ".join(f'<a class="snum" data-s="{n}" href="#">{n}</a>' for n in nums)
                       + "</sup>")
             if s.lemma and o.show_strongs:
                 w += f'<sup class="morphs" title="morphology">{esc(s.lemma)}</sup>'
-            out.append(f'<span class="wj">{w}</span>' if (wj and o.show_red) else w)
+            out.append(with_red(w, wj))
         elif s.kind == "note":
             if o.show_notes and s.text:
                 nid = "n" + _hashid(s.value or s.text)
@@ -1405,6 +1516,12 @@ def segs_html(segs: Iterable[Seg], o: RenderOpts | None = None) -> str:
             if o.show_headings:
                 out.append(f'<span class="docheading" data-t="{esc(s.attrs.get("t", ""))}">'
                            f'{esc(s.text)}</span>')
+        elif s.kind == "chapter":
+            # A chapter boundary inside a unit — the devotional creator's
+            # generated sections — gets a rule of its own, so the end of one
+            # chapter and the start of the next are unmistakable.
+            if o.show_headings:
+                out.append('<h3 class="chapter-head">' + esc(s.text) + '</h3>')
         elif s.kind == "heading":
             if o.show_headings:
                 out.append('<h3 class="unitheading">')
@@ -1444,19 +1561,3 @@ def segs_for_search(segs: Iterable[Seg]) -> str:
     return segs_text(segs, notes=False)
 
 
-def markers_from_segs(segs: Iterable[Seg], *, base_word: int = 0) -> list[Seg]:
-    """Strong's / lemma / morph markers carried by these segments.
-
-    Returned as pseudo-segments so the indexer can walk one list.
-    """
-    out = []
-    for s in segs:
-        if s.kind == "strongs" and s.value:
-            for n in s.value.split():
-                out.append(Seg("marker", "", n, "", {"kind": "strongs"}))
-            if s.lemma:
-                for m in s.lemma.split():
-                    out.append(Seg("marker", "", m, "", {"kind": "morph"}))
-        elif s.kind == "note" and s.value:
-            out.append(Seg("marker", "", s.value, "", {"kind": "note"}))
-    return out

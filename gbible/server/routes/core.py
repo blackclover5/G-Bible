@@ -372,12 +372,11 @@ def _library(parts, q):
             "chapters": m.chapters, "verses": m.verses,
             "has_strongs": m.has_strongs, "has_morph": m.has_morph,
             "has_notes": m.has_notes, "has_xref": m.has_xref,
-            "has_redletter": m.has_redletter,
             "index_types": m.index_types or list(taxonomy.index_types_for(m.type)),
             "reader": m.reader, "priority": m.priority, "favorite": m.favorite,
             "error": m.error,
             # A property, not a column, so it is absent from the SELECT * and
-            # was never sent.  app.js uses it to find a Bible to follow a cross
+            # was never sent.  the front end uses it to find a Bible to follow a cross
             # reference into, so with it missing "open this verse anywhere"
             # silently found nothing.
             "is_bible": m.is_bible,
@@ -412,7 +411,7 @@ def _library_module(parts, q):
         "index_types": m.index_types or list(taxonomy.index_types_for(m.type)),
         "reader": m.reader, "has_strongs": m.has_strongs,
         "has_morph": m.has_morph, "has_notes": m.has_notes,
-        "has_xref": m.has_xref, "has_redletter": m.has_redletter,
+        "has_xref": m.has_xref,
         "units": m.entries, "subject": m.subject,
     }, versification=v11n,
         linkable=library.link_map().get(mid, []))
@@ -586,6 +585,12 @@ def _study_topic(parts, q):
                              per_section=int(q.get("n") or 6))
 
 
+@endpoint("wordtip")
+def _wordtip(parts, q):
+    """The hover tooltip for a Strong's number (headword + one-line gloss)."""
+    return _ok(**study.word_tip(q.get("num", "")))
+
+
 @endpoint("study/wordfind")
 def _study_wordfind(parts, q):
     """Build a word-find puzzle from text you supply or from a passage."""
@@ -735,3 +740,17 @@ def _timeline_spans(parts, q):
     """The chronology as a number line, for drawing."""
     return timeline.spans()
 
+
+
+# ---------------------------------------------------------------------- tour
+@endpoint("tour/status")
+def _tour_status(parts, q):
+    from ... import db
+    return _ok(seen=bool(db.get_setting("tour_seen_v1", False)))
+
+
+@endpoint("tour/seen")
+def _tour_seen(parts, q):
+    from ... import db
+    db.set_setting("tour_seen_v1", True)
+    return _ok(ok=True)
