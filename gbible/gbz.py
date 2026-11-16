@@ -471,7 +471,7 @@ def restore_gbz(data: bytes, *, include_ai: bool = True, passphrase: str = "") -
                 continue
             conflict += 1
             stat["conflict"] += 1
-        conn.execute("COMMIT")
+        conn.commit()
     except GzError:
         try:
             conn.execute("ROLLBACK")
@@ -483,7 +483,7 @@ def restore_gbz(data: bytes, *, include_ai: bool = True, passphrase: str = "") -
             conn.execute("ROLLBACK")
         except Exception:
             pass
-        raise GzError(f"the restore was rolled back: {e}")
+        raise GzError(f"the restore could not continue: {e}")
 
     # --- restore/ section -------------------------------------------------
     notes: list[str] = []

@@ -1702,6 +1702,13 @@ const MapsUI = {
     return partial.length === 1 ? partial[0] : null;
   },
 
+  async showPlace(name) {
+    const p = await MapsUI.findPlace(name);
+    if (!p) return;
+    App.show('maps');
+    MapsUI.gotoPlace(p);
+  },
+
   /* ---------------------------------------------------- the map list */
 
   async open(id) {

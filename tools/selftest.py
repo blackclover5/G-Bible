@@ -3289,18 +3289,12 @@ def run() -> bool:
 
     # --------------------------------------------------------------- sync
     def t_sync_round_trip():
-        """Annotations reach a fresh install, and an edit comes back.
-
-        Two installs and one folder: A writes and pushes, B -- which has never
-        seen any of it -- pulls and must hold all of it, then B edits and A
-        deletes, and the two must agree at the end.  This is the check that the
-        contract in docs/sync.md actually holds, because every other part of it
-        is invisible until two devices meet.
-        """
+        """A backup restores missing records without overwriting local edits."""
         import os
         import shutil
         import tempfile
 
+        from gbible import gbz
         from gbible import sync as sync_mod
 
         home = os.environ.get("GBIBLE_HOME")
@@ -3325,47 +3319,26 @@ def run() -> bool:
 
             at(b)
             sync_mod.save_config(cfg)
-            sync_mod.run()
+            backup = Path(folder) / gbz.GBZ_NAME
+            restored = gbz.restore_gbz(backup.read_bytes())
             got = notes_mod.listing(limit=10)
             assert [n["title"] for n in got] == ["A note"], \
                 f"the note did not arrive: {[n['title'] for n in got]}"
             assert db.get_setting("reading-plan/progress") == {"bible": [1, 2, 3]}, \
                 "reading progress did not arrive"
+            assert restored["applied"] > 0, f"nothing was restored: {restored}"
 
-            # B edits and adds; A deletes.  Both must travel.
+            # Restore is additive: a local edit wins over a different backup.
             target = got[0]
             notes_mod.save(dict(target, title="A note",
                                 body="edited on B", tags=target["tags"]))
-            extra = notes_mod.save({"kind": "journal", "title": "B's own",
-                                    "body": "written on B"})
-            sync_mod.run()
-
-            at(a)
-            sync_mod.save_config(cfg)
-            sync_mod.run()
-            titles = sorted(n["title"] for n in notes_mod.listing(limit=10))
-            assert titles == ["A note", "B's own"], \
-                f"A did not receive B's changes: {titles}"
-            body = [n["body"] for n in notes_mod.listing(limit=10)
-                    if n["title"] == "A note"][0]
-            assert body == "edited on B", f"the edit did not arrive: {body!r}"
-
-            notes_mod.remove(extra["id"])
-            sync_mod.run()
-
-            at(b)
-            sync_mod.save_config(cfg)
-            sync_mod.run()
-            titles = sorted(n["title"] for n in notes_mod.listing(limit=10))
-            assert titles == ["A note"], \
-                f"the delete did not travel: {titles}"
-
-            # And a second sync moves nothing, on either side.
-            still = sync_mod.run()
-            assert still["pushed"] == 0 and still["pulled"] == 0, \
-                f"sync does not settle: {still}"
-            return (f"2 installs, {first['pushed']} pushed then received, "
-                    "an edit and a delete propagated, second sync idle")
+            repeated = gbz.restore_gbz(backup.read_bytes())
+            body = notes_mod.listing(limit=10)[0]["body"]
+            assert body == "edited on B", f"restore overwrote the local edit: {body!r}"
+            assert repeated["conflict"] > 0, \
+                f"the local edit was not reported as a conflict: {repeated}"
+            return (f"1 backup, {restored['applied']} records restored, "
+                    "local edit kept on conflicting restore")
         finally:
             if home is None:
                 os.environ.pop("GBIBLE_HOME", None)

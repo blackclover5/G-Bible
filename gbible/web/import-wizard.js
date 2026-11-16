@@ -257,7 +257,7 @@ const ImportWizard = {
           : '';
       }
       if (j.state === 'done' || j.state === 'cancelled') {
-        setTimeout(() => { closeModal(); App.loadLibrary(); App.loadWorkspace(); App.refreshInstallCount && App.refreshInstallCount(); }, 700);
+        setTimeout(() => { closeModal(); App.loadLibrary(); App.loadWorkspace(); }, 700);
         return;
       }
       setTimeout(poll, 900);
