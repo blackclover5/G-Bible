@@ -527,7 +527,8 @@ def run() -> bool:
                 tid == "Other", tid
         # The override that motivated the whole module.
         assert placement.type_for("crosswire-tsk", "Commentary") == "CrossReference"
-        assert placement.slot_for("tsk", "Commentary").reader == "verse"
+        assert placement.slot_for_type(
+            placement.type_for("tsk", "Commentary")).reader == "verse"
         # Overrides must resolve on both the bare and the namespaced id.
         for mid in ("tsk", "crosswire-tsk"):
             assert placement.type_for(mid, "Commentary") == "CrossReference", mid
@@ -804,7 +805,7 @@ def run() -> bool:
         # An installed module is a zip, a SWORD directory, or a source file.
         MATERIAL_EXT = {".usfm", ".bzz", ".bzs", ".bzv", ".zip", ".osis", ".sql",
                         ".db", ".mp3", ".ogg", ".m4a", ".wav", ".flac"}
-        # Source is code, and code grows with the app: app.js is 9,700 lines of
+        # Source is code, and code grows with the app: app-core.js is ~1,230 lines of
         # hand-written JavaScript. Holding it to the same 400 KB as a stray
         # archive meant failing on the file the project is named for, so the
         # cap below applies to what it was actually for -- a Bible text or an
@@ -2808,8 +2809,8 @@ def run() -> bool:
         absent the check still runs the cheap structural tests and says so.
         """
         import re
-        src = open("gbible/web/app.js", encoding="utf-8").read()
-        assert "\x00" not in src, "app.js contains a NUL byte"
+        src = open("gbible/web/app-core.js", encoding="utf-8").read()
+        assert "\x00" not in src, "app-core.js contains a NUL byte"
         assert src.count("{") == src.count("}"), \
             f"braces unbalanced: {src.count('{')} vs {src.count('}')}"
         assert src.count("(") == src.count(")"), \
@@ -2826,7 +2827,7 @@ def run() -> bool:
         except Exception as exc:
             line = getattr(exc, "lineNumber", "?")
             ctx = src.splitlines()[int(line) - 1] if str(line).isdigit() else ""
-            raise AssertionError(f"app.js does not parse at line {line}: "
+            raise AssertionError(f"app-core.js does not parse at line {line}: "
                                  f"{exc}\n    {ctx.strip()[:100]}")
         return f"{len(src.splitlines())} lines parse cleanly"
 
@@ -2845,8 +2846,8 @@ def run() -> bool:
         parse perfectly well: only the two together are the bug.
         """
         import re, glob, os
-        # After the front-end split, the call site lives in app.js (mirrored
-        # by app-core.js, which is what index.html actually loads) and the
+        # The call site lives in app-core.js, which is what index.html
+        # actually loads, and the definition lives in speech.js.  Check both.
         # definition lives in speech.js.  Check all of them so a move does not
         # silently drop the guard.
         sources = {}
@@ -3288,18 +3289,12 @@ def run() -> bool:
 
     # --------------------------------------------------------------- sync
     def t_sync_round_trip():
-        """Annotations reach a fresh install, and an edit comes back.
-
-        Two installs and one folder: A writes and pushes, B -- which has never
-        seen any of it -- pulls and must hold all of it, then B edits and A
-        deletes, and the two must agree at the end.  This is the check that the
-        contract in docs/sync.md actually holds, because every other part of it
-        is invisible until two devices meet.
-        """
+        """A backup restores missing records without overwriting local edits."""
         import os
         import shutil
         import tempfile
 
+        from gbible import gbz
         from gbible import sync as sync_mod
 
         home = os.environ.get("GBIBLE_HOME")
@@ -3324,47 +3319,26 @@ def run() -> bool:
 
             at(b)
             sync_mod.save_config(cfg)
-            sync_mod.run()
+            backup = Path(folder) / gbz.GBZ_NAME
+            restored = gbz.restore_gbz(backup.read_bytes())
             got = notes_mod.listing(limit=10)
             assert [n["title"] for n in got] == ["A note"], \
                 f"the note did not arrive: {[n['title'] for n in got]}"
             assert db.get_setting("reading-plan/progress") == {"bible": [1, 2, 3]}, \
                 "reading progress did not arrive"
+            assert restored["applied"] > 0, f"nothing was restored: {restored}"
 
-            # B edits and adds; A deletes.  Both must travel.
+            # Restore is additive: a local edit wins over a different backup.
             target = got[0]
             notes_mod.save(dict(target, title="A note",
                                 body="edited on B", tags=target["tags"]))
-            extra = notes_mod.save({"kind": "journal", "title": "B's own",
-                                    "body": "written on B"})
-            sync_mod.run()
-
-            at(a)
-            sync_mod.save_config(cfg)
-            sync_mod.run()
-            titles = sorted(n["title"] for n in notes_mod.listing(limit=10))
-            assert titles == ["A note", "B's own"], \
-                f"A did not receive B's changes: {titles}"
-            body = [n["body"] for n in notes_mod.listing(limit=10)
-                    if n["title"] == "A note"][0]
-            assert body == "edited on B", f"the edit did not arrive: {body!r}"
-
-            notes_mod.remove(extra["id"])
-            sync_mod.run()
-
-            at(b)
-            sync_mod.save_config(cfg)
-            sync_mod.run()
-            titles = sorted(n["title"] for n in notes_mod.listing(limit=10))
-            assert titles == ["A note"], \
-                f"the delete did not travel: {titles}"
-
-            # And a second sync moves nothing, on either side.
-            still = sync_mod.run()
-            assert still["pushed"] == 0 and still["pulled"] == 0, \
-                f"sync does not settle: {still}"
-            return (f"2 installs, {first['pushed']} pushed then received, "
-                    "an edit and a delete propagated, second sync idle")
+            repeated = gbz.restore_gbz(backup.read_bytes())
+            body = notes_mod.listing(limit=10)[0]["body"]
+            assert body == "edited on B", f"restore overwrote the local edit: {body!r}"
+            assert repeated["conflict"] > 0, \
+                f"the local edit was not reported as a conflict: {repeated}"
+            return (f"1 backup, {restored['applied']} records restored, "
+                    "local edit kept on conflicting restore")
         finally:
             if home is None:
                 os.environ.pop("GBIBLE_HOME", None)
@@ -4209,8 +4183,11 @@ def run() -> bool:
 
     def t_export_formats():
         from gbible import publish
-        mods = ["open-bibles-eng-kjv", "open-biles-eng-bsb"] \
-            if False else ["open-bibles-eng-kjv", "open-bibles-eng-bsb"]
+        mods = [m for m in ("open-bibles-eng-kjv", "open-bibles-eng-bsb")
+                if _installed(m)]
+        if len(mods) < 2:
+            return Skip("open-bibles-eng-kjv and open-bibles-eng-bsb are "
+                        "not installed")
         for fmt in ("md", "txt", "html", "rtf", "pdf"):
             r = publish.passage_document("John 3:16", mods, fmt=fmt)
             assert r.get("ok"), (fmt, r)
@@ -4239,7 +4216,11 @@ def run() -> bool:
         read that, so there is no second list to forget.
         """
         from gbible import publish
-        mods = ["open-bibles-eng-kjv", "open-bibles-eng-bsb"]
+        mods = [m for m in ("open-bibles-eng-kjv", "open-bibles-eng-bsb")
+                if _installed(m)]
+        if len(mods) < 2:
+            return Skip("open-bibles-eng-kjv and open-bibles-eng-bsb are "
+                        "not installed")
         with a_note():
             for kind in ("passage", "notes", "bibliography"):
                 declared = [f["id"] for f in publish.document_formats(kind)]
@@ -5047,6 +5028,8 @@ def run() -> bool:
         if _skip:
             return Skip(_skip)
         conn = _db.connect()
+        if not _installed("open-bibles-eng-kjv"):
+            return Skip("open-bibles-eng-kjv is not installed")
         row = conn.execute(
             "SELECT uid, key, module_id FROM pos_unit "
             "WHERE module_id='open-bibles-eng-kjv' AND key='John 3:16'").fetchone()

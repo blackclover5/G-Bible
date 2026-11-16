@@ -512,13 +512,6 @@ def list_apis(*, category: str | None = None, enabled_only: bool = False) -> lis
     return out
 
 
-def get_api(api_id: str) -> dict | None:
-    for a in list_apis():
-        if a["id"] == api_id:
-            return a
-    return None
-
-
 # --------------------------------------------------------------------------
 # Credentials
 # --------------------------------------------------------------------------

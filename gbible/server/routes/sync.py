@@ -65,3 +65,58 @@ def _sync_metered(parts, q):
                "checked. Turn 'only over Wi-Fi' off to sync anyway.")
 
 
+@endpoint("sync/missing_modules")
+def _sync_missing_modules(parts, q):
+    """List module ids referenced by personal records that aren't installed.
+
+    After a sync from another computer, the personal records travel regardless
+    of whether you installed the same modules there — notes still land here,
+    they just can't be opened. This is how the sync completion modal tells the
+    user honestly which records are orphaned by missing modules.
+    """
+    tables = [
+        ("note", "module_id"), ("highlight", "module_id"),
+        ("tag_item", "module_id"), ("collection_item", "module_id"),
+        ("passage_item", "module_id"), ("pane", "module_id"),
+        ("srs_card", "module_id"), ("word_list_item", "module_id"),
+    ]
+    conn = db.connect()
+    referenced: set[str] = set()
+    for name, col in tables:
+        try:
+            for r in conn.execute(f"SELECT DISTINCT {col} FROM {name} WHERE {col}<>''"):
+                v = r[0]
+                if v:
+                    referenced.add(v)
+        except Exception:
+            continue
+    try:
+        installed = {r["id"] for r in conn.execute(
+            "SELECT id FROM module WHERE installed_at>0")}
+    except Exception:
+        installed = set()
+    return _ok(missing=sorted(referenced - installed))
+@endpoint("sync/restore")
+def _sync_restore(parts, q):
+    """Restore from the .gbz sitting on the configured target — the same
+    file `sync/run` writes.  Works for filesystem and WebDAV/Nextcloud."""
+    from gbible import gbz, synctargets
+    try:
+        cfg = sync.config()
+        if not cfg.get("kind"):
+            return _ok(ok=False,
+                       error="That sync target is not configured yet.")
+        target = synctargets.from_config(cfg)
+        data = target.read(gbz.GBZ_NAME)
+        if data is None:
+            return _ok(ok=False,
+                       error="No backup on the target yet — press Sync now first.")
+        pw = q.get("passphrase") or (sync.encryption_passphrase(cfg) if cfg.get("encrypt") else "")
+        if gbz.is_encrypted(data) and not pw:
+            return _ok(ok=False,
+                       error="This backup is encrypted. Enter the passphrase "
+                             "to restore it.")
+        out = gbz.restore_gbz(data, include_ai=True, passphrase=pw)
+    except Exception as e:
+        return _ok(ok=False, error=str(e))
+    return _ok(**out)

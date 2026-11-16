@@ -172,10 +172,53 @@ def listing(kind: str = "", *, q: str = "", tag: str = "",
     return out
 
 
+def _verse_place(module_id: str, unit_key: str):
+    """The canonical place of a unit, if it is a verse.
+
+    `unit_key` belongs to the module — the same verse is "Gen.1.1" in one
+    translation and "1:1" in another — so the place is read from the unit
+    table, the one thing that means the same everywhere. This is what lets a
+    note follow its verse from one translation to another, and into a copied
+    devotion.
+    """
+    if not module_id or not unit_key:
+        return None
+    r = db.connect().execute(
+        "SELECT book, chapter, verse FROM unit WHERE module_id=? AND key=?",
+        (module_id, unit_key)).fetchone()
+    if r is None or not r["book"] or not r["chapter"] or not r["verse"]:
+        return None
+    return (r["book"], int(r["chapter"]), int(r["verse"]))
+
+
 def notes_at(module_id: str, unit_key: str) -> list[dict]:
-    return [_row_to_note(r) for r in db.connect().execute(
+    """Notes anchored to this unit — and the same verse in any other module.
+
+    The match is by the canonical book.chapter.verse, not by key, so a note
+    written in one translation shows in every translation that has the verse,
+    and in every devotion whose passages were copied from it.
+    """
+    conn = db.connect()
+    rows = list(conn.execute(
         "SELECT * FROM note WHERE module_id=? AND unit_key=? "
-        "ORDER BY updated_at DESC", (module_id, unit_key))]
+        "ORDER BY updated_at DESC", (module_id, unit_key)))
+    place = _verse_place(module_id, unit_key)
+    if place:
+        rows += list(conn.execute(
+            "SELECT n.* FROM note n JOIN unit u "
+            "  ON u.module_id = n.module_id AND u.key = n.unit_key "
+            "WHERE u.book=? AND u.chapter=? AND u.verse=? "
+            "  AND NOT (n.module_id=? AND n.unit_key=?) "
+            "ORDER BY n.updated_at DESC",
+            (place[0], place[1], place[2], module_id, unit_key)))
+    seen, out = set(), []
+    for r in rows:
+        nid = r["id"]
+        if nid in seen:
+            continue
+        seen.add(nid)
+        out.append(_row_to_note(r))
+    return out
 
 
 def stats() -> dict:
@@ -191,7 +234,14 @@ def stats() -> dict:
 # ------------------------------------------------------------------ prayer
 
 def prayer_day(day: str | None = None) -> dict | None:
-    """The prayer list for a day, or for today."""
+    """The prayer list for a day, or for today.
+
+    Every prayers the UI creates went out with `ref_label=''`, so a prayer you
+    actually made would never answer this question and the Home card would sit
+    on its "Nothing for today" placeholder forever.  When nothing is dated for
+    today the most recently edited prayer is shown instead — undated prayers
+    are the common case, not an error.
+    """
     conn = db.connect()
     row = None
     if day:
@@ -204,6 +254,10 @@ def prayer_day(day: str | None = None) -> dict | None:
         row = conn.execute(
             "SELECT * FROM note WHERE kind='prayer' AND ref_label=? LIMIT 1",
             (day,)).fetchone()
+    if row is None:
+        row = conn.execute(
+            "SELECT * FROM note WHERE kind='prayer' "
+            "ORDER BY updated_at DESC LIMIT 1").fetchone()
     return _row_to_note(row) if row else None
 
 

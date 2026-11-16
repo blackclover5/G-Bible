@@ -48,14 +48,7 @@ App.bind = function () {
     $$('#nav .menu-pop').forEach(m => m.classList.remove('open'));
     About.show();
   };
-  const cbBtn = $('#cmdbox-btn');
-  if (cbBtn) cbBtn.onclick = () => CommandBox.open();
   document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
-      e.preventDefault();
-      CommandBox.open();
-      return;
-    }
     if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
       e.preventDefault();
@@ -94,8 +87,63 @@ App.bind = function () {
   $('#s-range').onchange = () => {
     if (($('#sq').value || '').trim()) Search.go();
   };
-  /* ---- Search type: Bible text vs Morphology ------------------------------ */
-$('#s-scope').onclick = (e) => {
+  /* ---- Search type selector: 8 experiences, each with its own query,
+       filters, and results. Switching preserves each type's query. ---------- */
+  $$('.stype-btn').forEach(b => {
+    b.onclick = (e) => {
+      const btn = e.currentTarget;
+      const nt = btn.dataset.type;
+      if (nt === Search.type) return;
+      /* Save the active type's query. */
+      const ot = Search.type || 'all';
+      Search.saveTypeQuery(ot);
+      /* Switch active button. */
+      $$('.stype-btn').forEach(x => {
+        x.classList.toggle('active', x === btn);
+      });
+      Search.type = nt;
+      /* Show/hide type-specific filters. */
+      Search.showTypeFilters(nt);
+      /* Restore the new type's query into its input(s). */
+      Search.restoreTypeQuery(nt);
+
+      /* Populate the Topics source dropdown with the installed fact books. */
+      if (nt === 'topics') {
+        const sts = $('#s-topics-source');
+        if (sts && !sts._populated) {
+          const facts = (S.modules || []).filter(m => m.type === 'FactBook');
+          sts.innerHTML = '<option value="">All sources</option>'
+            + facts.map(m => '<option value="' + esc(m.id) + '">'
+              + esc(m.name) + ' (' + esc(m.lang || '') + ')</option>').join('');
+          sts._populated = true;
+        }
+      }
+
+      /* Attach the @ popup for morph search inputs when switching to morph. */
+      if (nt === 'morph') {
+        const smr = $('#s-morph-resource');
+        if (smr && !smr._populated) {
+          const tagged = (S.modules || []).filter(m => m.has_morph);
+          smr.innerHTML = '<option value="">All tagged resources</option>'
+            + tagged.map(m => '<option value="' + esc(m.id) + '">'
+              + esc(m.name) + ' (' + esc(m.lang || '') + ')</option>').join('');
+          smr._populated = true;
+        }
+        const input = $('#s-morph-word');
+        if (input && !input._atPopupAttached) {
+          attachMorphAtPopup(input, () => ($('#s-morph-resource') || {}).value || '',
+                                     () => (($('#s-morph-passage') || {}).value || '').trim());
+          input._atPopupAttached = true;
+        }
+      }
+
+      Search.go();
+    };
+  });
+
+  /* The morph word input is only relevant for the Morph type. */
+  $('#s-morph-word').onkeydown = (e) => { if (e.key === 'Enter') Search.go(); };
+  $('#s-scope').onclick = (e) => {
     const opts = [['', 'All resources'], ['bible', 'Bibles only'], ['books', 'Books only']];
     const cur = opts.findIndex(o => o[0] === S.search.opts.scope);
     const nx = opts[(cur + 1) % opts.length];
@@ -127,6 +175,13 @@ $('#s-scope').onclick = (e) => {
   if (wsClear) wsClear.onclick = async () => { await Workspace.clearLinks(); };
   const wsClose = $('#ws-closeall');
   if (wsClose) wsClose.onclick = async () => { await Workspace.closeAll(); };
+  const wsReopen = $('#ws-reopen');
+  if (wsReopen) wsReopen.onclick = async () => {
+    let id = null;
+    try { id = localStorage.getItem('gbible:last-module'); } catch (e) {}
+    if (!id) { toast('No recently opened resource.', 'warn'); return; }
+    await Workspace.openModule(id, {});
+  };
   const wsFs = $('#ws-fullscreen');
   if (wsFs) wsFs.onclick = async () => {
     const p = (S.layout && S.layout.panes && S.layout.panes[0]) ? S.layout.panes[0] : null;
@@ -146,70 +201,9 @@ $('#s-scope').onclick = (e) => {
     const num = prompt('Strong’s number for the word study pane:', 'G2316');
     if (num) await Workspace.openWordStudyPane(num);
   };
+
   Search.help();
 
-  /* ---- Morph search ------------------------------------------------ */
-  $('#s-stype').onclick = () => {
-    Search.morphMode = !Search.morphMode;
-    const on = Search.morphMode;
-    $('#s-stype').classList.toggle('on', on);
-    $('#s-stype').textContent = on ? 'Morph' : 'Bible';
-    $('#s-morph-bar').style.display = on ? 'flex' : 'none';
-    $('#s-morph-forms').innerHTML = '';
-    $('#sq').placeholder = on
-      ? 'word  then  @  to pick a grammatical form   (e.g. love@V-PAI-3S)'
-      : 'faith AND Lord    Lord WITHIN 5 WORDS Christ    strongs:G2316    bible:"Gen 1:1"';
-    if (on) Search._morphFillResources();
-    if (!on && ($('#sq').value || '').trim()) Search.go();
-  };
-  Search.morphMode = false;
-  Search._morphFillResources = async () => {
-    const sel = $('#s-morph-res');
-    const mods = (S.modules || []).filter(m => m.has_morph);
-    sel.innerHTML = '<option value="">All tagged resources</option>'
-      + mods.map(m => '<option value="' + esc(m.id) + '">'
-      + esc(m.name) + ' (' + esc(m.lang || '') + ')</option>').join('');
-  };
-  let morphTimer = 0;
-  const morphWord = $('#s-morph-word');
-  if (morphWord) {
-    morphWord.oninput = (e) => {
-      clearTimeout(morphTimer);
-      const v = e.target.value;
-      const at = /@\s*$/.test(v);
-      const w = v.replace(/@\s*$/, '').trim();
-      const forms = $('#s-morph-forms');
-      if (!at || !w) { forms.innerHTML = ''; return; }
-      forms.innerHTML = '<div class="tiny muted">looking up forms…</div>';
-      morphTimer = setTimeout(async () => {
-        const mid = $('#s-morph-res').value || '';
-        if (!mid) { forms.innerHTML = '<div class="tiny muted">pick a tagged resource first.</div>'; return; }
-        const r = await api('morph/wordforms', { module_id: mid, word: w, limit: 12 });
-        forms.innerHTML = '';
-        if (!r.ok || !r.forms || !r.forms.length) {
-          forms.innerHTML = '<div class="tiny muted">no tagged forms for "' + esc(w) + '"</div>';
-          return;
-        }
-        const midName = (S.modules || []).find(m => m.id === mid);
-        r.forms.forEach(f => {
-          const chip = document.createElement('div');
-          chip.className = 'morph-chip';
-          const feat = Study._morphLabel ? Study._morphLabel(f.features) : f.code;
-          chip.innerHTML = '<div style="display:flex;justify-content:space-between"><b>'
-            + esc(w) + '</b><code>' + esc(f.code) + '</code></div>'
-            + '<div class="feat">' + esc(feat) + ' · ' + f.count.toLocaleString() + '×</div>';
-          chip.onclick = () => {
-            morphWord.value = w + ' @' + f.code;
-            forms.innerHTML = '';
-            Search.go();
-          };
-          forms.appendChild(chip);
-        });
-      }, 250);
-    };
-    morphWord.onkeydown = (e) => { if (e.key === 'Enter') Search.go(); };
-  }
-  $('#s-morph-res').onchange = () => { $('#s-morph-forms').innerHTML = ''; };
   /* ---- Tools menu items ------------------------------------------------ */
   $('#tc-copy-bible-verses').onclick = async () => {
     const ref = prompt('Reference to copy:', 'John 3:16');
@@ -406,7 +400,8 @@ $('#s-scope').onclick = (e) => {
     toast('Saved as "' + name + '"');
     Search.loadTemplates();
   };
-  $('#o-tab').onchange = () => Organise.load();
+  const oTab = $('#o-tab');
+  if (oTab) oTab.onchange = () => Organise.load();
 
   const catBtn = $('#l-cat');
   if (catBtn) catBtn.onclick = () => Catalogue.open();
@@ -490,7 +485,8 @@ $('#s-scope').onclick = (e) => {
     }
     const cd = t.closest('a[data-cdel]');
     if (cd) { if (!confirm('Delete this collection?')) return;
-              await api('collection', { action: 'delete', id: cd.dataset.cdel }); }
+              await api('collection', { action: 'delete', id: cd.dataset.cdel });
+              Organise.load(); }
     const lo = t.closest('a[data-lopen]');
     if (lo) { e.preventDefault(); await Organise.openList(lo.dataset.lopen); return; }
     const lr0 = t.closest('a[data-lread]');
@@ -542,7 +538,8 @@ $('#s-scope').onclick = (e) => {
       return;
     }
     const td = t.closest('a[data-tpldel]');
-    if (td) { await api('search/template', { action: 'delete', id: td.dataset.tpldel }); }
+    if (td) { await api('search/template', { action: 'delete', id: td.dataset.tpldel });
+              if (S.view === 'organise') Organise.load(); }
   };
 
   $('#ou-nt').onchange = () => { Study._ouDefaulted = true; Study.loadNtuSeOt(); };
@@ -551,39 +548,8 @@ $('#s-scope').onclick = (e) => {
   $('#cg-word').onkeydown = (e) => { if (e.key === 'Enter') Study.loadConcordance(); };
   $('#cg-tagged').onchange = () => Study.loadConcordance();
   $('#cg-mod').onchange = () => Study.loadConcordance();
-  /* Debounced, not on Enter: the gazetteer answers a prefix, so typing it is
-   * the interaction, and firing on every keystroke would ask the server for a
-   * list the reader is about to make narrower.  200ms, the same as the search
-   * box, so the two feel like one application. */
-  let mpTimer = null;
-  $('#mp-find').oninput = () => {
-    clearTimeout(mpTimer);
-    mpTimer = setTimeout(() => {
-      MapsUI.find = ($('#mp-find').value || '').trim();
-      MapsUI.search();
-    }, 200);
-  };
-  $('#mp-find').onkeydown = (e) => {
-    if (e.key === 'Enter') {
-      clearTimeout(mpTimer);
-      MapsUI.find = ($('#mp-find').value || '').trim();
-      MapsUI.search();
-    }
-  };
-  /* The modern lookup is a button, not a keystroke.  Unlike the gazetteer, this
-   * one leaves the machine: Nominatim's policy is one request a second and it
-   * counts them, so a search that fires as the reader types spends the quota on
-   * prefixes they did not mean.  The answer is cached for a month server-side,
-   * so a second search of the same name is free. */
-  if ($('#mp-geo-go')) {
-    $('#mp-geo-go').onclick = () => MapsUI.geocode();
-    $('#mp-geo-q').onkeydown = (e) => {
-      if (e.key === 'Enter') MapsUI.geocode();
-    };
-    $('#mp-geo-near').onchange = () => {
-      if (($('#mp-geo-q').value || '').trim()) MapsUI.geocode();
-    };
-  }
+  /* The maps view wires its own controls in MapsUI.wire() (bindings live
+   * next to the state they mutate); nothing here touches the map. */
   /* Image search is a button for the same reason as the modern lookup: the
    * quota is 100 requests a day and 5 an hour, so a keystroke-driven search
    * spends it on prefixes.  Changing a filter does re-search, because that is
@@ -614,6 +580,7 @@ $('#s-scope').onclick = (e) => {
     Guides.load();
   };
   $('#n-kind').onchange = () => Notes.load();
+  $('#n-prayer-filter').onchange = () => Notes.load();
   $('#n-q').oninput = debounce(() => Notes.load(), 250);
   $('#n-new').onclick = () => { App.show('notes'); Notes.new(); };
   $('#n-export').onclick = async () => {
@@ -654,36 +621,33 @@ $('#s-scope').onclick = (e) => {
     b.disabled = false; b.textContent = 'Refresh catalogues';
     toast('Catalogues refreshed.');
   };
-  $('#f-import').onclick = () => $('#fileinput').click();
-  $('#fileinput').onchange = async (e) => {
-    const f = e.target.files[0];
-    if (!f) return;
-    toast('Copy this path into the import box: ' + f.name, 'err');
-    modal('Import a local module',
-      '<div class="legal">The importer reads SWORD packages, USFM zips, e-Sword modules, '
-      + 'MySword books, KML/KMZ place files, images, plain text, and '
-      + '<b>EPUB personal books</b> &mdash; drop a DRM-free <code>.epub</code> in here and it '
-      + 'becomes a readable, searchable book with the rest of your library. Point it at a '
-      + 'file path on this machine.</div>'
-      + '<input id="imp-path" style="width:100%;background:var(--bg-3);border:1px solid var(--line-2);'
-      + 'color:var(--fg);padding:8px;border-radius:7px" placeholder="/path/to/module.zip">',
-      [{ label: 'Import', cls: 'btn primary', close: false, fn: async () => {
-          const p = $('#imp-path').value.trim();
-          if (!p) return;
-          const r = await post('store/import', { path: p });
-          if (!r.ok) { toast(r.error, 'err'); return; }
-          toast('Importing… detected ' + r.sniffed);
-          const poll = async () => {
-            const j = (await api('store/job', { job: r.job })).job;
-            if (!j) return;
-            if (j.state === 'done') { toast('Imported.'); closeModal(); await App.loadLibrary(); await App.loadWorkspace(); return; }
-            if (j.state === 'error') { toast(j.message, 'err'); return; }
-            setTimeout(poll, 900);
-          };
-          poll();
-        } }, { label: 'Cancel', cls: 'btn' }]);
+  $('#f-import').onclick = () => ImportWizard.open();
+  const fUpd = $('#f-updates');
+  if (fUpd) fUpd.onclick = async () => {
+    const r = await api('store/updates');
+    if (!r.ok) { toast(r.error || 'Could not check for updates.', 'err'); return; }
+    if (!r.count) { toast('All installed modules are up to date.', 'ok'); return; }
+    if (!confirm(r.count + ' update(s) available. Install them now?')) return;
+    let done = 0;
+    for (const u of (r.updates || [])) {
+      toast('Updating ' + u.title + '…');
+      const jr = await api('store/install', { repo: u.repo, item: u.item });
+      if (jr && jr.job) {
+        // poll
+        let finished = false;
+        while (!finished) {
+          await new Promise(res => setTimeout(res, 500));
+          const js = await api('store/job', { job: jr.job });
+          const j = js && js.job;
+          if (!j) { finished = true; break; }
+          if (j.state === 'done' || j.state === 'error') { finished = true; }
+        }
+      }
+      done++;
+    }
+    toast('Finished ' + done + ' update(s). Refreshing library…');
+    await App.loadLibrary();
   };
-
   ['#l-type', '#l-lang', '#l-src'].forEach(s => $(s).onchange = () => Library.paint());
   $('#l-q').oninput = debounce(() => Library.paint(), 250);
   $('#l-detail').onchange = () => Library.paint();
@@ -772,12 +736,6 @@ $('#s-scope').onclick = (e) => {
     if (ref) {
       ref.after(preach);
       ref.after(study);
-      // Move the Command box button to the far right.
-      const cbBtn = document.getElementById('cmdbox-btn');
-      if (cbBtn) {
-        cbBtn.style.marginRight = '';
-        wsBar.appendChild(cbBtn);
-      }
     }
   }
 
@@ -787,7 +745,6 @@ $('#s-scope').onclick = (e) => {
     if (e.key === '/') { e.preventDefault(); App.show('search'); $('#sq').focus(); }
     if (e.key === 's' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); App.show('store'); }
     if (e.key === 'w' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); App.show('workspace'); }
-    if (e.key === 'k' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); CommandBox.open(); }
     /* Preaching mode. F is the mnemonic some platforms use for full screen, and
      * it is the one a presenter reaches for without looking. */
     if (e.key === 'p' && (e.ctrlKey || e.metaKey)) {

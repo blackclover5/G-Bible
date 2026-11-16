@@ -46,21 +46,12 @@ const Catalogue = {
 
     const build = () => {
       const f = $('#ct-f').value;
-      $('#ct-go').innerHTML = (f === 'html' || f === 'pdf'
-        ? '<button class="ct-fmt ct-print" id="ct-print">Print it</button>' : '')
-        + '<button class="ct-fmt" id="ct-dl">Download</button>';
+      $('#ct-go').innerHTML = '<button class="ct-fmt" id="ct-dl">Download</button>';
       $('#ct-dl').onclick = () => {
         Cite._save(url(f), 'library-catalogue.' + f);
         toast('Saved library-catalogue.' + f + '.');
       };
-      const pr = $('#ct-print');
-      /* Printed through the same iframe the passage exporter uses, so the
-       * browser's own print dialog gets the app's own print stylesheet rather
-       * than a screenshot of a document. */
-      if (pr) pr.onclick = async () => {
-        const r = await fetch(url('html'));
-        Cite._printHtml(await r.text(), 'Library catalogue');
-      };
+
     };
     $('#ct-g').onchange = build;
     $('#ct-d').onchange = build;

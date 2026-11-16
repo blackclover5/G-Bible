@@ -1,6 +1,7 @@
 const Workspace = {
   async openModule(moduleId, cursor, opts) {
     const lay = S.layout;
+    if (!lay) { toast('No workspace is open.', 'warn'); return; }
     const used = new Set(lay.panes.map(p => (p.tile_id || 't0') + ':' + p.module_id));
     // Tile ids are generated in layout order and rendered in the same order, so
     // the first N of them are the ones actually on screen.  A new pane landing
@@ -24,11 +25,21 @@ const Workspace = {
     const r = await post('workspace/pane', {
       action: 'add', layout: lay.id, module: moduleId, tile: tile,
       cursor: cursor || {}, options: opts || {}, link_set: link });
-    await App.loadWorkspace();
-    const p = r.pane;
+    if (!r || !r.ok || !r.pane) {
+      toast('Could not open the resource'
+        + (r && r.error ? ': ' + r.error : ''), 'err');
+      return;
+    }
+    /* Keep the local layout in sync and re-render instead of a full reload. */
+    if (S.layout && r.pane) {
+      if (!S.layout.panes) S.layout.panes = [];
+      S.layout.panes.push(r.pane);
+    }
+    App.renderWorkspace();
     /* A tile draws tp[0] -- the first pane filed under it -- so a pane added to
      * a tile that already has one is saved correctly and then never shown.  The
      * Library's Open button looked like it did nothing.  Select the new pane. */
+    const p = r.pane;
     App.showPane(tile, p.id);
     return p;
   },
@@ -38,10 +49,46 @@ const Workspace = {
     const r = await post('workspace/pane', {
       action: 'add', layout: lay.id, module: moduleId, tile: tile,
       cursor: cursor || {}, options: opts || {}, link_set: '' });
-    await App.loadWorkspace();
+    if (!r || !r.ok || !r.pane) {
+      toast('Could not open the resource'
+        + (r && r.error ? ': ' + r.error : ''), 'err');
+      return;
+    }
+    if (S.layout && r.pane) {
+      if (!S.layout.panes) S.layout.panes = [];
+      S.layout.panes.push(r.pane);
+    }
+    App.renderWorkspace();
     const p = r.pane;
     App.showPane(tile, p.id);
+    try { localStorage.setItem('gbible:last-module', moduleId); } catch (e) {}
     return p;
+  },
+
+  /* Switch the module (translation) shown in an existing pane, keeping the
+   * pane, its tile, its link set and its cursor (reading position).  This is
+   * what makes swapping translations in a parallel arrangement direct: no new
+   * pane is created, no link relationship is lost, and the reader stays where
+   * it was. */
+  async switchModule(paneId, moduleId) {
+    const lay = S.layout;
+    if (!lay || !lay.id) { toast('No workspace is open.', 'warn'); return; }
+    const p = (lay.panes || []).find(x => x.id === paneId);
+    if (!p) { toast('That pane is no longer open.', 'warn'); return; }
+    const m = (S.modules || []).find(x => x.id === moduleId);
+    if (!m) { toast('That resource is not installed.', 'warn'); return; }
+    if (p.module_id === moduleId) return p;
+    const r = await post('workspace/pane', {
+      pane: paneId,
+      module_id: moduleId,
+    });
+    if (!r || !r.pane) { toast('Could not switch translation.', 'warn'); return; }
+    /* Keep the local pane record in sync so the UI reflects the change at once.
+     * link_set, tile_id and cursor are intentionally untouched. */
+    p.module_id = moduleId;
+    const pane = $('.pane[data-pane="' + paneId + '"]');
+    if (pane) App.showPane(p.tile_id || 't0', paneId);
+    return r.pane;
   },
 
   async pickModule(tile) {
@@ -124,7 +171,10 @@ const Workspace = {
       id: lay.id, name: lay.name || 'Layout',
       tiles: tree, panes: lay.panes });
     if (sv && sv.layout) S.layout = sv.layout;
-    await App.loadWorkspace();
+    else {
+      if (S.layout) { S.layout.tiles = tree; if (!S.layout.panes) S.layout.panes=[]; if(!S.layout.panes.includes(r.pane)) S.layout.panes.push(r.pane); }
+    }
+    App.renderWorkspace();
     App.showPane(newTileId, r.pane.id);
   },
 
@@ -138,7 +188,11 @@ const Workspace = {
       cursor: { ref: ref || '', guide: 'passage' }, view: 'guide',
       options: {}, link_set: '' });
     if (!r || !r.pane) { toast('Could not open a guide pane.', 'warn'); return; }
-    await App.loadWorkspace();
+    if (S.layout && r.pane) {
+      if (!S.layout.panes) S.layout.panes = [];
+      S.layout.panes.push(r.pane);
+    }
+    App.renderWorkspace();
     App.showPane(tile, r.pane.id);
     return r.pane;
   },
@@ -153,7 +207,11 @@ const Workspace = {
       cursor: { number: number || '' }, view: 'wordstudy',
       options: {}, link_set: '' });
     if (!r || !r.pane) { toast('Could not open a Word Study pane.', 'warn'); return; }
-    await App.loadWorkspace();
+    if (S.layout && r.pane) {
+      if (!S.layout.panes) S.layout.panes = [];
+      S.layout.panes.push(r.pane);
+    }
+    App.renderWorkspace();
     App.showPane(tile, r.pane.id);
     return r.pane;
   },
@@ -184,10 +242,10 @@ const Workspace = {
     const lay = S.layout;
     if (!lay || !lay.id) { toast('No workspace is open.', 'warn'); return; }
     const panes = (lay.panes || []).slice();
-    for (const p of panes) {
-      try { await post('workspace/pane', { action: 'close', pane: p.id }); } catch (e) {}
-    }
-    await App.loadWorkspace();
+    await Promise.all(panes.map(p =>
+      post('workspace/pane', { action: 'close', pane: p.id }).catch(() => {})));
+    if (S.layout) S.layout.panes = [];
+    App.renderWorkspace();
     toast('All panes closed.');
   },
 
@@ -196,11 +254,12 @@ const Workspace = {
     const target = lay && (lay.panes || []).find(x => x.id === paneId);
     const tileId = target ? App.tileKey(target.tile_id) : null;
     await post('workspace/pane', { action: 'close', pane: paneId });
-    await App.loadWorkspace();
-    // A tile left with no panes in it goes away entirely -- an empty slot with
-    // an "Open a resource" prompt is a tile the reader has already said they
-    // are done with.  The one exception is the last tile standing: with nothing
-    // left at all there would be nowhere to open the next thing from.
+    // Drop the pane locally instead of a full reload, then re-render.
+    if (S.layout && S.layout.panes) {
+      S.layout.panes = S.layout.panes.filter(p => p.id !== paneId);
+    }
+    App.renderWorkspace();
+    // Prune an emptied tile without a second full reload.
     if (tileId && S.layout) {
       const rest = S.layout.panes || [];
       const inTile = rest.filter(x => App.tileKey(x.tile_id) === tileId);
@@ -210,7 +269,6 @@ const Workspace = {
         if (pruned) {
           S.layout.tiles = pruned;
           await App.saveCurrentTree();
-          await App.loadWorkspace();
         }
       }
     }
@@ -241,24 +299,49 @@ const Workspace = {
     } catch (e) { /* never break linking */ }
   },
 
+  /* After a workspace is restored, bring every linked pane to the same passage.
+   * Each pane stores its own cursor, so a link set whose panes were saved at
+   * different positions needs one pass to bring them together.  We pick the
+   * first pane in each link set that has a ref cursor and propagate it to the
+   * rest; the server maps the cursor through shared milestone types (Bible and
+   * commentary scroll together; a lexicon looks up on click instead). */
+  async restoreLinks() {
+    const panes = (S.layout && S.layout.panes) || [];
+    const bySet = new Map();
+    for (const p of panes) {
+      const ls = p.link_set || '';
+      if (!bySet.has(ls)) bySet.set(ls, []);
+      bySet.get(ls).push(p);
+    }
+    for (const [ls, members] of bySet) {
+      if (!ls) continue;
+      const leader = members.find(p => p.cursor && p.cursor.ref);
+      if (!leader) continue;
+      await this.propagate(leader);
+    }
+  },
+
   /* Pack 1 extras: arrangements without closing panes, one-click unlink,
    * QuickStart layouts, Top Bible, parallel prev/next, reading progress,
    * copy-location. All thin wrappers over the JSON API. */
   async arrange(name) {
     const r = await post('workspace/arrange', { arrangement: name });
-    if (r.layout) S.layout = r.layout;
-    await App.loadWorkspace();
+    if (r.layout) { S.layout = r.layout; App.renderWorkspace(); }
+    else await App.loadWorkspace();
   },
   async clearLinks() {
     await post('workspace/clear_links', {});
-    await App.loadWorkspace();
+    if (S.layout && S.layout.panes) {
+      S.layout.panes.forEach(p => { p.link_set = ''; });
+    }
+    App.renderWorkspace();
     toast('All link sets cleared.');
   },
   async quickstarts() { return api('workspace/quickstarts', {}); },
   async quickstart(name) {
     const r = await post('workspace/quickstart', { name });
-    if (r.layout) S.layout = r.layout;
-    await App.loadWorkspace();
+    if (r.layout) { S.layout = r.layout; App.renderWorkspace(); }
+    else await App.loadWorkspace();
   },
   async topBible(id) {
     if (id === undefined) return api('workspace/top_bible', {});
@@ -295,12 +378,31 @@ const Workspace = {
   /* Pack 6 extras: layouts dialog, fullscreen reading, progress bookmark,
    * reader's-edition toggle. */
   async layoutsDialog() {
-    const [qs, tb] = await Promise.all([
+    const [qs, tb, listed] = await Promise.all([
       this.quickstarts().catch(() => ({ quickstarts: [] })),
       this.topBible().catch(() => ({})),
+      api('workspace/layouts').catch(() => ({ layouts: [] })),
     ]);
     const names = Object.keys(S.arrangements || {});
+    const saved = (listed && listed.layouts) || [];
+    const cur = S.layout || {};
     const row = (label, body) => '<h4 style="margin:12px 0 4px">' + label + '</h4>' + body;
+    const savedRows = saved.map(l => {
+      const active = l.id === cur.id ? ' <span style="color:var(--accent)">(current)</span>' : '';
+      const btns = '<button class="btn tiny" data-use="' + esc(l.id) + '">Open</button>'
+        + ' <button class="btn tiny danger" data-del="' + esc(l.id) + '">Delete</button>';
+      const panes = (l.panes || []).length;
+      const mods = (l.panes || []).map(p => {
+        const m = (S.modules || []).find(x => x.id === p.module_id);
+        return m ? m.name : (p.view || '(empty)');
+      }).join(', ');
+      return '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">'
+        + '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+        + esc(l.name) + active + '</span>'
+        + '<span class="tiny muted" style="white-space:nowrap">' + panes + ' pane(s)</span>'
+        + '<span class="tiny muted">' + esc(mods) + '</span>'
+        + btns + '</div>';
+    }).join('') || '<div class="empty tiny">No saved layouts yet.</div>';
     modal('Layouts',
       row('Rearrange open panes — nothing closes',
         '<div class="row wrap">' + names.map(n =>
@@ -310,6 +412,15 @@ const Workspace = {
         '<div class="row wrap">' + (qs.quickstarts || []).map(q =>
           '<button class="btn" data-qs="' + esc(q.name) + '" title="' + esc(q.about || '') + '">'
           + esc(q.name) + '</button>').join('') + '</div>')
+      + row('Saved layouts',
+        '<div id="saved-layouts">' + savedRows + '</div>'
+        + '<div style="margin-top:8px;display:flex;gap:6px">'
+        + '<input id="save-layout-name" placeholder="Name this layout…" style="flex:1;min-width:140px;'
+        + 'background:var(--bg-3);border:1px solid var(--line-2);color:var(--fg);'
+        + 'padding:4px 8px;border-radius:5px;font-size:12px">'
+        + '<button class="btn" id="save-layout">Save current</button></div>'
+        + '<div class="tiny muted" style="margin-top:4px">Saving keeps every open pane, its '
+        + 'translation, reading position and link set.</div>')
       + row('Links', '<div class="row wrap"><button class="btn" data-clear="1">'
         + 'Clear links in all panels</button></div>'
         + '<div class="tiny muted" style="margin-top:4px">Top Bible: '
@@ -321,8 +432,51 @@ const Workspace = {
     $$('#modal-body button[data-qs]').forEach(b => b.onclick = async () => {
       closeModal(); await this.quickstart(b.dataset.qs);
     });
+    $$('#modal-body button[data-use]').forEach(b => b.onclick = async () => {
+      closeModal(); await this.useLayout(b.dataset.use);
+    });
+    $$('#modal-body button[data-del]').forEach(b => b.onclick = async () => {
+      const id = b.dataset.del;
+      if (!confirm('Delete this layout? Its panes are removed too.')) return;
+      closeModal(); await this.deleteLayout(id);
+    });
     const cl = $('#modal-body button[data-clear]');
     if (cl) cl.onclick = async () => { closeModal(); await this.clearLinks(); };
+    $('#save-layout').onclick = async () => {
+      const name = ($('#save-layout-name').value || '').trim() || 'Layout';
+      closeModal();
+      await this.saveLayoutAs(name);
+    };
+  },
+
+  /* Save the current workspace as a named layout, then make it current. */
+  async saveLayoutAs(name) {
+    const lay = S.layout;
+    if (!lay) { toast('No workspace to save.', 'warn'); return; }
+    const r = await post('workspace/save', {
+      id: lay.id, name: name,
+      tiles: App.ensureTiles(), panes: lay.panes || [],
+    });
+    if (!r || !r.layout) { toast('Could not save layout.', 'warn'); return; }
+    S.layout = r.layout;
+    await this.useLayout(r.layout.id);
+    toast('Layout saved: ' + name);
+  },
+
+  /* Switch to a saved layout and reload the workspace. */
+  async useLayout(layoutId) {
+    const r = await post('workspace/use', { id: layoutId });
+    if (!r || !r.layout) { toast('Could not open that layout.', 'warn'); return; }
+    S.layout = r.layout;
+    App.renderWorkspace();
+    toast('Layout opened.');
+  },
+
+  /* Delete a saved layout and refresh the list. */
+  async deleteLayout(layoutId) {
+    const r = await post('workspace/delete', { id: layoutId, force: '1' });
+    if (!r || r.ok === false) { toast('Could not delete layout.', 'warn'); return; }
+    await this.layoutsDialog();
   },
   async fullscreen(paneId) {
     const p = (S.layout.panes || []).find(x => x.id === paneId);
@@ -347,7 +501,9 @@ const Workspace = {
     const r = await api('reader/edition', { preset }).catch(() => null);
     if (!r || !r.options) { toast('Could not load that edition.', 'warn'); return; }
     await post('workspace/pane', { pane: paneId, options: r.options });
-    await App.loadWorkspace();
+    const pp = (S.layout && S.layout.panes || []).find(x => x.id === paneId);
+    if (pp) pp.options = r.options;
+    App.renderWorkspace();
     toast(preset === 'clean' ? 'Reader’s edition: running text.' : 'Study edition restored.');
   },
 };
@@ -364,7 +520,11 @@ function liccls(l) {
 /* ========================================================== PanelMenu */
 function PanelMenu(p, m, body) {
   const mods = S.modules.filter(x => x.id !== m.id);
-  const setO = (k, v) => post('workspace/pane', { pane: p.id, [k]: v }).then(App.loadWorkspace.bind(App));
+  const setO = (k, v) => post('workspace/pane', { pane: p.id, [k]: v }).then(() => {
+    const pp = (S.layout && S.layout.panes || []).find(x => x.id === p.id);
+    if (pp) pp[k] = v;
+    App.renderWorkspace();
+  });
   /* A citation for *this* resource, and its licence, whichever kind of resource
    * it is. The three citation entries in the verse reader's right-click menu were
    * the only route to them, and that menu is only wired when the pane's reader is
@@ -422,8 +582,8 @@ function PanelMenu(p, m, body) {
     + '<tr><td>Milestone types</td><td class="tiny">' + esc((m.index_types || []).join(', ')) + '</td></tr>'
     + '<tr><td>Features</td><td class="tiny">'
     + [m.has_strongs ? 'Strong’s' : '', m.has_morph ? 'morphology' : '',
-       m.has_notes ? 'footnotes' : '', m.has_xref ? 'cross-references' : '',
-       m.has_redletter ? 'words of Christ' : ''].filter(Boolean).join(', ') + '</td></tr>'
+       m.has_notes ? 'footnotes' : '', m.has_xref ? 'cross-references' : '']
+       .filter(Boolean).join(', ') + '</td></tr>'
     + '</table>'
     + citeButtons
     + reindexButton
@@ -461,7 +621,6 @@ function PanelMenu(p, m, body) {
         return;
       }
       await App.loadLibrary();
-      await App.loadWorkspace();
       toast('Re-indexed ' + m.name + ' — ' + (r.units || 0) + ' units.');
     };
   }
@@ -471,6 +630,21 @@ function PanelMenu(p, m, body) {
 const Search = {
   /* 'group' = one collapsible section per resource, 'flat' = the old list. */
   group: 'group',
+
+  /* Which search experience is active: all | bible | books | morph | topics
+   * | media | documents | maps. Each has its own query, filters, and results. */
+  type: 'all',
+
+  /* Each search type keeps its own query so switching categories never loses
+   * what you were typing. Keys match the data-type values of .stype-btn. */
+  queries: {
+    all: '', bible: '', books: '', morph: '', topics: '', media: '',
+    documents: '', maps: ''
+  },
+
+  /* morphMode is kept for API compatibility; the search bar uses
+   * Search.type === 'morph' instead. */
+  morphMode: false,
 
   /* Keep the hits as a passage list -- the verses, in passage order.
    *
@@ -497,6 +671,92 @@ const Search = {
       + (skipped ? ' · ' + skipped + ' skipped (a different translation)' : '')
       + '.');
     App.show('organise');
+  },
+
+  /* Save the current type's query from its input(s) into Search.queries[type]. */
+  saveTypeQuery(t) {
+    const sq = $('#sq');
+    const mw = $('#s-morph-word');
+    if (t === 'morph') {
+      this.queries.morph = (mw && mw.value) || '';
+      this.queries.morph_resource = ($('#s-morph-resource') || {}).value || '';
+      this.queries.morph_passage = ($('#s-morph-passage') || {}).value || '';
+    } else if (t === 'bible') {
+      this.queries.bible = (sq && sq.value) || '';
+      this.queries.bible_passage = ($('#s-bible-passage') || {}).value || '';
+      this.queries.bible_translation = ($('#s-bible-translation') || {}).value || '';
+    } else if (t === 'books') {
+      this.queries.books = (sq && sq.value) || '';
+      this.queries.books_collection = ($('#s-books-collection') || {}).value || '';
+      this.queries.books_type = ($('#s-books-type') || {}).value || '';
+    } else if (t === 'topics') {
+      this.queries.topics = (sq && sq.value) || '';
+      this.queries.topics_source = ($('#s-topics-source') || {}).value || '';
+    } else if (t === 'media') {
+      this.queries.media = (sq && sq.value) || '';
+      this.queries.media_source = ($('#s-media-source') || {}).value || '';
+      this.queries.media_license = ($('#s-media-license') || {}).value || '';
+    } else if (t === 'documents') {
+      this.queries.documents = (sq && sq.value) || '';
+      this.queries.documents_kind = ($('#s-docs-kind') || {}).value || '';
+    } else if (t === 'maps') {
+      this.queries.maps = (sq && sq.value) || '';
+      this.queries.maps_type = ($('#s-map-type') || {}).value || '';
+    } else {
+      /* 'all' — the default text search. */
+      this.queries.all = (sq && sq.value) || '';
+    }
+  },
+
+  /* Restore the saved query for type t into its input(s). */
+  restoreTypeQuery(t) {
+    const sq = $('#sq');
+    const mw = $('#s-morph-word');
+    if (t === 'morph') {
+      /* Morph search uses its own input; hide the main one. */
+      if (sq) { sq.value = ''; sq.style.display = 'none'; }
+      if (mw) { mw.value = this.queries.morph || ''; mw.style.display = ''; }
+      const mr = $('#s-morph-resource'); if (mr) mr.value = this.queries.morph_resource || '';
+      const mp = $('#s-morph-passage'); if (mp) mp.value = this.queries.morph_passage || '';
+    } else if (t === 'bible') {
+      if (sq) { sq.value = this.queries.bible || ''; sq.style.display = ''; }
+      const p = $('#s-bible-passage'); if (p) p.value = this.queries.bible_passage || '';
+      const tr = $('#s-bible-translation'); if (tr) tr.value = this.queries.bible_translation || '';
+      if (mw) mw.style.display = 'none';
+    } else if (t === 'books') {
+      if (sq) { sq.value = this.queries.books || ''; sq.style.display = ''; }
+      const c = $('#s-books-collection'); if (c) c.value = this.queries.books_collection || '';
+      const ty = $('#s-books-type'); if (ty) ty.value = this.queries.books_type || '';
+      if (mw) mw.style.display = 'none';
+    } else if (t === 'topics') {
+      if (sq) { sq.value = this.queries.topics || ''; sq.style.display = ''; }
+      const s = $('#s-topics-source'); if (s) s.value = this.queries.topics_source || '';
+      if (mw) mw.style.display = 'none';
+    } else if (t === 'media') {
+      if (sq) { sq.value = this.queries.media || ''; sq.style.display = ''; }
+      const ms = $('#s-media-source'); if (ms) ms.value = this.queries.media_source || '';
+      const ml = $('#s-media-license'); if (ml) ml.value = this.queries.media_license || '';
+      if (mw) mw.style.display = 'none';
+    } else if (t === 'documents') {
+      if (sq) { sq.value = this.queries.documents || ''; sq.style.display = ''; }
+      const k = $('#s-docs-kind'); if (k) k.value = this.queries.documents_kind || '';
+      if (mw) mw.style.display = 'none';
+    } else if (t === 'maps') {
+      if (sq) { sq.value = this.queries.maps || ''; sq.style.display = ''; }
+      const mt = $('#s-map-type'); if (mt) mt.value = this.queries.maps_type || '';
+      if (mw) mw.style.display = 'none';
+    } else {
+      /* 'all' — the default text search. */
+      if (sq) { sq.value = this.queries.all || ''; sq.style.display = ''; }
+      if (mw) mw.style.display = 'none';
+    }
+  },
+
+  /* Show the filter div for the active type, hide all others. */
+  showTypeFilters(t) {
+    $$('.s-filters').forEach(f => {
+      f.style.display = f.id === 's-filters-' + t ? '' : 'none';
+    });
   },
 
   /* The saved searches, as chips above the results. */
@@ -696,7 +956,7 @@ const Search = {
       + 'query…</span>';
     const r = await api('ai/smart-search', { q });
     if (!r.ok) {
-      host.innerHTML = '<span class="tiny" style="color:var(--red)">'
+      host.innerHTML = '<span class="tiny" style="color:var(--error)">'
         + esc(r.error || 'The model produced no query.')
         + (r.hint ? ' — ' + esc(r.hint) : '') + '</span>';
       return;
@@ -709,86 +969,250 @@ const Search = {
   },
 
   async go() {
-    let q = $('#sq').value;
-    /* ---- Morph search type ------------------------------------------------
-     * When Morph is the active search type, the query is built from the
-     * morph word input: `love @V-PAI-3S` becomes `morph:V-PAI-3S`, which the
-     * search engine already resolves against the morphology marker index.
-     * Results come back as verse hits, grouped by resource, each linking to
-     * the Bible pane -- the same path an ordinary text search takes. */
-    if (Search.morphMode) {
+    /* Save the active type's query before we possibly overwrite the input. */
+    this.saveTypeQuery(this.type);
+
+    let q = '';
+    let r;
+    const host = $('#search-results');
+    const t = this.type;
+
+    /* ---- Read the query from the right input for each type ---------------- */
+    if (t === 'morph') {
       const mw = $('#s-morph-word');
       const w = (mw && mw.value ? mw.value : '').trim();
       if (!w) {
-        $('#search-results').innerHTML = '<div class="empty">Type a word, '
-          + 'press @ and pick a grammatical form.</div>';
+        host.innerHTML = '<div class="empty">Type a word, then @ to pick a '
+          + 'grammatical form (e.g. λογος@VF), or enter a morphology code '
+          + '(e.g. HNcmsa, V-PAI-3S).</div>';
         return;
       }
       const m = w.match(/^(.+?)\s*@\s*(.+)$/);
       q = m ? ('morph:' + m[2]) : ('morph:' + w);
       $('#sq').value = q;
       S.search.q = q;
+    } else if (t === 'bible') {
+      q = ($('#sq').value || '').trim();
+      if (!q) {
+        host.innerHTML = '<div class="empty">Type a Bible search query.</div>';
+        return;
+      }
+      S.search.q = q;
+    } else if (t === 'books') {
+      q = ($('#sq').value || '').trim();
+      if (!q) {
+        host.innerHTML = '<div class="empty">Type something to search books for.</div>';
+        return;
+      }
+    } else if (t === 'topics') {
+      q = ($('#sq').value || '').trim();
+      if (!q) {
+        host.innerHTML = '<div class="empty">Type a topic, person, place, or subject.</div>';
+        return;
+      }
+    } else if (t === 'media') {
+      q = ($('#sq').value || '').trim();
+      if (!q) {
+        host.innerHTML = '<div class="empty">Type something to search images for.</div>';
+        return;
+      }
+    } else if (t === 'documents') {
+      q = ($('#sq').value || '').trim();
+      if (!q) {
+        host.innerHTML = '<div class="empty">Type something to search notes and documents for.</div>';
+        return;
+      }
+    } else if (t === 'maps') {
+      q = ($('#sq').value || '').trim();
+      if (!q) {
+        host.innerHTML = '<div class="empty">Type a place name or Bible reference.</div>';
+        return;
+      }
     } else {
-      if (!q.trim()) {
-        $('#search-results').innerHTML = '<div class="empty">Type something '
-          + 'to search'
-          + ((S.search.mods || []).length
-             ? ' — currently scoped to ' + S.search.mods.length + ' resources'
-             : '') + '.</div>';
+      /* 'all' — combined text search across the library. */
+      q = ($('#sq').value || '').trim();
+      if (!q) {
+        host.innerHTML = '<div class="empty">Type something to search for.</div>';
         return;
       }
       S.search.q = q;
     }
-    const host = $('#search-results');
+
     host.innerHTML = '<div class="loading">Searching…</div>';
-    /* A range is a second request path, not a filter on the first: the engine
-     * has no book filter, so `search/ranges` over-fetches and then keeps the
-     * hits whose books fall inside the range.  Its reply has a different shape
-     * -- `hits` plus `shown`/`truncated` rather than `total`/`groups` -- so it
-     * is reshaped here into what the renderer below already knows how to draw,
-     * instead of the renderer growing a second branch that the two could drift
-     * apart on. */
-    const range = ($('#s-range').value || '');
-    let r;
-    if (range) {
-      const raw = await api('search/ranges', { action: 'search', q,
-        range, opts: { scope: S.search.opts.scope,
-                       modules: S.search.mods || [],
-                       match_case: S.search.opts.match_case,
-                       match_all_forms: S.search.opts.match_all_forms,
-                       sort: S.search.opts.sort, limit: 400 } });
+
+    /* ---- Dispatch to the right API per search type ---------------------- */
+    if (t === 'morph') {
+      /* Morph search goes to the dedicated study/morph endpoint. */
+      const mid = ($('#s-morph-resource') || {}).value || '';
+      const ref = (($('#s-morph-passage') || {}).value || '').trim();
+      r = await api('study/morph', { code: q.replace(/^morph:/, ''), module_id: mid,
+                                    ref, limit: 300 });
+      if (!r.ok) {
+        host.innerHTML = '';
+        host.appendChild(el('div', 'warn', esc(r.error || 'search failed')));
+        return;
+      }
+      /* Normalize morph results into the common hit shape. */
+      const hits = (r.hits || []).map(x => ({
+        module_id: x.module_id,
+        key: x.key,
+        label: x.ref ? (x.ref.label || x.ref.book + ' ' + x.ref.chapter + ':' + x.ref.verse) : x.key,
+        module_name: (S.modules || []).find(m => m.id === x.module_id)?.name || x.module_id,
+        snippet_html: '<span class="tiny muted">' + esc(x.surface || x.code) + '</span>',
+        matched: [x.code],
+        rank: 1
+      }));
+      r = { ok: true, hits, total: r.total || hits.length, ms: null, warnings: [],
+            smart: [], operators: [], groups: {}, group_meta: {} };
+    } else if (t === 'books') {
+      const collection = ($('#s-books-collection') || {}).value || '';
+      const btype = ($('#s-books-type') || {}).value || '';
+      const module_ids = collection ? [collection] : [];
+      const raw = await api('books-search', { q, module_ids, limit: 400 });
       if (!raw.ok) {
         host.innerHTML = '';
         host.appendChild(el('div', 'warn', esc(raw.error || 'search failed')));
         return;
       }
-      const hits = raw.hits || [];
-      const byMod = new Map();
-      hits.forEach(h => {
-        if (!byMod.has(h.module_id)) byMod.set(h.module_id, []);
-        byMod.get(h.module_id).push(h);
-      });
-      const gmeta = {};
-      byMod.forEach((v, k) => {
-        const m = modById(k);
-        gmeta[k] = { name: (m && m.name) || k, type: (m && m.type) || '',
-                     count: v.length };
-      });
+      const hits = (raw.results || []).map(x => ({
+        module_id: x.module_id || '',
+        key: x.key || '',
+        label: x.ref || x.title || x.key || '',
+        module_name: x.module || '',
+        snippet_html: '<span class="tiny muted">' + esc((x.text || '').slice(0, 160)) + '</span>',
+        matched: [],
+        rank: 1
+      }));
       r = { ok: true, hits, total: hits.length, ms: null, warnings: [],
-            smart: [], operators: [], groups: {}, group_meta: gmeta };
-      /* Shown-vs-window is the honest framing here: this path may have
-       * discarded hits the range excluded, and the count has to say so rather
-       * than presenting a filtered total as if it were the real one. */
-      r.rangeNote = raw.truncated
-        ? 'More matched outside the ' + raw.range + ' window than were '
-          + 'searched, so this may be short of the whole range.'
-        : '';
+            smart: [], operators: [], groups: {}, group_meta: {} };
+    } else if (t === 'topics') {
+      const source = ($('#s-topics-source') || {}).value || '';
+      /* Topics is the FactBook: search the books' headings for the entry a
+       * reader means, and open the Topics guide when a hit is clicked.
+       * (This used to dispatch a text LIKE match across every module, which
+       * counted Bible verses as "results" and never surfaced the entries.) */
+      const raw = await api('factbook-search', { q, module_ids: source ? [source] : [],
+                                                 limit: 400 });
+      if (!raw.ok) {
+        host.innerHTML = '';
+        host.appendChild(el('div', 'warn', esc(raw.error || 'search failed')));
+        return;
+      }
+      const hits = (raw.results || []).map(x => ({
+        module_id: x.module_id || '',
+        key: x.key || '',
+        label: x.title || x.key || '',
+        module_name: x.module || '',
+        snippet_html: '<span class="tiny muted">' + esc((x.text || '').slice(0, 200)) + '</span>'
+          + (x.length && x.length > 1500
+            ? ' <span class="tiny">(full entry, ' + esc(x.length) + ' chars)</span>'
+            : ''),
+        matched: [],
+        rank: 1
+      }));
+      r = { ok: true, hits, total: hits.length, ms: null, warnings: [],
+            smart: [], operators: [], groups: {}, group_meta: {} };
+    } else if (t === 'media') {
+      const source = ($('#s-media-source') || {}).value || '';
+      const license = ($('#s-media-license') || {}).value || '';
+      const raw = await api('media/images', { q, source, license: license, limit: 48 });
+      if (!raw.ok) {
+        host.innerHTML = '';
+        host.appendChild(el('div', 'warn', esc(raw.error || 'search failed')));
+        return;
+      }
+      const hits = (raw.results || []).map(x => ({
+        module_id: 'media',
+        key: x.id || '',
+        label: x.title || x.id || '',
+        module_name: 'Media',
+        snippet_html: '<span class="tiny muted">' + esc(x.source || '') + '</span>'
+          + ' <span class="tiny">' + esc((x.license || '')) + '</span>',
+        matched: [],
+        rank: 1,
+        media_url: x.url || '',
+        media_thumb: x.thumbnail || ''
+      }));
+      r = { ok: true, hits, total: raw.count || hits.length, ms: null, warnings: [],
+            smart: [], operators: [], groups: {}, group_meta: {} };
+    } else if (t === 'documents') {
+      const kind = ($('#s-docs-kind') || {}).value || '';
+      const raw = await api('notes/list', { q, kind, limit: 400 });
+      if (!raw.ok) {
+        host.innerHTML = '';
+        host.appendChild(el('div', 'warn', esc(raw.error || 'search failed')));
+        return;
+      }
+      const hits = (raw.notes || []).map(x => ({
+        module_id: 'documents',
+        key: x.id || '',
+        label: x.title || x.key || '',
+        module_name: 'Documents',
+        snippet_html: '<span class="tiny muted">' + esc(x.kind || '') + '</span>'
+          + ' <span class="tiny">' + esc((x.preview || x.text || '').slice(0, 160)) + '</span>',
+        matched: [],
+        rank: 1
+      }));
+      r = { ok: true, hits, total: hits.length, ms: null, warnings: [],
+            smart: [], operators: [], groups: {}, group_meta: {} };
+    } else if (t === 'maps') {
+      const raw = await api('maps/places', { q, limit: 400 });
+      if (!raw.ok) {
+        host.innerHTML = '';
+        host.appendChild(el('div', 'warn', esc(raw.error || 'search failed')));
+        return;
+      }
+      const hits = (raw.places || []).map(x => ({
+        module_id: 'maps',
+        key: x.key || '',
+        label: x.label || x.name || '',
+        module_name: 'Maps',
+        snippet_html: '<span class="tiny muted">' + esc((x.book || '') + ' ' + (x.chapter || '') + ':' + (x.verse || '')).trim() + '</span>',
+        matched: [],
+        rank: 1
+      }));
+      r = { ok: true, hits, total: hits.length, ms: null, warnings: [],
+            smart: [], operators: [], groups: {}, group_meta: {} };
     } else {
-      r = await api('search', {
-        q: q, scope: S.search.opts.scope, match_case: S.search.opts.match_case,
-        modules: S.search.mods || [],
-        match_all_forms: S.search.opts.match_all_forms,
-        context: S.search.opts.context, sort: S.search.opts.sort, limit: 400 });
+      /* 'all' — combined text search via the main search endpoint. */
+      const range = ($('#s-range').value || '');
+      if (range) {
+        const raw = await api('search/ranges', { action: 'search', q,
+          range, opts: { scope: S.search.opts.scope,
+                         modules: S.search.mods || [],
+                         match_case: S.search.opts.match_case,
+                         match_all_forms: S.search.opts.match_all_forms,
+                         sort: S.search.opts.sort, limit: 400 } });
+        if (!raw.ok) {
+          host.innerHTML = '';
+          host.appendChild(el('div', 'warn', esc(raw.error || 'search failed')));
+          return;
+        }
+        const hits = raw.hits || [];
+        const byMod = new Map();
+        hits.forEach(h => {
+          if (!byMod.has(h.module_id)) byMod.set(h.module_id, []);
+          byMod.get(h.module_id).push(h);
+        });
+        const gmeta = {};
+        byMod.forEach((v, k) => {
+          const m = modById(k);
+          gmeta[k] = { name: (m && m.name) || k, type: (m && m.type) || '',
+                       count: v.length };
+        });
+        r = { ok: true, hits, total: hits.length, ms: null, warnings: [],
+              smart: [], operators: [], groups: {}, group_meta: gmeta };
+        r.rangeNote = raw.truncated
+          ? 'More matched outside the ' + raw.range + ' window than were '
+            + 'searched, so this may be short of the whole range.'
+          : '';
+      } else {
+        r = await api('search', {
+          q: q, scope: S.search.opts.scope, match_case: S.search.opts.match_case,
+          modules: S.search.mods || [],
+          match_all_forms: S.search.opts.match_all_forms,
+          context: S.search.opts.context, sort: S.search.opts.sort, limit: 400 });
+      }
     }
     host.innerHTML = '';
     if (!r.ok) { host.appendChild(el('div', 'warn', esc(r.error))); return; }
@@ -931,6 +1355,7 @@ const Search = {
     const asList = el('button', 'btn tiny', 'Save as a passage list');
     asList.onclick = () => Search.toPassageList(r.hits);
     acts.appendChild(asList);
+
     const tr = el('button', 'btn tiny',
       'Translate these hits  (sends text off this computer)');
     tr.onclick = () => Translate.open(r.hits);
@@ -938,7 +1363,7 @@ const Search = {
     /* Add Versions -- Logos shows the same search side by side across
      * translations.  Offer the other tagged resources and render each
      * selection as its own column of verse hits. */
-    if (Search.morphMode) {
+    if (this.type === 'morph') {
       const tagged = (S.modules || []).filter(m => m.has_morph);
       const others = tagged.filter(m => !byModule.has(m.id));
       if (others.length) {
@@ -1097,3 +1522,108 @@ const Search = {
    rows; this one is organised by *where the module goes*, says so before you
    download it, warns when something is already installed or already open in a
    pane, and can forget a repository entirely. */
+
+/* ============================================== Morphology @ helper ===
+   Reusable Logos-style @ popup. When the user types a word followed by @,
+   look up the word's grammatical forms and show a dropdown. Clicking a form
+   replaces the trailing @ with the selected morphology code.
+
+   Usage: attachMorphAtPopup(inputElement, resourceGetter, passageGetter)
+     resourceGetter: a function or string returning the module_id to search
+       ('' means every tagged resource).
+     passageGetter:  an optional function returning the passage to limit the
+       search to (e.g. "John 3"), or '' for the whole text.
+
+   This was deleted with the Study Tools Morph pane (d89d682) while the
+   search bar's Morph type still calls it, which left `love@` doing
+   nothing at all.  Restored here, sharing the same CSS. */
+function attachMorphAtPopup(input, resourceGetter, passageGetter) {
+  if (!input) return;
+  let timer = 0;
+  const parent = input.parentElement;
+  if (!parent) return;
+  parent.style.position = 'relative';
+
+  const popup = document.createElement('div');
+  popup.className = 'morph-at-popup';
+  popup.style.display = 'none';
+  parent.appendChild(popup);
+
+  const clearForms = () => { popup.innerHTML = ''; popup.style.display = 'none'; };
+
+  const getModuleId = () => {
+    if (typeof resourceGetter === 'function') return resourceGetter();
+    return resourceGetter || '';
+  };
+  const getRef = () => {
+    if (typeof passageGetter === 'function') return passageGetter();
+    return passageGetter || '';
+  };
+
+  const showForms = async (raw) => {
+    const w = (raw || '').replace(/@\s*$/, '').trim();
+    if (!w) { clearForms(); return; }
+    const mid = getModuleId();
+    const ref = getRef();
+    popup.innerHTML = '<div class="tiny muted" style="padding:8px">looking up forms…</div>';
+    popup.style.display = '';
+    /* Module left empty searches every tagged resource — the same set the
+     * "All tagged resources" dropdown searches. */
+    const r = await api('morph/wordforms', { module_id: mid, word: w,
+                                             limit: 12, ref });
+    popup.innerHTML = '';
+    if (!r.ok || !r.forms || !r.forms.length) {
+      popup.innerHTML = '<div class="tiny muted" style="padding:8px">no tagged forms found for "' + esc(w) + '"</div>';
+      return;
+    }
+    /* Show the scope the forms were found in, so it is clear the dropdown
+     * is restricted. */
+    const scopeBits = [];
+    if (!mid) scopeBits.push('all tagged resources');
+    if (ref) scopeBits.push(ref);
+    if (scopeBits.length) {
+      const d = document.createElement('div');
+      d.className = 'tiny muted';
+      d.style.cssText = 'padding:6px 10px 0;border-bottom:1px solid var(--line)';
+      d.textContent = 'Forms in ' + scopeBits.join(' · ');
+      popup.appendChild(d);
+    }
+    r.forms.forEach(f => {
+      const btn = document.createElement('button');
+      const feat = Study._morphLabel(f.features);
+      btn.innerHTML = '<div style="display:flex; justify-content:space-between">'
+        + '<b>' + esc(w) + '</b>'
+        + '<span class="tiny muted">' + esc(f.code) + ' · ' + Number(f.count || 0).toLocaleString() + '</span></div>'
+        + '<div class="feat">' + esc(feat) + '</div>';
+      btn.onclick = () => {
+        /* Replace the trailing @ with the selected code. */
+        const val = input.value;
+        const at = val.lastIndexOf('@');
+        if (at >= 0) {
+          input.value = val.slice(0, at + 1) + f.code;
+        } else {
+          input.value = f.code;
+        }
+        clearForms();
+        input.focus();
+      };
+      popup.appendChild(btn);
+    });
+  };
+
+  input.oninput = (e) => {
+    clearTimeout(timer);
+    if (/@\s*$/.test(e.target.value)) {
+      timer = setTimeout(() => showForms(e.target.value), 250);
+    } else {
+      clearForms();
+    }
+  };
+
+  /* Close popup when clicking outside. */
+  document.addEventListener('click', (ev) => {
+    if (ev.target !== input && !popup.contains(ev.target)) {
+      clearForms();
+    }
+  });
+}

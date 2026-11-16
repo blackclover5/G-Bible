@@ -32,10 +32,11 @@ against, and the repositories the Store draws from.
 | SBL Greek New Testament | Open Scriptures | Holmes, 2010, ed. | **CC BY 4.0** | **Yes** — "SBL Greek New Testament, ed. Michael W. Holmes, 2010. CC BY 4.0" |
 | Exodus route map (Ortelius, 1624) and others | Wikimedia Commons | Abraham Ortelius and other public-domain cartographers | **Public Domain** | No |
 | Bible place coordinates (334 places) | OpenBible.info / BiblePlaces.com | BiblePlaces.com contributors | **CC BY 4.0** | **Yes** — "Bible place data from BiblePlaces.com via OpenBible.info, CC BY 4.0" |
-| OpenStreetMap tiles shown in the map pane | openstreetmap.org | © OpenStreetMap contributors | **ODbL** | **Yes** — "© OpenStreetMap contributors". Tiles are fetched at display time; none are bundled. |
+| Map tiles shown in the map pane | server.arcgisonline.com (Esri World Street Map) | © Esri and its licensors | Esri Terms of Use (free for non-commercial use, < 1 M tiles/month, attribution required) | **Yes** — "Tiles © Esri — Sources: Esri, DeLorme, HERE, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), MapmyIndia, TomTom." Tiles are fetched at display time; none are bundled. |
 
 Map tiles are the one component that is *not* installed locally: the map pane
-embeds OpenStreetMap, which requires visible attribution, and the app shows it
+embeds Esri's World Street Map, which renders place names in English/Latin
+script for this region and requires visible attribution, and the app shows it
 under the map. Place coordinates — the data the app actually indexes — are
 installed and attributed locally.
 

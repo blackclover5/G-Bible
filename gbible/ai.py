@@ -1579,25 +1579,6 @@ def fact_questions(term: str, lens: str = "", provider_id: str | None = None,
             "model": model, "lens": lens}
 
 
-def run_fact(term: str, question: str, lens: str = "",
-             provider_id: str | None = None, model: str | None = None,
-             max_sources: int | None = None) -> dict:
-    """Full (non-streaming) answer to one question about a term."""
-    provider, model = resolve(provider_id, model)
-    sources = fact_sources(term, lens, max_sources=max_sources or 12)
-    msgs = fact_messages(term, question, sources, lens)
-    parts: list[str] = []
-    stats: dict = {}
-    for delta in stream(msgs, provider, model, stats=stats):
-        parts.append(delta)
-    record_usage(provider.id, model, "fact:ask", stats)
-    return {
-        "ok": True, "answer": "".join(parts), "action": "fact",
-        "term": term, "lens": lens, "provider": provider.id,
-        "model": model, "citations": sources,
-    }
-
-
 # ==========================================================================
 # Which words of a source backed a claim
 # ==========================================================================

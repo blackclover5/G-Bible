@@ -35,7 +35,21 @@ const S = {
   lib: { type: '', lang: '', source: '', q: '', detail: false },
   popups: {},
 };
-const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content || '';
+let CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content || '';
+/* The server mints its CSRF token per process, but this meta tag is baked in
+ * when the page was written.  A server restart leaves the window holding a
+ * stale token, and every POST then fails with 403 -- which used to surface as
+ * crashes like "can't access property id".  Fetching '/' again writes the
+ * current token into a fresh meta tag, so one retry with it always works. */
+async function refreshCsrfToken() {
+  try {
+    const r = await fetch('/', { cache: 'no-store' });
+    if (!r.ok) return false;
+    const m = (await r.text()).match(/<meta name="csrf-token" content="([^"]+)"/);
+    if (m && m[1]) { CSRF_TOKEN = m[1]; return true; }
+  } catch (e) { /* keep the old token */ }
+  return false;
+}
 
 /* The most recent non-empty text selection, recorded as it happens.
  *
@@ -49,7 +63,28 @@ document.addEventListener('selectionchange', () => {
 });
 
 /* ------------------------------------------------------------------ util */
-const $ = (s, r) => (r || document).querySelector(s);
+/* Safe null element: querying a missing id returns this instead of null, so
+ * property reads and assignments never crash.  Reads return sensible defaults
+ * ('' for strings, false for booleans, no-op functions for methods, empty
+ * classList), writes are swallowed.  Code that does `if ($(id))` will enter
+ * the block but any property access on the safe null is a harmless no-op. */
+const _safeNull = new Proxy({}, {
+  get(target, prop) {
+    if (prop === 'value' || prop === 'textContent' || prop === 'innerHTML' ||
+        prop === 'innerText' || prop === 'outerHTML' || prop === 'className' ||
+        prop === 'placeholder' || prop === 'title') return '';
+    if (prop === 'checked' || prop === 'selected' || prop === 'disabled' ||
+        prop === 'hidden' || prop === 'readonly') return false;
+    if (prop === 'files') return [];
+    if (prop === 'classList') return { add: () => {}, remove: () => {}, toggle: () => {}, contains: () => false };
+    if (prop === 'style') return { setProperty: () => {} };
+    // Any method call becomes a no-op
+    return () => {};
+  },
+  set() { return true; }
+});
+
+const $ = (s, r) => (r || document).querySelector(s) || _safeNull;
 const $$ = (s, r) => [...(r || document).querySelectorAll(s)];
 const el = (tag, cls, html) => {
   const n = document.createElement(tag);
@@ -130,8 +165,11 @@ async function api(path, params) {
     else qs.append(k, v);
   }
   try {
-    const r = await fetch('/api/' + path + (qs.toString() ? '?' + qs : ''),
+    const send = () => fetch('/api/' + path + (qs.toString() ? '?' + qs : ''),
       { headers: { 'X-GBible-CSRF-Token': CSRF_TOKEN } });
+    let r = await send();
+    /* One retry with a freshly-fetched token: the page may hold a stale one. */
+    if (r.status === 403 && await refreshCsrfToken()) r = await send();
     if (!r.ok) return { ok: false, error: 'HTTP ' + r.status };
     return await r.json();
   } catch (e) {
@@ -139,13 +177,15 @@ async function api(path, params) {
   }
 }
 async function post(path, body) {
-  try {
-    const r = await fetch('/api/' + path, {
+  const send = () => fetch('/api/' + path, {
       method: 'POST', headers: {
         'Content-Type': 'application/json',
         'X-GBible-CSRF-Token': CSRF_TOKEN,
       },
       body: JSON.stringify(body || {}) });
+  try {
+    let r = await send();
+    if (r.status === 403 && await refreshCsrfToken()) r = await send();
     if (!r.ok) return { ok: false, error: 'HTTP ' + r.status };
     return await r.json();
   } catch (e) {
@@ -169,9 +209,11 @@ const modById = (id) => S.modules.find(m => m.id === id);
  * therefore survived Escape.  This hook is run on every path. */
 let _modalCleanup = null;
 
-function modal(title, bodyHtml, buttons) {
+function modal(title, bodyHtml, buttons, extra) {
   _modalCleanup = null;
-  $('#modal-title').textContent = title;
+  const trail = extra && extra.trailing ? String(extra.trailing) : '';
+  $('#modal-title').innerHTML = esc(title)
+    + (trail ? '<span class="modal-trail">' + esc(trail) + '</span>' : '');
   $('#modal-body').innerHTML = bodyHtml;
   const f = $('#modal-foot'); f.innerHTML = '';
   (buttons || [{ label: 'Close', cls: 'btn' }]).forEach(b => {
@@ -180,6 +222,9 @@ function modal(title, bodyHtml, buttons) {
     x.onclick = () => { if (b.fn) b.fn(); if (b.close !== false) closeModal(); };
     f.appendChild(x);
   });
+  /* Printing is offered only where it makes sense (notes, sermons, drawings,
+     canvas) via explicit buttons; modals no longer carry a blanket Print
+     button. */
   $('#modal-bg').classList.add('on');
   // Move focus into the dialog for keyboard/screen-reader users.
   setTimeout(() => {
@@ -202,7 +247,6 @@ const Shortcuts = {
   show() {
     const body = '<div class="st-body">'
       + '<table class="kv"><tbody>'
-      + '<tr><td><kbd>Ctrl/⌘ K</kbd></td><td>Open command box</td></tr>'
       + '<tr><td><kbd>Ctrl/⌘ F</kbd></td><td>Open search</td></tr>'
       + '<tr><td><kbd>Esc</kbd></td><td>Close modal / cancel</td></tr>'
       + '<tr><td><kbd>?</kbd></td><td>Show this list</td></tr>'
@@ -214,7 +258,62 @@ const Shortcuts = {
   },
 };
 const About = {
+  async checkForUpdates() {
+    const meta = document.querySelector('meta[name="gbible-version"]');
+    const current = (meta && meta.content) ? meta.content.trim() : '';
+    // Desktop builds provide a native updater; prefer it.
+    const nativeUpdater = (window.gbible && typeof window.gbible.checkForUpdates === 'function')
+      ? window.gbible
+      : (window.pywebview && window.pywebview.api && typeof window.pywebview.api.checkForUpdates === 'function')
+        ? window.pywebview.api
+        : null;
+    if (nativeUpdater) {
+      try { await nativeUpdater.checkForUpdates(); return; }
+      catch (e) { toast((e && e.message) || 'Could not check for updates.', 'err'); return; }
+    }
+    try {
+      const r = await fetch('https://api.github.com/repos/blackclover5/G-Bible/releases/latest', {
+        headers: { 'Accept': 'application/vnd.github+json' } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      const latestTag = (data.tag_name || '').trim();
+      const latestVer = latestTag.replace(/^v\.?/i, '');
+      const currentVer = current.replace(/^v\.?/i, '');
+      const cmp = (a, b) => {
+        const pa = String(a || '').split('.').map(x => parseInt(x, 10) || 0);
+        const pb = String(b || '').split('.').map(x => parseInt(x, 10) || 0);
+        const n = Math.max(pa.length, pb.length);
+        for (let i = 0; i < n; i++) {
+          const x = pa[i] || 0, y = pb[i] || 0;
+          if (x !== y) return x - y;
+        }
+        return 0;
+      };
+      if (currentVer && currentVer !== '__GBIBLE_VERSION__' && cmp(latestVer, currentVer) <= 0) {
+        toast('All up to date (' + (current || latestTag) + ').'); return;
+      }
+      const asset = (data.assets || []).find(a => /appimage|\.exe|\.msi|\.dmg|\.zip/i.test(a.name || ''))
+        || (data.assets || [])[0];
+      const link = asset ? asset.browser_download_url : data.html_url;
+      let notes = (data.body || '').trim();
+      if (notes.length > 500) {
+        const cut = notes.lastIndexOf(' ', 500);
+        notes = notes.slice(0, cut > 200 ? cut : 500).trim() + '…';
+      }
+      modal('Update available',
+        '<div class="st-body" style="margin-bottom:8px"><b>' + esc(latestTag || 'New version') + '</b>'
+        + (currentVer ? ' <span class="tiny muted">(you have ' + esc(current || 'unknown') + ')</span>' : '') + '</div>'
+        + (notes ? '<div class="tiny muted" style="white-space:pre-wrap;margin-bottom:8px">' + esc(notes) + '</div>' : '')
+        + '<div class="tiny muted">Download the latest build and replace your current one.</div>',
+        [ { label: 'Download', cls: 'btn primary', fn: () => { if (link) window.open(link, '_blank'); } },
+          { label: 'Close', cls: 'btn' } ]);
+    } catch (e) {
+      toast('Could not check for updates: ' + (e && e.message ? e.message : e), 'err');
+    }
+  },
   show() {
+    const meta = document.querySelector('meta[name="gbible-version"]');
+    const version = meta ? meta.content : '';
     modal('About G-Bible',
       '<div class="st-body" style="margin-bottom:10px">'
       + 'G-Bible is a local-first Bible study application. It runs entirely on '
@@ -232,10 +331,12 @@ const About = {
       + 'and fork it however you like.'
       + '</div>'
       + '<div class="tiny muted">© 2026 G-Bible contributors</div>',
-      [ ...(window.gbible && typeof window.gbible.checkForUpdates === 'function' ? [{ label: 'Check for Updates', cls: 'btn', fn: async () => {
-          try { await window.gbible.checkForUpdates(); }
-          catch (e) { toast((e && e.message) || 'Could not check for updates.', 'err'); }
-        } }] : []),
+      [ { label: 'Check for Updates', cls: 'btn', fn: async () => {
+          await About.checkForUpdates();
+        } },
+        { label: 'Take the tour', cls: 'btn', hidePrint: true, fn: () => {
+            if (typeof Tour !== 'undefined') Tour.start(0);
+          } },
         { label: 'Reset G-Bible', cls: 'btn danger', fn: async () => {
           if (!confirm('Reset G-Bible to a fresh, empty library?\n\n'
             + 'This deletes the database and every installed module, note, '
@@ -247,7 +348,8 @@ const About = {
             toast((r && r.error) || 'Reset failed', 'err');
           }
         } },
-        { label: 'Close', cls: 'btn', fn: closeModal }]);
+        { label: 'Close', cls: 'btn', fn: closeModal, hidePrint: true }]
+      , { trailing: version ? 'v' + version : '' });
   },
 };
 
@@ -269,17 +371,146 @@ document.addEventListener('click', (e) => {
     return;
   }
   /* Power Lookup: click a Strong's number or lemma in verse text to open
-   * a Word Study pane for that word.  Works anywhere a tagged word appears. */
+   * a Word Study pane for that word.  Works anywhere a tagged word appears.
+   * The word text (.tword) deliberately does NOT open the study here: it
+   * hovers a tooltip instead, so plain reading clicks still select the
+   * verse like any other text. */
   const snum = e.target && e.target.closest ? e.target.closest('a.snum') : null;
   const morph = e.target && e.target.closest ? e.target.closest('.morphs') : null;
   if (snum || morph) {
     e.preventDefault();
     try { closeModal(); } catch (err) { /* not in a modal */ }
-    const num = snum ? snum.dataset.s || snum.textContent : (morph.textContent || '').trim();
+    const num = snum ? (snum.dataset.s || snum.textContent)
+      : (morph.textContent || '').trim();
     if (num && typeof Reader !== 'undefined' && Reader.openWordStudyPane) {
       Reader.openWordStudyPane(num);
     }
   }
+});
+
+/* -------------------------------------------------- strong's hover tip */
+/* e-Sword-style hover definition: hover a Strong's number in tagged text and
+ * the lexicon entry appears, no click needed.  The tip is one global element,
+ * positioned fixed against the anchor; the API answers from a cached one-line
+ * gloss and never scans the concordance on the hover path.  Click behavior is
+ * unchanged (the click opens the word study, not the tip). */
+const _strongsTipCache = new Map();
+const _morphTipCache = new Map();
+let _strongsTipTimer = 0;
+function hideStrongsTip() {
+  const t = document.getElementById('strongs-tip');
+  if (t) t.style.display = 'none';
+  _strongsTipTimer = 0;
+}
+function _strongsTipEl() {
+  let t = document.getElementById('strongs-tip');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'strongs-tip';
+    document.body.appendChild(t);
+  }
+  return t;
+}
+/* Place the tip near the anchor; above the line when it would clip the bottom,
+ * below otherwise. */
+function _placeTip(t, anchor) {
+  const r = anchor.getBoundingClientRect();
+  t.style.display = 'block';
+  t.style.visibility = 'hidden';
+  const tipRect = t.getBoundingClientRect();
+  let top = r.bottom + 6;
+  if (top + tipRect.height > window.innerHeight - 8) {
+    top = r.top - tipRect.height - 6;
+  }
+  let left = r.left;
+  if (left + tipRect.width > window.innerWidth - 8) {
+    left = window.innerWidth - tipRect.width - 8;
+  }
+  if (left < 8) left = 8;
+  t.style.top = top + 'px';
+  t.style.left = left + 'px';
+  t.style.visibility = '';
+}
+async function _paintStrongsTip(num, anchor) {
+  /* The $ helper never returns null (it returns a Proxy), so it cannot be used
+   * to test for existence here. */
+  let t = _strongsTipEl();
+  t.innerHTML = '<div class="stip-head">' + esc(num)
+    + ' <span class="muted">…</span></div>';
+  _placeTip(t, anchor);
+  let data = _strongsTipCache.get(num);
+  if (!data) {
+    data = await api('wordtip', { num });
+    _strongsTipCache.set(num, data);
+    /* If the element was hidden while the fetch was in flight, leave it alone. */
+    if (t.style.display === 'none') return;
+  }
+  const gloss = data && data.ok ? (data.gloss || '').trim() : '';
+  const form = data && data.ok ? (data.form || '').trim() : '';
+  t.innerHTML = '<div class="stip-head">' + esc(num)
+    + (form ? ' <span class="stip-form">' + esc(form) + '</span>' : '')
+    + '</div>'
+    + (gloss
+      ? '<div class="stip-gloss">' + esc(gloss) + '</div>'
+      : '<div class="stip-gloss stip-empty">No lexicon installed for this number.</div>')
+    + '<div class="stip-hint">Click for the full word study</div>';
+  _placeTip(t, anchor);
+}
+async function _paintMorphTip(code, anchor) {
+  let t = _strongsTipEl();
+  t.innerHTML = '<div class="stip-head">' + esc(code)
+    + ' <span class="muted">…</span></div>';
+  _placeTip(t, anchor);
+  let data = _morphTipCache.get(code);
+  if (!data) {
+    data = await api('morph/decode', { code });
+    _morphTipCache.set(code, data);
+    if (t.style.display === 'none') return;
+  }
+  const label = data && data.ok ? data.label : '';
+  t.innerHTML = '<div class="stip-head">' + esc(code) + '</div>'
+    + (label
+      ? '<div class="stip-gloss">' + esc(label) + '</div>'
+      : '<div class="stip-gloss stip-empty">Could not decode this code.</div>')
+    + '<div class="stip-hint">morphological form</div>';
+  _placeTip(t, anchor);
+}
+document.addEventListener('mouseover', (e) => {
+  /* Morphology code on hover: the sup tag next to a tagged word (N-NSM etc.) */
+  const ms = e.target && e.target.closest ? e.target.closest('.morphs') : null;
+  if (ms) {
+    const code = (ms.textContent || '').trim();
+    if (code) {
+      clearTimeout(_strongsTipTimer);
+      _strongsTipTimer = setTimeout(() => _paintMorphTip(code, ms), 130);
+    }
+    return;
+  }
+  const a = e.target && e.target.closest ? (e.target.closest('a.snum') || e.target.closest('.tword')) : null;
+  if (!a) return;
+  const num = (a.dataset.s || a.textContent || '').trim();
+  const anchor = a;
+  if (!num) return;
+  clearTimeout(_strongsTipTimer);
+  _strongsTipTimer = setTimeout(() => _paintStrongsTip(num, anchor), 130);
+});
+document.addEventListener('mouseout', (e) => {
+  const anchor = e.target && e.target.closest
+    ? (e.target.closest('a.snum') || e.target.closest('.tword') || e.target.closest('.morphs')) : null;
+  if (!anchor) return;
+  const to = e.relatedTarget;
+  /* Still inside the same word (moving between the text and the superscript) */
+  if (to && anchor.contains(to)) return;
+  clearTimeout(_strongsTipTimer);
+  const tip = to && to.closest ? to.closest('#strongs-tip') : null;
+  if (tip) return;
+  hideStrongsTip();
+});
+document.addEventListener('scroll', hideStrongsTip, true);
+document.addEventListener('click', (e) => {
+  /* Clicks anywhere but the tip dismiss it; the click on the number itself
+   * opens the word study, which is handled above. */
+  if (!e.target.closest('#strongs-tip')) hideStrongsTip();
 });
 
 /* "John.3.16" and "John 3:16" both mean "John 3" here.  A concordance is a
@@ -399,88 +630,6 @@ const Memorise = {
     });
     const sc = $('#mem-score');
     if (sc) sc.textContent = right + ' / ' + total + ' correct';
-  }
-};
-/* ================================================================ Command box */
-/* A Ctrl+K palette: type to filter, Enter to run, arrows to move.  Commands are
- * a static list of the things a reader reaches for most often; navigation
- * commands that need a reference parse it out of the query. */
-const CommandBox = {
-  idx: 0, filtered: [],
-
-  commands() {
-    const cmds = [
-      { id: 'workspace',  label: 'Open workspace',     hint: 'panes',     run: () => App.show('workspace') },
-      { id: 'search',     label: 'Search the library',  hint: '/',         run: () => { App.show('search'); setTimeout(() => $('#sq') && $('#sq').focus(), 50); } },
-      { id: 'store',      label: 'Open the Store',      hint: 'install',   run: () => App.show('store') },
-      { id: 'notes',      label: 'Open notes',          hint: 'notes',     run: () => App.show('notes') },
-      { id: 'dashboard',  label: 'Open dashboard',      hint: 'home',      run: () => App.show('dashboard') },
-      { id: 'settings',   label: 'Settings',            hint: 'prefs',     run: () => App.show('settings') },
-      { id: 'preach',     label: 'Toggle preaching mode', hint: 'F',       run: () => Preach.toggle() },
-      { id: 'shortcuts', label: 'Keyboard shortcuts', hint: 'keys', run: () => Shortcuts.show() },
-      { id: 'sermoncal',  label: 'Sermon calendar', hint: 'preach', run: () => SermonCal.open() },
-      { id: 'passageanalysis', label: 'Passage analysis', hint: 'study', run: () => PassageAnalysis.open() },
-      { id: 'memorise',   label: 'Memorise current passage', hint: 'Mem',  run: () => {
-          const p = (S.layout && S.layout.panes && S.layout.panes[0]) ? S.layout.panes[0] : null;
-          const c = p ? p._content : null;
-          const text = (c && c.items) ? c.items.map(it => it.text || '').join('\n\n').trim() : '';
-          if (text) Memorise.open(text, (c && c.section_title) || '');
-          else toast('Open a passage first.', 'warn');
-        } },
-      { id: 'goto',       label: 'Go to reference (type "John 3:16")', hint: 'navigate', run: (q) => {
-          const ref = (q || '').trim();
-          if (!ref) { toast('Type a reference after the command.', 'warn'); return; }
-          App.show('workspace');
-          const pane = (S.layout && S.layout.panes && S.layout.panes[0]) ? S.layout.panes[0] : null;
-          if (pane) Reader.go(pane, ref);
-          else toast('No pane open.', 'warn');
-        } },
-    ];
-    return cmds;
-  },
-
-  open() {
-    this.idx = 0;
-    const body = '<div class="cb-wrap">'
-      + '<input id="cb-q" class="cb-q" placeholder="Type a command or a reference…" autocomplete="off">'
-      + '<div id="cb-list" class="cb-list"></div>'
-      + '</div>';
-    modal('Command box', body, [{ label: 'Close', cls: 'btn' }]);
-    const input = $('#cb-q');
-    const list = $('#cb-list');
-    const render = () => {
-      const q = (input.value || '').toLowerCase().trim();
-      this.filtered = this.commands().filter(c => !q || c.label.toLowerCase().includes(q)
-        || (c.hint || '').toLowerCase().includes(q));
-      // also offer "go to reference" when the query looks like a reference
-      if (q && !this.filtered.some(c => c.id === 'goto')) {
-        this.filtered.unshift({ id: 'goto', label: 'Go to ' + input.value.trim(), hint: 'navigate',
-          run: (qq) => { App.show('workspace'); const pane = (S.layout && S.layout.panes && S.layout.panes[0]) ? S.layout.panes[0] : null; if (pane) Reader.go(pane, input.value.trim()); } });
-      }
-      this.idx = Math.min(this.idx, Math.max(0, this.filtered.length - 1));
-      list.innerHTML = this.filtered.map((c, i) =>
-        '<div class="cb-row' + (i === this.idx ? ' on' : '') + '" data-i="' + i + '">'
-        + '<span class="cb-lab">' + esc(c.label) + '</span>'
-        + '<span class="cb-hint">' + esc(c.hint || '') + '</span></div>').join('');
-      $$('#cb-list .cb-row').forEach(row => {
-        row.onclick = () => { const i = parseInt(row.dataset.i, 10); this.run(i, input.value); };
-      });
-    };
-    input.oninput = render;
-    input.onkeydown = (e) => {
-      if (e.key === 'ArrowDown') { e.preventDefault(); this.idx = Math.min(this.filtered.length - 1, this.idx + 1); render(); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); this.idx = Math.max(0, this.idx - 1); render(); }
-      else if (e.key === 'Enter') { e.preventDefault(); this.run(this.idx, input.value); }
-    };
-    render();
-    setTimeout(() => input.focus(), 30);
-  },
-
-  run(i, q) {
-    const c = this.filtered[i];
-    if (!c) return;
-    closeModal();
-    try { c.run(q); } catch (e) { toast('Command failed: ' + e.message, 'err'); }
   }
 };
 /* ================================================================ SRS */
@@ -716,8 +865,12 @@ const Notes = {
   async load() {
     const kind = $('#n-kind').value;
     const q = ($('#n-q').value || '').trim();
+    const pf = $('#n-prayer-filter').value;
     const r = await api('notes/list', { kind, q, limit: 500 });
-    this.items = r.notes || [];
+    let items = r.notes || [];
+    if ((kind === '' || kind === 'prayer') && pf === 'answered') items = items.filter(n => n.kind === 'prayer' && n.meta && n.meta.answered);
+    if ((kind === '' || kind === 'prayer') && pf === 'unanswered') items = items.filter(n => n.kind === 'prayer' && !(n.meta && n.meta.answered));
+    this.items = items;
     const s = r.stats || {};
     const by = s.by_kind || {};
     $('#notes-summary').textContent =
@@ -738,9 +891,12 @@ const Notes = {
         + (this.current && this.current.id === n.id ? ' on' : ''));
       const when = new Date((n.updated_at || 0) * 1000)
         .toISOString().slice(0, 10);
+      const prayerTag = (n.kind === 'prayer' && n.meta && n.meta.answered)
+        ? ' · <span style="color:var(--ok,#4f8b6a)">answered' + (n.meta.answered_date ? ' ' + esc(n.meta.answered_date) : '') + '</span>'
+        : '';
       row.innerHTML = '<div class="note-t">' + esc(n.title || '(untitled)')
         + '</div><div class="tiny muted">' + esc(n.kind) + ' · ' + when
-        + (n.ref_label ? ' · ' + esc(n.ref_label) : '') + '</div>';
+        + (n.ref_label ? ' · ' + esc(n.ref_label) : '') + prayerTag + '</div>';
       row.onclick = () => this.edit(n.id);
       host.appendChild(row);
     });
@@ -748,8 +904,17 @@ const Notes = {
 
   blank(kind) {
     const k = kind || $('#n-kind').value || 'note';
+    /* Prayers preview as dated in the editor and land in the Home prayer
+     * card, which reads the day's date — an undated prayer would be
+     * invisible there.  Use the same format the server does. */
+    const now = new Date();
+    const ref = (k === 'prayer')
+      ? String(now.getFullYear()).padStart(4, '0') + '-'
+        + String(now.getMonth() + 1).padStart(2, '0') + '-'
+        + String(now.getDate()).padStart(2, '0')
+      : '';
     return { id: '', kind: k === '' ? 'note' : k, title: '', body: '',
-             module_id: '', unit_key: '', ref_label: '', tags: [],
+             module_id: '', unit_key: '', ref_label: ref, tags: [],
              meta: { passages: [] } };
   },
 
@@ -804,9 +969,14 @@ const Notes = {
       + 'style="flex:1;background:var(--bg-3);border:1px solid var(--line-2);'
       + 'color:var(--fg);padding:8px;border-radius:7px;font-size:15px">'
       + '<button class="btn primary" id="ne-save">Save</button>'
-      + '<button class="btn" id="ne-del">Delete</button></div>'
+      + '<button class="btn" id="ne-del">Delete</button>'
+      + '<button class="btn" id="ne-pdf">PDF</button></div>'
       + (n.ref_label ? '<div class="tiny muted" style="margin-bottom:6px">'
         + esc(n.ref_label) + ' · ' + esc(n.module_id || '') + '</div>' : '')
+      + (n.kind === 'prayer'
+        ? '<div class="row wrap" style="margin-bottom:6px"><label><input type="checkbox" id="ne-prayer-answered" ' + (n.meta && n.meta.answered ? 'checked' : '') + '> Answered</label>'
+          + '<input type="date" id="ne-prayer-date" value="' + esc((n.meta && n.meta.answered_date) || '') + '" style="margin-left:8px"></div>'
+        : '')
       + '<textarea id="ne-body" rows="16" style="width:100%;background:var(--bg-3);'
       + 'border:1px solid var(--line-2);color:var(--fg);padding:10px;'
       + 'border-radius:7px;font-family:inherit;font-size:13.5px" '
@@ -833,6 +1003,20 @@ const Notes = {
         '<div class="tiny" style="margin-top:6px">'
         + '<a href="#" id="ne-refs">Find the scripture references in this note'
         + '</a></div>');
+    }
+    if (n.ref_label) {
+      const related = (this.items || []).filter(x =>
+        x.id !== n.id && x.ref_label === n.ref_label);
+      if (related.length) {
+        host.insertAdjacentHTML('beforeend',
+          '<div class="tiny muted" style="margin-top:6px">Other notes on '
+          + esc(n.ref_label) + ': '
+          + related.map(x => '<a href="#" data-related="' + esc(x.id) + '">'
+            + esc(x.title || '(untitled)') + '</a>').join(' · ') + '</div>');
+        host.querySelectorAll('a[data-related]').forEach(a => {
+          a.onclick = (e) => { e.preventDefault(); this.edit(a.dataset.related); };
+        });
+      }
     }
     const refsBtn = $('#ne-refs');
     if (refsBtn) {
@@ -893,16 +1077,43 @@ const Notes = {
     $('#ne-save').onclick = async () => {
       n.title = $('#ne-title').value;
       n.body = $('#ne-body').value;
+      if (n.kind === 'prayer') {
+        n.meta = n.meta || {};
+        const cb = $('#ne-prayer-answered');
+        n.meta.answered = !!(cb && cb.checked);
+        const dd = $('#ne-prayer-date');
+        n.meta.answered_date = (dd && dd.value) || '';
+      }
       if (n.kind === 'sermon') {
         n.meta = n.meta || {};
         n.meta.text = n.body;
         n.meta.passages = (n.body.match(/\b[A-Za-z0-9]+\s+\d+:\d+[^\n]*/g) || [])
           .slice(0, 40);
       }
-      await post('notes/save', n);
+      const r = await post('notes/save', n);
+      if (!r || r.ok === false) {
+        toast((r && r.error) || 'Could not save. Try again.', 'err');
+        return;
+      }
       toast('Saved.');
       this.current = null;
       await this.load();
+    };
+    const pdfBtn = $('#ne-pdf');
+    if (pdfBtn) pdfBtn.onclick = async () => {
+      if (!n.id) { toast('Save the note first.', 'warn'); return; }
+      const r = await api('print-export', { action: 'export', content_type: 'notes', content_id: n.id, format: 'pdf' });
+      if (!r || !r.ok) { toast((r && r.error) || 'Could not export.', 'err'); return; }
+      if (r.content_base64) {
+        const a = document.createElement('a');
+        a.href = 'data:application/pdf;base64,' + r.content_base64;
+        a.download = r.filename || 'note.pdf';
+        a.click();
+        toast('Downloaded.');
+      } else {
+        await navigator.clipboard.writeText(r.content || '');
+        toast('Copied as text.');
+      }
     };
     $('#ne-del').onclick = async () => {
       if (!n.id) return;
@@ -958,8 +1169,9 @@ const Notes = {
  * application to when the CDN operator decides to ship a new one; and a map
  * viewer is about two hundred lines of arithmetic, which is not a dependency.
  *
- * What that buys is honest behaviour on failure.  Tiles come from OpenStreetMap
- * and will not always arrive -- no network, a blocked host, an offline laptop.
+ * What that buys is honest behaviour on failure.  Tiles come from Esri's
+ * World Street Map and will not always arrive -- no network, a blocked host,
+ * an offline laptop.
  * When they do not, the graticule, the coast-to-coast bounding box and every
  * marker still draw, because none of those needs a tile.  A map that becomes a
  * grey rectangle is worse than one that becomes a coordinate grid with the
@@ -972,6 +1184,12 @@ const Atlas = {
   TILE: 256,
   MIN: 2, MAX: 18,
   /* Web Mercator, which is the projection OSM tiles are in. */
+  /* Longitudes wrap at the dateline; tile coordinates and center both live
+   * in wrapped space so panning past it never leaves the valid range. */
+  _wrapLon(lon) {
+    return ((lon + 540) % 360 + 360) % 360 - 180;
+  },
+
   _px(lat, lon, z) {
     const n = Math.pow(2, z) * this.TILE;
     const x = (lon + 180) / 360 * n;
@@ -989,21 +1207,30 @@ const Atlas = {
 
   /* markers: [{lat, lon, label, kind, onPick}] */
   mount(host, markers, opts) {
-    const o = Object.assign({ lat: 31.5, lon: 35.0, z: 6, height: 420 }, opts || {});
-    const st = this._st = { z: o.z, cx: o.lon, cy: o.lat, markers: markers || [] };
+    const o = Object.assign({ lat: 31.5, lon: 35.0, z: 6, height: 420,
+                              basemap: 'standard', fit: true }, opts || {});
+    const st = this._st = { z: o.z, cx: o.lon, cy: o.lat,
+                            markers: markers || [],
+                            basemap: o.basemap, measure: null,
+                            measureOn: false, hover: null,
+                            selectedKey: null };
     host.classList.add('atlas');
-    host.style.height = o.height + 'px';
+    host.style.height = (typeof o.height === 'number')
+      ? o.height + 'px' : String(o.height);
     host.innerHTML =
       '<canvas class="atlas-cv"></canvas>'
       + '<div class="atlas-ctl">'
-      + '<button class="btn tiny" data-a="zin">+</button>'
-      + '<button class="btn tiny" data-a="zout">−</button>'
-      + '<button class="btn tiny" data-a="fit">Fit</button>'
-      + '<span class="atlas-z tiny muted">z' + o.z + '</span>'
+      + '<button class="btn tiny" data-a="zin" title="Zoom in">+</button>'
+      + '<button class="btn tiny" data-a="zout" title="Zoom out">−</button>'
+      + '<button class="btn tiny" data-a="fit" title="Fit the shown places">Fit</button>'
+      + '<button class="btn tiny" data-a="measure" title="Measure a straight line between two points (Esc clears)">Measure</button>'
+      + '<button class="btn tiny" data-a="grid" title="No-tile coordinate grid — works offline">Grid</button>'
       + '<span class="atlas-note tiny"></span>'
       + '</div>'
-      + '<div class="atlas-attr tiny">Map tiles © OpenStreetMap '
-      + 'contributors, ODbL. Place data CC BY 4.0.</div>';
+      + '<div class="atlas-attr tiny">Tiles © Esri — Sources: Esri, '
+      + 'DeLorme, HERE, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, '
+      + 'Esri China (Hong Kong), Esri (Thailand), MapmyIndia, TomTom. '
+      + 'Place data CC BY 4.0.</div>';
     const cv = host.querySelector('.atlas-cv');
     /* Wire before drawing.  `draw()` sizes the canvas from `this._host`, which
      * `_wire` sets -- so drawing first left the canvas at its 300x150 default
@@ -1012,7 +1239,7 @@ const Atlas = {
      * explicitly built to survive -- no tile ever arrives and the map never
      * appeared at all. */
     this._wire(host, cv);
-    this._fit(markers);
+    if (o.fit !== false) this._fit(markers);
     this.draw();
     return st;
   },
@@ -1027,7 +1254,7 @@ const Atlas = {
       lo0 = Math.min(lo0, m.lon); lo1 = Math.max(lo1, m.lon);
     });
     st.cy = (la0 + la1) / 2;
-    st.cx = (lo0 + lo1) / 2;
+    st.cx = this._wrapLon((lo0 + lo1) / 2);
     // Largest zoom whose whole extent fits, so "Fit" means fit.
     for (let z = this.MAX; z >= this.MIN; z--) {
       const [x0, y0] = this._px(la1, lo0, z);
@@ -1045,6 +1272,7 @@ const Atlas = {
     const st = this._st;
     const cv = this._host && this._host.querySelector('.atlas-cv');
     if (!cv) return;
+    st.cx = this._wrapLon(st.cx);
     const W = this._w(), H = this._h(), z = st.z;
     const dpr = window.devicePixelRatio || 1;
     cv.width = W * dpr; cv.height = H * dpr;
@@ -1062,28 +1290,48 @@ const Atlas = {
     const [ccx, ccy] = this._px(st.cy, st.cx, z);
     const at = ([x, y]) => [x - ccx + W / 2, y - ccy + H / 2];
 
-    /* Tiles first, so everything drawn after sits on top of them. */
+    /* Tiles first, so everything drawn after sits on top of them.
+     * `grid` is the offline basemap: the graticule alone, no network. */
     const n = Math.pow(2, z);
-    const x0 = Math.floor((ccx - W / 2) / this.TILE);
-    const y0 = Math.floor((ccy - H / 2) / this.TILE);
-    const x1 = Math.floor((ccx + W / 2) / this.TILE);
-    const y1 = Math.floor((ccy + H / 2) / this.TILE);
     let got = 0, asked = 0;
-    for (let tx = x0; tx <= x1; tx++) {
-      for (let ty = y0; ty <= y1; ty++) {
-        if (ty < 0 || ty >= n) continue;
-        asked++;
-        const img = this._tile(tx, ty, z);
-        if (img && img.complete && img.naturalWidth) {
-          got++;
-          const [sx, sy] = at([tx * this.TILE, ty * this.TILE]);
-          g.drawImage(img, sx, sy, this.TILE, this.TILE);
+    if (st.basemap !== 'grid') {
+      const x0 = Math.floor((ccx - W / 2) / this.TILE);
+      const y0 = Math.floor((ccy - H / 2) / this.TILE);
+      const x1 = Math.floor((ccx + W / 2) / this.TILE);
+      const y1 = Math.floor((ccy + H / 2) / this.TILE);
+      for (let tx = x0; tx <= x1; tx++) {
+        for (let ty = y0; ty <= y1; ty++) {
+          if (ty < 0 || ty >= n) continue;
+          asked++;
+          /* Longitude wraps around the dateline; without the wrap the request
+           * goes out-of-range and the tile server answers 400 with no CORS
+           * header -- which the console shows as a CORS error on a URL the
+           * app could never have received. */
+          const txx = ((tx % n) + n) % n;
+          const img = this._tile(txx, ty, z);
+          if (img && img.complete && img.naturalWidth) {
+            got++;
+            const [sx, sy] = at([tx * this.TILE, ty * this.TILE]);
+            g.drawImage(img, sx, sy, this.TILE, this.TILE);
+          }
         }
       }
     }
+    const attr = this._host.querySelector('.atlas-attr');
+    if (attr) attr.style.display = st.basemap === 'grid' ? 'none' : '';
+    const note = this._host.querySelector('.atlas-note');
+    if (note) {
+      note.textContent = st.basemap === 'grid'
+        ? 'coordinate grid — no tiles'
+        : (asked && !got ? 'no tiles loaded — showing coordinates only' : '');
+    }
 
     /* A graticule every 5 degrees, and the prime meridian, so the map still
-     * reads as a map when no tile arrived. */
+     * reads as a map when no tile arrived.  On a tiled basemap it is drawn
+     * faint and unlabeled -- it is a coordinate system, not a picture of
+     * every latitude on Earth. */
+    const grat = st.basemap === 'grid';
+    g.globalAlpha = grat ? 1 : 0.22;
     g.strokeStyle = line;
     g.fillStyle = fg;
     g.lineWidth = 1;
@@ -1093,63 +1341,183 @@ const Atlas = {
       const sy = at([0, y])[1];
       if (sy < -20 || sy > H + 20) continue;
       g.beginPath(); g.moveTo(0, sy); g.lineTo(W, sy); g.stroke();
-      g.fillText(lat + '°', 4, sy - 3);
+      if (grat) g.fillText(lat + '°', 4, sy - 3);
     }
     for (let lon = -180; lon <= 180; lon += 10) {
       const [x] = this._px(0, lon, z);
       const sx = at([x, 0])[0];
       if (sx < -20 || sx > W + 20) continue;
       g.beginPath(); g.moveTo(sx, 0); g.lineTo(sx, H); g.stroke();
-      g.fillText(lon + '°', sx + 3, H - 5);
+      if (grat) g.fillText(lon + '°', sx + 3, H - 5);
     }
+    g.globalAlpha = 1;
 
-    /* Markers, drawn after the tiles and never sorted behind them. */
+    /* Markers, drawn after the tiles and never sorted behind them.
+     * The selected pin -- the one the reader picked a place on -- is drawn
+     * yellow with a halo and always wins a label, so it is unmissable among
+     * the blue crowd. */
     const ms = st.markers.filter(m => isFinite(m.lat) && isFinite(m.lon));
+    const drawn = [];
     ms.forEach(m => {
       const [x, y] = this._px(m.lat, m.lon, z);
       const [sx, sy] = at([x, y]);
       if (sx < -12 || sx > W + 12 || sy < -12 || sy > H + 12) return;
+      const sel = st.selectedKey && m.key === st.selectedKey;
       g.beginPath();
-      g.arc(sx, sy, 5.5, 0, Math.PI * 2);
-      g.fillStyle = m.color || accent;
+      g.arc(sx, sy, sel ? 7 : 5.5, 0, Math.PI * 2);
+      g.fillStyle = sel ? '#ffd400' : (m.color || accent);
       g.fill();
-      g.lineWidth = 1.5;
+      g.lineWidth = sel ? 2 : 1.5;
       g.strokeStyle = bg;
       g.stroke();
+      if (sel) {
+        g.beginPath();
+        g.arc(sx, sy, 11.5, 0, Math.PI * 2);
+        g.lineWidth = 2;
+        g.strokeStyle = '#ffd400';
+        g.globalAlpha = 0.85;
+        g.stroke();
+        g.globalAlpha = 1;
+      }
       st._hit = st._hit || [];
       st._hit.push({ x: sx, y: sy, m });
+      /* A label only when zoomed in and uncrowded. */
+      const hovered = st.hover === m || !!sel;
+      const big = (m.weight || 0) >= 2 && z >= 8;
+      if (hovered || big) {
+        const label = m.label || '';
+        if (label) {
+          g.font = '11px system-ui, sans-serif';
+          const tw = g.measureText(label).width;
+          const lx = sx + 8, ly = sy - 8;
+          const box = { x: lx - 3, y: ly - 12, w: tw + 8, h: 15 };
+          const hit = drawn.find(b =>
+            box.x < b.x + b.w && b.x < box.x + box.w
+            && box.y < b.y + b.h && b.y < box.y + box.h);
+          if (hovered || !hit) {
+            if (!hovered) drawn.push(box);
+            g.fillStyle = 'rgba(10,14,22,0.78)';
+            g.fillRect(box.x, box.y, box.w, box.h);
+            g.fillStyle = sel ? '#ffd400' : (hovered ? '#ffffff' : fg);
+            g.fillText(label, lx, ly);
+            if (hovered && m.hint) {
+              g.font = '10px system-ui, sans-serif';
+              const hw = g.measureText(m.hint).width;
+              g.fillStyle = 'rgba(10,14,22,0.78)';
+              g.fillRect(lx - 3, ly + 2, hw + 8, 14);
+              g.fillStyle = fg;
+              g.fillText(m.hint, lx, ly + 12);
+            }
+          }
+        }
+      }
     });
     st._hit = (st._hit || []).filter(h =>
       h.x >= -12 && h.x <= W + 12 && h.y >= -12 && h.y <= H + 12);
-    const note = this._host.querySelector('.atlas-note');
-    if (note) {
-      note.textContent = asked && !got
-        ? 'no tiles loaded — showing coordinates only'
-        : (asked ? got + '/' + asked + ' tiles' : '');
+    /* Measure overlay: the line between the two clicked points and the
+     * great-circle distance between them. */
+    if (st.measure && st.measure.pts.length) {
+      g.strokeStyle = accent;
+      g.lineWidth = 1.5;
+      g.setLineDash([5, 4]);
+      g.beginPath();
+      st.measure.pts.forEach((p, i) => {
+        const [x, y] = this._px(p.lat, p.lon, z);
+        const [sx, sy] = at([x, y]);
+        if (i === 0) g.moveTo(sx, sy); else g.lineTo(sx, sy);
+      });
+      g.stroke();
+      g.setLineDash([]);
+      st.measure.pts.forEach((p, i) => {
+        const [x, y] = this._px(p.lat, p.lon, z);
+        const [sx, sy] = at([x, y]);
+        g.beginPath();
+        g.arc(sx, sy, 4, 0, Math.PI * 2);
+        g.fillStyle = accent;
+        g.fill();
+        g.fillStyle = '#000';
+        g.font = 'bold 9px system-ui, sans-serif';
+        g.fillText(String(i + 1), sx - 3, sy + 3);
+      });
+      if (st.measure.km != null) {
+        const [x, y] = this._px(st.measure.pts[1].lat, st.measure.pts[1].lon, z);
+        const [sx, sy] = at([x, y]);
+        const label = Math.round(st.measure.km).toLocaleString() + ' km';
+        g.font = 'bold 12px system-ui, sans-serif';
+        const tw = g.measureText(label).width;
+        g.fillStyle = 'rgba(10,14,22,0.85)';
+        g.fillRect(sx + 10, sy + 6, tw + 10, 18);
+        g.fillStyle = accent;
+        g.fillText(label, sx + 15, sy + 19);
+      }
+    }
+    /* Scale bar: a nice round distance that fits in ~90px at this zoom. */
+    {
+      const mPerPx = 156543.03392 * Math.cos(st.cy * Math.PI / 180)
+        / Math.pow(2, z);
+      const target = 90 * mPerPx;
+      const pow = Math.pow(10, Math.floor(Math.log10(target)));
+      const steps = [1, 2, 5, 10];
+      let nice = pow;
+      for (const s of steps) { if (s * pow <= target) nice = s * pow; }
+      const px = nice / mPerPx;
+      const y = H - 8, x0 = W - px - 14;
+      g.strokeStyle = fg;
+      g.lineWidth = 2;
+      g.beginPath(); g.moveTo(x0, y); g.lineTo(x0 + px, y); g.stroke();
+      g.fillStyle = fg;
+      g.font = '10px system-ui, sans-serif';
+      const lab = nice >= 1000 ? (nice / 1000) + ' km' : Math.round(nice) + ' m';
+      g.fillText(lab, x0, y - 4);
     }
     const zl = this._host.querySelector('.atlas-z');
     if (zl) zl.textContent = 'z' + z;
   },
 
   _tiles: {},
+  _tileN: 0,
   _tile(x, y, z) {
     const key = z + '/' + x + '/' + y;
     if (this._tiles[key]) return this._tiles[key];
+    /* A long session can accumulate thousands of tile images; drop the
+     * oldest half once the cache gets big rather than leak memory forever. */
+    if (this._tileN > 600) {
+      const keys = Object.keys(this._tiles);
+      for (let i = 0; i < keys.length / 2; i++) {
+        delete this._tiles[keys[i]];
+        this._tileN--;
+      }
+    }
     const img = new Image();
-    /* OSM's own tile usage policy: a fixed, identifiable referrer and no bulk
-     * downloading.  This is the one outbound request the application makes, and
-     * the attribution is on the canvas. */
+    /* Esri's World Street Map: the one outbound request the application makes,
+     * and the attribution is on the canvas. */
     img.crossOrigin = 'anonymous';
     img.referrerPolicy = 'origin';
-    img.src = 'https://tile.openstreetmap.org/' + z + '/' + x + '/' + y + '.png';
+    img.src = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/'
+      + z + '/' + y + '/' + x;
     img.addEventListener('load', () => this.draw());
     img.addEventListener('error', () => {});
     this._tiles[key] = img;
+    this._tileN++;
     return img;
   },
 
   _wire(host, cv) {
     this._host = host;
+    if (!this._esc) {
+      this._esc = (e) => {
+        if (e.key === 'Escape' && this._st) {
+          if (this._st.measure && this._st.measure.pts.length) {
+            this._st.measure = null;
+            this.draw();
+          } else if (this._st.measureOn) {
+            this.setMeasure(false);
+          }
+        }
+      };
+      window.addEventListener('keydown', this._esc);
+    }
+    cv.style.cursor = 'grab';
     let drag = null;
     cv.addEventListener('mousedown', (e) => {
       drag = { x: e.clientX, y: e.clientY, cx: this._st.cx, cy: this._st.cy,
@@ -1157,9 +1525,36 @@ const Atlas = {
       e.preventDefault();
     });
     window.addEventListener('mousemove', (e) => {
-      if (!drag) return;
+      if (!drag) {
+        /* Hover: find the pin nearest the pointer; Atlas.draw() paints the
+         * label and stores nothing else -- the tooltip is canvas text. */
+        const st = this._st;
+        if (!st) return;
+        const r = cv.getBoundingClientRect();
+        if (e.clientX < r.left || e.clientX > r.right
+            || e.clientY < r.top || e.clientY > r.bottom) {
+          if (st.hover) { st.hover = null; cv.style.cursor = 'grab'; this.draw(); }
+          return;
+        }
+        const px = e.clientX - r.left, py = e.clientY - r.top;
+        const hit = (st._hit || []).find(h =>
+          Math.abs(h.x - px) < 9 && Math.abs(h.y - py) < 9);
+        const m = hit ? hit.m : null;
+        if (st.hover !== m) {
+          st.hover = m;
+          cv.style.cursor = st.measureOn ? 'crosshair' : (m ? 'pointer' : 'grab');
+          this.draw();
+        }
+        return;
+      }
       const st = this._st;
-      const [x0, y0] = this._px(st.cy, st.cx, st.z);
+      /* The origin is computed from the drag-START center, not the current
+       * one.  Recomputing from `st` here re-applied the whole accumulated
+       * delta on every mousemove, so the map compounded its displacement
+       * with each event and ran away from the pointer -- exactly "it speeds
+       * up the more I drag".  With the drag image fixed, the map under the
+       * cursor answers precisely the pixels the cursor has moved. */
+      const [x0, y0] = this._px(drag.cy, drag.cx, st.z);
       const x = x0 - (e.clientX - drag.x);
       const y = y0 - (e.clientY - drag.y);
       if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 3) {
@@ -1167,8 +1562,8 @@ const Atlas = {
       }
       const [lat, lon] = this._ll(x, y, st.z);
       st.cy = Math.max(-85, Math.min(85, lat));
-      st.cx = lon;
-      this.draw();
+      st.cx = this._wrapLon(lon);
+      this._scheduleDraw();
     });
     window.addEventListener('mouseup', (e) => {
       if (!drag) return;
@@ -1177,6 +1572,24 @@ const Atlas = {
       if (moved) return;
       const r = cv.getBoundingClientRect();
       const px = e.clientX - r.left, py = e.clientY - r.top;
+      const st = this._st;
+      /* Measure mode eats the click: each click adds a point; a second point
+       * completes the measurement; a third starts a new one. */
+      if (st.measureOn) {
+        const W = this._w(), H = this._h(), z = st.z;
+        const [ccx, ccy] = this._px(st.cy, st.cx, z);
+        const [lat, lon] = this._ll(px + ccx - W / 2, py + ccy - H / 2, z);
+        const pt = { lat, lon };
+        if (!st.measure || st.measure.pts.length >= 2) {
+          st.measure = { pts: [pt], km: null };
+        } else {
+          st.measure.pts.push(pt);
+          const a = st.measure.pts[0], b = st.measure.pts[1];
+          st.measure.km = this._haversine(a.lat, a.lon, b.lat, b.lon);
+        }
+        this.draw();
+        return;
+      }
       const hit = (this._st._hit || []).find(h =>
         Math.abs(h.x - px) < 9 && Math.abs(h.y - py) < 9);
       if (hit && hit.m.onPick) hit.m.onPick(hit.m);
@@ -1207,20 +1620,85 @@ const Atlas = {
         return;
       }
       const t = e.touches[0];
-      const [x0, y0] = this._px(st.cy, st.cx, st.z);
+      const [x0, y0] = this._px(touch.cy, touch.cx, st.z);
       const [lat, lon] = this._ll(
         x0 - (t.clientX - touch.x), y0 - (t.clientY - touch.y), st.z);
       st.cy = Math.max(-85, Math.min(85, lat));
-      st.cx = lon;
-      this.draw();
+      st.cx = this._wrapLon(lon);
+      this._scheduleDraw();
     }, { passive: false });
     cv.addEventListener('touchend', () => { touch = null; });
     $$('[data-a]', host).forEach(b => b.onclick = () => {
       if (b.dataset.a === 'zin') this._zoomBy(1, b);
       else if (b.dataset.a === 'zout') this._zoomBy(-1, b);
-      else { this._fit(this._st.markers); this.draw(); }
+      else if (b.dataset.a === 'fit') { this._fit(this._st.markers); this._scheduleDraw(); }
+      else if (b.dataset.a === 'measure') this.setMeasure(!this._st.measureOn);
+      else if (b.dataset.a === 'grid') this.setBasemap(this._st.basemap === 'grid' ? 'standard' : 'grid');
     });
     window.addEventListener('resize', () => this.draw());
+  },
+
+  /* Great-circle distance in km, for the measure tool. */
+  _haversine(la1, lo1, la2, lo2) {
+    const R = 6371.0088, d = Math.PI / 180;
+    const dLa = (la2 - la1) * d, dLo = (lo2 - lo1) * d;
+    const a = Math.sin(dLa / 2) ** 2
+      + Math.cos(la1 * d) * Math.cos(la2 * d) * Math.sin(dLo / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+  },
+
+  /* One draw per animation frame, no matter how many mousemoves arrive in
+   * between -- a burst of them costs a single full repaint. */
+  _scheduleDraw() {
+    if (this._raf) return;
+    this._raf = requestAnimationFrame(() => {
+      this._raf = 0;
+      this.draw();
+    });
+  },
+
+  setMeasure(on) {
+    const st = this._st;
+    if (!st) return;
+    st.measureOn = !!on;
+    st.measure = null;
+    const cv = this._host && this._host.querySelector('.atlas-cv');
+    if (cv) cv.style.cursor = st.measureOn ? 'crosshair' : 'grab';
+    const btn = this._host && this._host.querySelector('[data-a="measure"]');
+    if (btn) btn.classList.toggle('on', st.measureOn);
+    this.draw();
+  },
+
+  clearMeasure() {
+    const st = this._st;
+    if (st) { st.measure = null; this.draw(); }
+  },
+
+  /* Called by the Maps view to switch basemap without remounting. */
+  setBasemap(name) {
+    const st = this._st;
+    if (!st) return;
+    st.basemap = name === 'grid' ? 'grid' : 'standard';
+    const btn = this._host && this._host.querySelector('[data-a="grid"]');
+    if (btn) btn.textContent = st.basemap === 'grid' ? 'Map' : 'Grid';
+    this.draw();
+  },
+
+  /* Highlight the pin the reader picked a place for.  Passing null clears
+   * it; an unknown key simply matches nothing. */
+  select(key) {
+    const st = this._st;
+    if (st) st.selectedKey = key || null;
+    this.draw();
+  },
+
+  flyTo(lat, lon, z) {
+    const st = this._st;
+    if (!st) return;
+    st.cy = lat;
+    st.cx = this._wrapLon(lon);
+    if (z) st.z = z;
+    this.draw();
   },
 
   _touchDist(t) {
@@ -1247,8 +1725,8 @@ const Atlas = {
                              fy - (ay - 0.5) * this._h(), nz);
     st.z = nz;
     st.cy = lx;
-    st.cx = ly;
-    this.draw();
+    st.cx = this._wrapLon(ly);
+    this._scheduleDraw();
   },
 
   /* Every place in the gazetteer, on one map. */
@@ -1322,8 +1800,10 @@ const Atlas = {
           .join(', ') || '—') + '</td></tr></table>'
       + (p.comment ? '<div class="notice">' + esc(p.comment) + '</div>' : '')
       + '<div class="tiny muted" style="margin-top:8px">Place data '
-      + 'CC BY 4.0, from OpenBible Geography. Tiles © OpenStreetMap '
-      + 'contributors, ODbL.</div>',
+      + 'CC BY 4.0, from OpenBible Geography. Tiles © Esri — Sources: '
+      + 'Esri, DeLorme, HERE, USGS, Intermap, iPC, NRCAN, Esri Japan, '
+      + 'METI, Esri China (Hong Kong), Esri (Thailand), MapmyIndia, '
+      + 'TomTom.</div>',
       [{ label: 'Show on map', fn: () => {
           const s = Atlas._st;
           if (s) { s.cx = p.lon; s.cy = p.lat; s.z = 6; Atlas.draw(); }
@@ -1375,12 +1855,16 @@ const Dashboard = {
         + d.readings.map(x =>
           '<div class="dash-item"><div class="dash-src">'
           + esc(x.module) + (x.title ? ' · ' + esc(x.title) : '')
-          + '</div><div class="st-body">'
-          + esc(x.text.slice(0, 900))
-          + (x.text.length > 900 ? '…' : '') + '</div>'
-          + '<div class="tiny"><a href="#" data-open="'
-          + esc(x.module_id) + '" data-key="' + esc(x.title || '')
-          + '">Open</a></div></div>').join('');
+          + '</div>'
+          + (x.plan_id
+            ? '<div class="tiny muted">Reading plan from ' + esc(x.source_name || 'your library')
+              + '. It opens in the original reading pane.</div>'
+            : '<div class="st-body">' + esc(x.text.slice(0, 900))
+              + (x.text.length > 900 ? '…' : '') + '</div>')
+          + '<div class="tiny"><a href="#" '
+          + (x.plan_id ? 'data-plan="' + esc(x.plan_id) + '">Start reading' : 'data-open="'
+            + esc(x.module_id) + '" data-key="' + esc(x.title || '') + '">Open')
+          + '</a></div></div>').join('');
     } else {
       r.innerHTML = '<div class="dash-h">Today’s reading</div>'
         + '<div class="empty">No devotional is installed. '
@@ -1560,7 +2044,11 @@ const Dashboard = {
     $('#rp-all').onclick = () => this.planOverview(this.planShown());
     $$('#d-plan a[data-openref]').forEach(a => a.onclick = (e) => {
       e.preventDefault();
-      Reader.openRefAnywhere(a.dataset.openref);
+      const selected = (p.plans || []).find(x => x.id === this.planShown());
+      if (selected && selected.kind === 'devotional' && selected.source_id
+          && typeof DevotionalContext !== 'undefined') {
+        DevotionalContext.activate(selected.id, d.day);
+      } else Reader.openRefAnywhere(a.dataset.openref);
     });
   },
 
@@ -1568,6 +2056,10 @@ const Dashboard = {
   async showPlanDay(plan, n) {
     const d = await api('readingplan/day', { plan, day: n });
     if (!d.ok) { toast(d.error || 'No such day.', 'warn'); return; }
+    if (d.kind === 'devotional' && d.source_id && typeof DevotionalContext !== 'undefined') {
+      await DevotionalContext.activate(plan, n);
+      return;
+    }
     S.plan = plan;
     if ((d.passages || []).length) {
       Reader.openRefAnywhere(d.passages[0]);
@@ -1680,6 +2172,12 @@ const Dashboard = {
         const lay = S.layout;
         const p = lay && lay.panes.find(x => x.id === pane.dataset.pane);
         if (p) { App.show('workspace'); App.showPane(p.tile_id || 't0', p.id); }
+        return;
+      }
+      const dp = e.target.closest('a[data-plan]');
+      if (dp) {
+        e.preventDefault();
+        if (typeof DevotionalContext !== 'undefined') DevotionalContext.activate(dp.dataset.plan, 0);
         return;
       }
       const o = e.target.closest('a[data-open]');
@@ -1946,6 +2444,15 @@ const Organise = {
     if (tab === 'quotations') return Quotations.load(main);
     if (tab === 'canvases') return this.canvasesView(main);
     if (tab === 'charts') return this.chartsView(main);
+    if (tab === 'templates') return this.templatesView(main);
+    if (tab === 'sermon-starter') return this.sermonStarterView(main);
+    if (tab === 'qa') return this.qaView(main);
+    if (tab === 'sense-lexicon') return this.senseLexiconView(main);
+    if (tab === 'community-tags') return this.communityTagsView(main);
+    if (tab === 'personal-books') return this.personalBooksView(main);
+    if (tab === 'courses') return this.coursesView(main);
+    if (tab === 'draw-on-screen') return this.drawOnScreenView(main);
+    if (tab === 'print-export') return this.printExportView(main);
     return this.templatesView(main);
   },
 
@@ -1984,7 +2491,7 @@ const Organise = {
           + '<span class="org-a">'
           + '<a href="#" data-csearch="' + esc(c.id) + '">search these</a>'
           + '<a href="#" data-copen="' + esc(c.id) + '">open</a>'
-          + (hasRule ? '<a href="#" data-crule="' + esc(c.id) + '">edit rule</a>' : '')
+          + '<a href="#" data-crule="' + esc(c.id) + '">edit rule</a>'
           + '<a href="#" data-cdel="' + esc(c.id) + '" class="danger">delete</a>'
           + '</span></div>'
           + '<div class="tiny muted">' + (c.modules || []).map(x =>
@@ -2041,34 +2548,37 @@ const Organise = {
     if (!c) return;
     const cur = await api('collection', { id });
     const rule = cur.rule || '';
-    const plus = (cur.plus || []).map(m => m.module_id || m).join(', ');
-    const minus = (cur.minus || []).map(m => m.module_id || m).join(', ');
+    const plusSet = new Set((cur.plus || []).map(m => m.module_id || m));
+    const minusSet = new Set((cur.minus || []).map(m => m.module_id || m));
+    const mods = (S.modules || []).slice().sort((a, b) =>
+      String(a.name || a.id).localeCompare(String(b.name || b.id)));
+    const opts = (sel) => mods.map(m =>
+      '<option value="' + esc(m.id) + '"' + (sel.has(m.id) ? ' selected' : '') + '>'
+      + esc(m.name || m.id) + '</option>').join('');
     modal('Edit collection rule — ' + esc(c.name),
       '<div class="tiny muted" style="margin-bottom:8px">Match modules by field, '
       + 'e.g. <code>type:commentary lang:eng</code>. Bare words match name, '
       + 'author or type. Use ANDNOT to exclude. Plus/minus add or remove '
-      + 'specific modules by id.</div>'
+      + 'specific modules from the list.</div>'
       + '<div class="row wrap" style="margin-bottom:8px">'
       + '<label style="width:90px">Rule</label>'
       + '<input id="crule-rule" style="flex:1" value="' + esc(rule) + '">'
       + '</div>'
-      + '<div class="row wrap" style="margin-bottom:8px">'
-      + '<label style="width:90px">Always include</label>'
-      + '<input id="crule-plus" placeholder="module ids, comma-separated" '
-      + 'value="' + esc(plus) + '">'
+      + '<div class="row wrap" style="margin-bottom:8px;align-items:flex-start">'
+      + '<label style="width:90px;padding-top:4px">Always include</label>'
+      + '<select id="crule-plus" multiple size="8" style="flex:1">' + opts(plusSet) + '</select>'
       + '</div>'
-      + '<div class="row wrap" style="margin-bottom:8px">'
-      + '<label style="width:90px">Always exclude</label>'
-      + '<input id="crule-minus" placeholder="module ids, comma-separated" '
-      + 'value="' + esc(minus) + '">'
+      + '<div class="row wrap" style="margin-bottom:8px;align-items:flex-start">'
+      + '<label style="width:90px;padding-top:4px">Always exclude</label>'
+      + '<select id="crule-minus" multiple size="8" style="flex:1">' + opts(minusSet) + '</select>'
       + '</div>'
       + '<div class="tiny muted">Saving applies the rule live — new installs '
       + 'that match will appear automatically.</div>',
       [{ label: 'Cancel', cls: 'btn' },
        { label: 'Save rule', cls: 'btn primary', close: false, fn: async () => {
          const rule = $('#crule-rule').value.trim();
-         const plus = $('#crule-plus').value.split(',').map(s => s.trim()).filter(Boolean);
-         const minus = $('#crule-minus').value.split(',').map(s => s.trim()).filter(Boolean);
+         const plus = [...$('#crule-plus').selectedOptions].map(o => o.value);
+         const minus = [...$('#crule-minus').selectedOptions].map(o => o.value);
          const r = await post('collection', {
            action: 'rule', id, rule, plus: JSON.stringify(plus), minus: JSON.stringify(minus) });
          if (!r.ok) { toast(r.error || 'Could not save rule.', 'err'); return; }
@@ -2598,6 +3108,10 @@ const Organise = {
     let h = '<div class="dash-card"><div class="dash-h">Courses</div>'
       + '<div class="tiny muted" style="margin-bottom:10px">Video and audio courses '
       + 'for Bible study. Track your progress through lessons.</div>'
+      + '<div class="org-new" style="margin-bottom:10px">'
+      + '<input id="course-title" placeholder="New course title" style="flex:1">'
+      + '<input id="course-author" placeholder="Author" style="width:120px">'
+      + '<button class="btn primary" id="course-create">Create</button></div>'
       + '<div id="courses-out"></div>';
     main.innerHTML = h;
     const load = async () => {
@@ -2605,13 +3119,33 @@ const Organise = {
       if (!r.ok) { $('#courses-out').innerHTML = '<div class="st-body">' + esc(r.error) + '</div>'; return; }
       $('#courses-out').innerHTML = (r.courses || []).map(c => '<div class="org-card"><div class="org-h"><b>'
         + esc(c.title) + '</b><span class="muted tiny"> · ' + (c.lesson_count || 0) + ' lessons</span>'
-        + '<span class="org-a"><a href="#" data-course-open="' + esc(c.id) + '">open</a></span></div>'
+        + '<span class="org-a"><a href="#" data-course-open="' + esc(c.id) + '">open</a>'
+        + ' <button class="btn tiny danger" data-course-del="' + esc(c.id) + '">delete</button></span></div>'
         + '<div class="tiny muted">' + esc(c.description || "") + '</div></div>').join('');
       $('#courses-out').querySelectorAll('[data-course-open]').forEach(a => {
         a.onclick = (e) => { e.preventDefault(); openCourse(a.dataset.courseOpen); };
       });
+      $('#courses-out').querySelectorAll('[data-course-del]').forEach(b => {
+        b.onclick = async (e) => {
+          e.preventDefault();
+          if (!confirm('Delete this course and its lessons?')) return;
+          await api('courses', { action: 'delete', course_id: b.dataset.courseDel });
+          load();
+        };
+      });
+    };
+    $('#course-create').onclick = async () => {
+      const title = $('#course-title').value.trim();
+      if (!title) { toast('Give the course a title.', 'warn'); return; }
+      const r = await api('courses', { action: 'create', title,
+        author: $('#course-author').value.trim() });
+      if (!r.ok) { toast(r.error || 'Could not create course.', 'err'); return; }
+      toast('Course created.');
+      $('#course-title').value = '';
+      load();
     };
     const openCourse = async (id) => {
+      main.dataset.courseId = id;
       const r = await api('courses', { action: 'open', course_id: id });
       if (!r.ok) { toast(r.error || 'Could not open course.', 'err'); return; }
       const c = r.course;
@@ -2621,12 +3155,34 @@ const Organise = {
       out += '<div class="st-sec"><div class="st-h">Lessons</div>'
         + (r.lessons || []).map(l => {
           const done = r.progress && r.progress[l.id] ? ' ✓' : '';
-          return '<div class="st-note"><a href="#" data-lesson="' + esc(l.id) + '" class="pg-ref">' + esc(l.title) + '</a>' + esc(done) + '</div>';
-        }).join('') + '</div>';
+          return '<div class="st-note"><a href="#" data-lesson="' + esc(l.id) + '" class="pg-ref">' + esc(l.title) + '</a>' + esc(done)
+            + ' <button class="btn tiny danger" data-lesdel="' + esc(l.id) + '">delete</button></div>';
+        }).join('') + '</div>'
+        + '<div class="org-new" style="margin-top:10px">'
+        + '<input id="lesson-title" placeholder="New lesson title" style="flex:1">'
+        + '<button class="btn primary" id="lesson-add">Add Lesson</button></div>';
       main.innerHTML = out;
       main.querySelectorAll('[data-lesson]').forEach(a => {
         a.onclick = (e) => { e.preventDefault(); openLesson(a.dataset.lesson); };
       });
+      main.querySelectorAll('[data-lesdel]').forEach(b => {
+        b.onclick = async (e) => {
+          e.preventDefault();
+          if (!confirm('Delete this lesson?')) return;
+          await api('courses', { action: 'delete-lesson', lesson_id: b.dataset.lesdel });
+          openCourse(id);
+        };
+      });
+      const la = $('#lesson-add');
+      if (la) la.onclick = async () => {
+        const lt = $('#lesson-title').value.trim();
+        if (!lt) { toast('Give the lesson a title.', 'warn'); return; }
+        const rr = await api('courses', { action: 'add-lesson', course_id: id, lesson_title: lt });
+        if (!rr.ok) { toast(rr.error || 'Could not add lesson.', 'err'); return; }
+        toast('Lesson added.');
+        $('#lesson-title').value = '';
+        openCourse(id);
+      };
     };
     const openLesson = async (id) => {
       const r = await api('courses', { action: 'lesson', lesson_id: id });
@@ -2644,9 +3200,8 @@ const Organise = {
       $('#course-complete').onclick = async () => {
         await api('courses', { action: 'progress', course_id: main.dataset.courseId, lesson_id: id, completed: '1' });
         toast('Lesson marked complete.');
-        load();
+        openCourse(main.dataset.courseId);
       };
-      main.dataset.courseId = main.dataset.courseId || "";
     };
     load();
   },
@@ -2654,13 +3209,61 @@ const Organise = {
   /* ------------------------------------------------------------- Draw on Screen */
   async drawOnScreenView(main) {
     let h = '<div class="dash-card"><div class="dash-h">Draw on Screen</div>'
-      + '<div class="tiny muted" style="margin-bottom:10px">Create drawing annotations '
-      + 'over Bible text. Save, load and delete drawings.</div>'
+      + '<div class="tiny muted" style="margin-bottom:10px">Draw freehand annotations. '
+      + 'Strokes are saved as JSON and reloaded onto the canvas.</div>'
       + '<div class="org-new" style="margin-bottom:10px">'
       + '<input id="dw-title" placeholder="Drawing title" style="flex:1">'
-      + '<button class="btn primary" id="dw-save">Save Drawing</button></div>'
-      + '<div id="dw-out"></div>';
+      + '<label class="tiny muted" style="margin-left:8px">Colour</label>'
+      + '<input type="color" id="dw-color" value="#ff4040" style="width:28px;height:24px;padding:0;border:0">'
+      + '<label class="tiny muted" style="margin-left:8px">Size</label>'
+      + '<select id="dw-size" style="width:48px">'
+      + '<option>1</option><option>2</option><option selected>3</option>'
+      + '<option>5</option><option>8</option><option>12</option></select>'
+      + '<button class="btn" id="dw-clear">Clear</button>'
+      + '<button class="btn primary" id="dw-save">Save Drawing</button>'
+      + '<button class="btn" id="dw-print">Print</button></div>'
+      + '<canvas id="dw-canvas" width="800" height="420" '
+      + 'style="border:1px solid var(--line);border-radius:6px;background:var(--bg-0);touch-action:none;cursor:crosshair"></canvas>'
+      + '<div id="dw-out" style="margin-top:10px"></div>'
+      + '<textarea id="dw-drawing-data" style="display:none"></textarea>';
     main.innerHTML = h;
+    const canvas = $('#dw-canvas');
+    const ctx = canvas.getContext('2d');
+    let strokes = [];
+    let current = null;
+    const render = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      strokes.forEach(s => {
+        if (!s.points || s.points.length < 2) return;
+        ctx.strokeStyle = s.color || '#ff4040';
+        ctx.lineWidth = s.size || 3;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(s.points[0].x, s.points[0].y);
+        for (let i = 1; i < s.points.length; i++) ctx.lineTo(s.points[i].x, s.points[i].y);
+        ctx.stroke();
+      });
+    };
+    const pos = (e) => {
+      const r = canvas.getBoundingClientRect();
+      const sx = canvas.width / r.width, sy = canvas.height / r.height;
+      return { x: (e.clientX - r.left) * sx, y: (e.clientY - r.top) * sy };
+    };
+    canvas.onpointerdown = (e) => {
+      canvas.setPointerCapture(e.pointerId);
+      current = { color: $('#dw-color').value, size: parseInt($('#dw-size').value, 10) || 3,
+                  points: [pos(e)] };
+      strokes.push(current);
+    };
+    canvas.onpointermove = (e) => {
+      if (!current) return;
+      current.points.push(pos(e));
+      render();
+    };
+    canvas.onpointerup = () => { current = null; };
+    canvas.onpointerleave = () => { current = null; };
+    $('#dw-clear').onclick = () => { strokes = []; current = null; render(); };
     const load = async () => {
       const r = await api('draw-on-screen', { action: 'list' });
       if (!r.ok) { $('#dw-out').innerHTML = '<div class="st-body">' + esc(r.error) + '</div>'; return; }
@@ -2678,23 +3281,28 @@ const Organise = {
         b.onclick = async () => {
           const r = await api('draw-on-screen', { action: 'load', drawing_id: b.dataset.dwload });
           if (!r.ok) { toast(r.error || 'Could not load drawing.', 'err'); return; }
-          $('#dw-drawing-data').value = r.drawing.data || "";
-          toast('Drawing loaded. Use the drawing canvas to view/edit.');
+          try { strokes = JSON.parse(r.drawing.data || '[]'); } catch (e) { strokes = []; }
+          render();
+          toast('Drawing loaded.');
         };
       });
     };
     $('#dw-save').onclick = async () => {
       const title = $('#dw-title').value.trim();
-      const data = $('#dw-drawing-data').value.trim();
-      if (!title || !data) { toast('Enter a title and drawing data.', 'warn'); return; }
-      const r = await api('draw-on-screen', { action: 'save', drawing_id: '', data });
+      if (!title) { toast('Enter a title first.', 'warn'); return; }
+      const data = JSON.stringify(strokes);
+      if (!strokes.length) { toast('Nothing drawn yet.', 'warn'); return; }
+      const r = await api('draw-on-screen', { action: 'save', drawing_id: '', title, data });
       if (!r.ok) { toast(r.error || 'Save failed.', 'err'); return; }
       toast('Drawing saved.');
       $('#dw-title').value = '';
       load();
     };
-    // Hidden textarea for drawing data (in a real app this would be a canvas)
-    h += '<textarea id="dw-drawing-data" style="display:none"></textarea>';
+    const dp = $('#dw-print');
+    if (dp) dp.onclick = () => Print.printNode($('#dw-canvas').parentElement, {
+      moduleName: 'Drawing', section: $('#dw-title').value.trim() || 'Drawing', refLabel: ''
+    });
+    render();
     load();
   },
 
@@ -2734,6 +3342,15 @@ const Organise = {
       const r = await api('print-export', { action: 'export', content_type: type, content_id: id, format: fmt });
       if (!r.ok) { $('#pe-out').innerHTML = '<div class="st-body">' + esc(r.error) + '</div>'; return; }
       if (r.note) $('#pe-out').innerHTML = '<div class="tiny muted">' + esc(r.note) + '</div>';
+      if (r.content_base64) {
+        const a = document.createElement('a');
+        a.href = 'data:application/pdf;base64,' + r.content_base64;
+        a.download = r.filename || 'export.pdf';
+        a.textContent = 'Download ' + (r.filename || 'export.pdf');
+        a.className = 'btn primary';
+        $('#pe-out').appendChild(a);
+        return;
+      }
       $('#pe-out').innerHTML += '<div class="st-sec"><div class="st-h">Exported Content</div>'
         + '<div class="st-body"><pre style="white-space:pre-wrap;font-family:monospace;font-size:12px">'
         + esc(r.content || "") + '</pre></div></div>'
@@ -2931,7 +3548,7 @@ const Guides = {
     // than at the end of each renderer means a new tab cannot forget it.
     try {
       if (tab === 'canon') return await this.canon(body);
-      if (tab === 'eusebian') return await this.canon(body);
+      if (tab === 'eusebian') return await Outlines.eusebian(body);
       if (tab === 'harmony') return await this.harmony(body);
       if (tab === 'timeline') return await this.timeline(body);
        if (tab === 'biblefacts') return await this.biblefacts(body);

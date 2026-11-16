@@ -4,26 +4,31 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf-token" content="__GBIBLE_CSRF_TOKEN__">
+<meta name="gbible-version" content="__GBIBLE_VERSION__">
 <title>G-Bible</title>
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=8">
 <link rel="stylesheet" href="/print.css" media="print">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#128218;</text></svg>">
+<link rel="icon" type="image/png" href="icon.png">
 </head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
 <div id="app">
 
   <div id="topbar" role="banner">
-    <div class="brand" aria-label="G-Bible"><img src="icon.png" alt="G-Bible"></div>
+    <div class="brand" aria-label="G-Bible">
+      <img src="icon.png" alt="" width="36" height="36">
+    </div>
     <nav class="tabs" id="nav" aria-label="Main navigation">
       <button data-view="today" class="on" aria-label="Home">Home</button>
       <button data-view="workspace" aria-label="Study workspace">Workspace</button>
       <button data-view="search" aria-label="Search your library">Search</button>
       <button data-view="guides" aria-label="Study guides">Guides</button>
-      <button data-view="ai" aria-label="AI assistant">Assistant</button>
+      <button data-view="ai" aria-label="AI assistant">Assistant<span class="exp-pill" title="Still settling — needs your own provider key">Experimental</span></button>
 
       <div class="nav-menu">
-        <button class="menu-btn" data-menu="tools" aria-controls="menu-tools" aria-haspopup="true" aria-expanded="false">Study tools <span aria-hidden="true">⌄</span></button>
+        <button class="menu-btn" data-menu="tools" aria-controls="menu-tools" aria-haspopup="true" aria-expanded="false">
+          Study tools
+        </button>
         <div class="menu-pop menu-wide" id="menu-tools">
           <div class="menu-group-label">Explore Scripture</div>
           <button data-view="concordance">Concordance</button>
@@ -31,7 +36,7 @@
           <button data-view="ntuseot">New Testament use of the Old Testament</button>
           <button data-view="wordlists">Word lists</button>
           <button data-view="memorization">Verse memorization</button>
-          <button id="menu-passage-guide">Passage guide</button>
+
           <div class="menu-divider"></div>
           <div class="menu-group-label">Text tools</div>
           <button id="tc-copy-bible-verses">Copy Bible verses</button>
@@ -54,23 +59,30 @@
       </div>
 
       <div class="nav-menu">
-        <button class="menu-btn" data-menu="documents" aria-controls="menu-documents" aria-haspopup="true" aria-expanded="false">My study <span aria-hidden="true">⌄</span></button>
+        <button class="menu-btn" data-menu="documents" aria-controls="menu-documents" aria-haspopup="true" aria-expanded="false">
+          My study
+        </button>
         <div class="menu-pop" id="menu-documents">
           <div class="menu-group-label">Personal study</div>
-          <button data-view="notes">Notes & highlights</button>
-          <button data-view="organise">Organise & collections</button>
+          <button data-view="notes">Notes &amp; highlights</button>
+          <button data-view="favorites">Favorites</button>
+          <button data-view="canvas">Canvas</button>
+          <button data-view="organise">Organise &amp; collections</button>
           <button data-view="clippings">Clippings</button>
           <div class="menu-divider"></div>
-          <div class="menu-group-label">Growth & preparation</div>
+          <div class="menu-group-label">Growth &amp; preparation</div>
           <button data-view="workflows">Study workflows</button>
           <button data-view="sermon-manager">Sermon manager</button>
           <button data-view="plans">Reading plans</button>
+          <button data-view="devotions">Devotional creator</button>
           <button data-view="prayer">Prayer lists</button>
         </div>
       </div>
 
       <div class="nav-menu">
-        <button class="menu-btn" data-menu="library" aria-controls="menu-library" aria-haspopup="true" aria-expanded="false">Library <span aria-hidden="true">⌄</span></button>
+        <button class="menu-btn" data-menu="library" aria-controls="menu-library" aria-haspopup="true" aria-expanded="false">
+          Library
+        </button>
         <div class="menu-pop" id="menu-library">
           <button data-view="library">My library</button>
           <button data-view="store">Resource store</button>
@@ -78,12 +90,16 @@
       </div>
 
       <div class="nav-menu">
-        <button class="menu-btn" data-menu="settings" aria-controls="menu-settings" aria-haspopup="true" aria-expanded="false">Settings <span aria-hidden="true">⌄</span></button>
+        <button class="menu-btn" data-menu="settings" aria-controls="menu-settings" aria-haspopup="true" aria-expanded="false">
+          Settings
+        </button>
         <div class="menu-pop" id="menu-settings">
           <button data-view="apis">API settings</button>
-          <button data-view="aisettings">AI providers</button>
-          <button data-view="sync">Synchronization</button>
+          <button data-view="aisettings">AI providers<span class="exp-pill" title="Optional — needs your own key">Experimental</span></button>
+          <button data-view="sync">Synchronization<span class="exp-pill" title="Still settling — sync only folders you trust">Experimental</span></button>
+          <button data-view="logs">Logs</button>
           <div class="menu-divider"></div>
+          <button id="menu-passage-guide">Passage guide</button>
           <button id="menu-appearance">Appearance</button>
           <button id="menu-ra-settings">Read aloud settings</button>
           <div class="menu-divider"></div>
@@ -91,10 +107,10 @@
         </div>
       </div>
     </nav>
-    <div class="spacer"></div>
-    <button class="btn tiny" id="cmdbox-btn" title="Command box (Ctrl+K)" aria-label="Command box (Ctrl+K)" style="margin-right:8px">⌘K</button>
+
     <div class="spacer"></div>
     <div id="install-spinner" class="install-spinner" hidden aria-label="Installing"></div>
+    <button id="status-errors" class="status-errors" hidden>Error(s) found</button>
     <div class="row tiny muted" id="status"></div>
   </div>
 
@@ -102,9 +118,8 @@
 
     <!-- =========================================================== TODAY -->
     <div class="view on" id="v-today">
-      <div class="store-head">
-        <h2 id="d-title">Today</h2>
-        <div class="tiny muted" id="d-lib"></div>
+      <div class="view-head">
+        <h2 id="d-title">Today</h2> <span id="d-lib" class="view-sub">Your study day at a glance</span>
       </div>
       <div class="dash">
         <div class="dash-col">
@@ -123,12 +138,17 @@
 
     <!-- ================================================== WORKSPACE -->
     <div class="view" id="v-workspace">
+      <div class="view-head">
+        <h2>Workspace <span class="view-sub">Multiple resources, side by side — linked together.</span></h2>
+      </div>
       <div class="workspace-bar" id="workspace-bar" role="toolbar" aria-label="Workspace tools">
         <button class="btn tiny" id="ws-layouts" title="Layouts and arrangements">Layouts</button>
         <button class="btn tiny" id="ws-clearlinks" title="Clear all link sets">Clear links</button>
         <button class="btn tiny" id="ws-closeall" title="Close every pane (keeps one empty tile)">Close all panes</button>
         <button class="btn tiny" id="ws-fullscreen" title="Fullscreen reading of the first pane">Fullscreen</button>
         <button class="btn tiny" id="ws-guidepane" title="Open Passage in a pane">Passage pane</button>
+        <button class="btn tiny" id="ws-wordstudypane" title="Open Word Study in a pane">Word Study pane</button>
+        <button class="btn tiny" id="ws-reopen" title="Reopen the last resource you closed">Reopen last</button>
 
         <span class="spacer"></span>
         <span class="tiny muted" id="ws-status"></span>
@@ -138,29 +158,97 @@
 
     <!-- ==================================================== SEARCH -->
     <div class="view" id="v-search">
+      <div class="view-head">
+        <h2>Search <span class="view-sub">Search across your installed library.</span></h2>
+      </div>
       <div class="search-bar">
-        <input type="search" id="sq" placeholder="faith AND Lord    Lord WITHIN 5 WORDS Christ    strongs:G2316    bible:&quot;Gen 1:1&quot;" spellcheck="false">
-        <button id="s-scope" title="Which resources to search">All</button>
-        <select id="s-range" title="Limit the search to a range of books">
-          <option value="">Every book</option>
-        </select>
-        <button id="s-case" title="Match case">Aa</button>
-        <button id="s-forms" title="Match all forms (stemming)">*</button>
-        <button id="s-ctx" title="Show surrounding verses">Context</button>
-        <button id="s-stype" title="Search type: Bible text or Morphology">Bible</button>
-        <select id="s-sort">
+        <!-- Search type selector: 8 experiences, each with its own query,
+             filters, and results. Switching preserves each type's query. -->
+        <div class="stype-group">
+          <button class="stype-btn active" data-type="all" title="All Search — combined results from supported sources">All</button>
+          <button class="stype-btn" data-type="bible" title="Bible Search — Bible-specific queries, translation selection, passage restrictions">Bible</button>
+          <button class="stype-btn" data-type="books" title="Books Search — search installed books, collections, and resource filters">Books</button>
+          <button class="stype-btn" data-type="morph" title="Morph Search — Hebrew and Greek lemmas, morphology, grammatical forms">Morph</button>
+          <button class="stype-btn" data-type="topics" title="Topics — people, places, subjects, and related references">Topics</button>
+          <button class="stype-btn" data-type="media" title="Media — search images and visual resources">Media</button>
+          <button class="stype-btn" data-type="documents" title="Documents — search notes, sermons, and personal study documents">Documents</button>
+          <button class="stype-btn" data-type="maps" title="Maps — biblical locations and geographic resources">Maps</button>
+        </div>
+
+        <input type="search" id="sq" placeholder="Search… try: faith AND lord · &quot;exact phrase&quot; · strongs:G2316" spellcheck="false">
+        <input type="search" id="s-morph-word" placeholder="word @ form (e.g. λογος@V-PAI-3S)" style="display:none;flex:1;margin-left:8px">
+
+        <!-- Type-specific filters. Shown/hidden by the active search type. -->
+        <div id="s-filters-all" class="s-filters">
+          <button id="s-scope" title="Which resources to search">All</button>
+          <select id="s-range" title="Limit the search to a range of books">
+            <option value="">Every book</option>
+          </select>
+          <button id="s-case" title="Match case">Aa</button>
+          <button id="s-forms" title="Match all forms (stemming)">*</button>
+          <button id="s-ctx" title="Show surrounding verses">Context</button>
+        </div>
+
+        <div id="s-filters-bible" class="s-filters" style="display:none">
+          <select id="s-bible-translation" title="Translation to search">
+            <option value="">All translations</option>
+          </select>
+          <input type="search" id="s-bible-passage" placeholder="Passage, e.g. John 3:16" title="Limit to a Bible passage">
+        </div>
+
+        <div id="s-filters-books" class="s-filters" style="display:none">
+          <select id="s-books-collection" title="Filter by collection">
+            <option value="">All collections</option>
+          </select>
+          <select id="s-books-type" title="Filter by resource type">
+            <option value="">All types</option>
+          </select>
+        </div>
+
+        <div id="s-filters-morph" class="s-filters" style="display:none">
+          <select id="s-morph-resource" title="Tagged resource to search">
+            <option value="">All tagged resources</option>
+          </select>
+          <input type="search" id="s-morph-passage" placeholder="Passage, e.g. John 1" title="Limit to a Bible passage">
+        </div>
+
+        <div id="s-filters-topics" class="s-filters" style="display:none">
+          <select id="s-topics-source" title="Topic source filter">
+            <option value="">All sources</option>
+          </select>
+        </div>
+
+        <div id="s-filters-media" class="s-filters" style="display:none">
+          <select id="s-media-source" title="Image source">
+            <option value="">All sources</option>
+          </select>
+          <select id="s-media-license" title="License filter">
+            <option value="">All licenses</option>
+          </select>
+        </div>
+
+        <div id="s-filters-documents" class="s-filters" style="display:none">
+          <select id="s-docs-kind" title="Document kind">
+            <option value="">All kinds</option>
+            <option value="note">Notes</option>
+            <option value="sermon">Sermons</option>
+            <option value="prayer">Prayers</option>
+            <option value="journal">Journal</option>
+          </select>
+        </div>
+
+        <div id="s-filters-maps" class="s-filters" style="display:none">
+          <select id="s-map-type" title="Place type">
+            <option value="">All places</option>
+          </select>
+        </div>
+
+        <select id="s-sort" aria-label="Sort order">
           <option value="relevance">Relevance</option>
           <option value="passage">Passage order</option>
           <option value="resource">By resource</option>
         </select>
-        <div id="s-morph-bar" style="display:none;align-items:center;gap:6px">
-          <label style="font-size:11.5px;color:var(--fg-3)">Morph · resource</label>
-          <select id="s-morph-res" style="width:170px"></select>
-          <label style="font-size:11.5px;color:var(--fg-3)">word</label>
-          <input type="search" id="s-morph-word" placeholder="love  then  @" style="width:150px">
-          <div id="s-morph-forms" style="display:flex;flex-direction:column;gap:3px;max-height:220px;overflow-y:auto;background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--r);padding:6px;z-index:10;position:absolute"></div>
-        </div>
-        <button id="s-go" class="primary">Search</button>
+        <button id="s-go" class="btn primary">Search</button>
         <button id="s-browse" title="Build a search without remembering the syntax">Browse</button>
         <button id="s-save" title="Keep this search">Save</button>
         <button id="s-smart" title="Type a question in plain English; the model turns it into a query for your library">Ask AI</button>
@@ -215,9 +303,11 @@
 
     <!-- ================================================== NT USE OF OT -->
     <div class="view" id="v-ntuseot">
+      <div class="view-head">
+        <h2>New Testament use of the Old Testament <span class="view-sub">Cross-references between the testaments.</span></h2>
+      </div>
       <div class="view-col">
         <div class="store-head">
-          <h2>New Testament use of the Old Testament</h2>
           <div class="store-filters">
             <label>New Testament <select id="ou-nt"></select></label>
             <label>Old Testament <select id="ou-ot"></select></label>
@@ -233,50 +323,63 @@
 
     <!-- ================================================ MAPS -->
     <div class="view" id="v-maps">
-      <div class="view-col">
-        <div class="store-head">
-          <h2>Maps</h2>
-          <div class="store-filters">
-            <input type="search" id="mp-find" placeholder="Find a Bible place, or a verse that names one">
-            <div class="spacer"></div>
-            <span class="tiny muted" id="mp-count"></span>
-          </div>
-        </div>
-        <div id="mp-places" class="mp-places"></div>
-        <div class="mp-geo">
-          <h3 class="tiny muted">Find a place on the modern map</h3>
-          <p class="tiny muted mp-geonote">The list above is the Bible
-            gazetteer — 334 places the Bible names. This searches today's
-            OpenStreetMap instead, for the names a Bible reader has but the
-            gazetteer does not.</p>
-          <div class="row">
-            <input type="search" id="mp-geo-q" placeholder="e.g. Bethlehem">
-            <button class="btn" id="mp-geo-go">Look up</button>
-          </div>
-          <label class="tiny"><input type="checkbox" id="mp-geo-near" checked>
-            Near East only</label>
-          <div id="mp-geo-out" class="mp-geo-out"></div>
-        </div>
+      <div class="view-head">
+        <h2>Maps <span class="view-sub">Every named Bible place on one map — hover a pin, click it, or filter by testament.</span></h2>
       </div>
-      <div class="view-col mp-mapcol">
-        <div class="store-head">
-          <h2 id="mp-title">Choose a map</h2>
-          <div class="spacer"></div>
-          <span id="mp-badges"></span>
+      <div class="maps-wrap">
+        <aside class="maps-side">
+          <div class="maps-find">
+            <input type="search" id="mp-find" placeholder="Find a place… name, also-called, or verse" autocomplete="off">
+            <span id="mp-count" class="tiny muted"></span>
+          </div>
+          <div class="maps-era" role="group" aria-label="Testament filter">
+            <button class="on" data-era="all">All</button>
+            <button data-era="ot">Old Testament</button>
+            <button data-era="nt">New Testament</button>
+            <button data-era="shared">Both</button>
+          </div>
+          <div class="maps-results" id="mp-places"></div>
+          <details class="maps-sec" id="mp-sec-scans">
+            <summary>Historical maps (scans)</summary>
+            <p class="tiny muted maps-sec-note">Flat scans you can
+              align with two known places — a scan has no coordinates
+              until then.</p>
+            <div class="mp-maps" id="mp-maps"></div>
+          </details>
+          <details class="maps-sec" id="mp-sec-geo">
+            <summary>Modern map lookup</summary>
+            <p class="tiny muted maps-sec-note">Today's OpenStreetMap, for
+              the names the Bible gazetteer does not carry.</p>
+            <div class="row">
+              <input type="search" id="mp-geo-q" placeholder="e.g. Bethlehem" autocomplete="off">
+              <button class="btn" id="mp-geo-go">Look up</button>
+            </div>
+            <label class="tiny maps-geo-near"><input type="checkbox" id="mp-geo-near" checked> Near East only</label>
+            <div id="mp-geo-out" class="mp-geo-out"></div>
+          </details>
+          <div class="maps-foot tiny muted">Place data CC BY 4.0 · OpenBible Geography · Map tiles © Esri</div>
+        </aside>
+        <div class="maps-main">
+          <div class="maps-head">
+            <h2 id="mp-title">Bible lands</h2>
+            <div class="spacer"></div>
+            <span id="mp-badges"></span>
+            <button class="btn tiny" id="mp-back" style="display:none">← Bible map</button>
+          </div>
+          <div id="mp-stage" class="mp-stage"></div>
+          <div id="mp-mapnote" class="mp-mapnote"></div>
+          <div id="mp-attr" class="tiny muted mp-attrfoot"></div>
         </div>
-        <div id="mp-stage" class="mp-stage">
-          <p class="muted">Pick a map on the left, or search for a place.</p>
-        </div>
-        <div id="mp-mapnote" class="mp-mapnote"></div>
-        <div id="mp-attr" class="mp-attr tiny"></div>
       </div>
     </div>
 
     <!-- ================================================ CONCORDANCE -->
     <div class="view" id="v-concordance">
+      <div class="view-head">
+        <h2>Concordance <span class="view-sub">Word occurrences across your library.</span></h2>
+      </div>
       <div class="view-col">
         <div class="store-head">
-          <h2>Concordance</h2>
           <div class="store-filters">
             <label>Resource <select id="cg-mod"></select></label>
             <label>Chapter <input id="cg-ref" value="John 3" size="10"></label>
@@ -294,9 +397,11 @@
 
     <!-- ==================================================== LIBRARY -->
     <div class="view" id="v-library">
+      <div class="view-head">
+        <h2>Library <span class="view-sub">Your installed resources.</span></h2>
+      </div>
       <div class="view-col">
         <div class="store-head">
-          <h2>Library</h2>
           <div class="store-filters">
             <label>Type <select id="l-type"><option value="">All types</option></select></label>
             <label>Language <select id="l-lang"><option value="">All languages</option></select></label>
@@ -326,163 +431,182 @@
 
     <!-- ============================================== MODULE BROWSER -->
     <div class="view" id="v-store">
-      <div class="store-head">
-        <h2>Modules <span class="tiny muted" id="store-count"></span></h2>
-        <div class="store-filters">
-          <label class="repo-pick">Repository
-            <span class="repo-combo">
-              <select id="f-repo"></select>
-              <span class="repo-btns" style="display:inline-flex;gap:4px">
-                <button class="btn" id="f-repo-add"
-                        title="Add a repository to the browser"
-                        aria-label="Add repository">+</button>
-                <button class="btn danger" id="f-repo-del"
-                        title="Remove this repository from the browser"
-                        aria-label="Remove repository">&#8722;</button>
-              </span>
-            </span>
-          </label>
-          <label>Goes in <select id="f-slot"><option value="">Everything</option></select></label>
-          <label>Language <select id="f-lang"><option value="">All languages</option></select></label>
-          <label>Category <select id="f-cat"><option value="">All categories</option></select></label>
-          <label>Subject <select id="f-subj"><option value="">All subjects</option></select></label>
-          <input type="search" id="f-q" placeholder="Search the catalogue">
-          <label><input type="checkbox" id="f-inst"> Installed only</label>
-          <label>Sort <select id="f-sort">
-            <option value="slot">Where it goes</option>
-            <option value="title">Title</option>
-            <option value="lang">Language</option>
-            <option value="year">Year</option>
-            <option value="size">Size</option>
-            <option value="installed">Installed first</option>
-            <option value="category">Category</option>
-          </select></label>
-          <div class="spacer"></div>
-          <button class="btn" id="f-import">Import a file…</button>
-          <button class="btn" id="f-sync">Refresh catalogues</button>
-          <button class="btn" id="f-transfers"
-            title="What has been downloaded, imported and changed">Transfers</button>
-        </div>
+      <div class="view-head">
+        <h2>Modules <span class="tiny muted" id="store-count"></span> <span class="view-sub">Install resources from connected catalogues.</span></h2>
       </div>
-      <div class="store-body">
-        <div class="store-side" id="store-facets"></div>
-        <div class="store-list" id="store-list"></div>
+      <div class="view-col">
+        <div class="store-head">
+          <div class="store-filters">
+            <label class="repo-pick">Repository
+              <span class="repo-combo">
+                <select id="f-repo"></select>
+                <span class="repo-btns" style="display:inline-flex;gap:4px">
+                  <button class="btn" id="f-repo-add"
+                          title="Add a repository to the browser"
+                          aria-label="Add repository">+</button>
+                  <button class="btn danger" id="f-repo-del"
+                          title="Remove this repository from the browser"
+                          aria-label="Remove repository">&#8722;</button>
+                </span>
+              </span>
+            </label>
+            <label>Goes in <select id="f-slot"><option value="">Everything</option></select></label>
+            <label>Language <select id="f-lang"><option value="">All languages</option></select></label>
+            <label>Category <select id="f-cat"><option value="">All categories</option></select></label>
+            <label>Subject <select id="f-subj"><option value="">All subjects</option></select></label>
+            <input type="search" id="f-q" placeholder="Search the catalogue">
+            <label><input type="checkbox" id="f-inst"> Installed only</label>
+            <label>Sort <select id="f-sort">
+              <option value="slot">Where it goes</option>
+              <option value="title">Title</option>
+              <option value="lang">Language</option>
+              <option value="year">Year</option>
+              <option value="size">Size</option>
+              <option value="installed">Installed first</option>
+              <option value="category">Category</option>
+            </select></label>
+            <div class="spacer"></div>
+            <button class="btn" id="f-import">Import a file…</button>
+            <button class="btn" id="f-updates">Check updates</button>
+            <button class="btn" id="f-sync">Refresh catalogues</button>
+            <button class="btn" id="f-transfers"
+              title="What has been downloaded, imported and changed">Transfers</button>
+          </div>
+        </div>
+        <div class="store-body">
+          <div class="store-side" id="store-facets"></div>
+          <div class="store-list" id="store-list"></div>
+        </div>
       </div>
     </div>
 
     <!-- ================================================ API SETTINGS -->
     <div class="view" id="v-apis">
-      <div class="store-head">
-        <h2>API Settings</h2>
-        <div class="tiny muted" id="api-summary"></div>
+      <div class="view-head">
+        <h2>API Settings <span id="api-summary" class="view-sub">Configure external service providers</span>.</h2>
       </div>
       <div class="apis-wrap" id="api-list"></div>
     </div>
 
     <!-- ====================================================== SYNC -->
     <div class="view" id="v-sync">
-      <div class="store-head">
-        <h2>Sync</h2>
-        <div class="tiny muted" id="sync-summary"></div>
+      <div class="view-head">
+        <h2>Sync <span class="view-sub">Keep your study data in sync across devices.</span> <span id="sync-summary" class="tiny muted"></span></h2>
       </div>
       <div class="sync-wrap" id="sync-body"></div>
     </div>
 
-    <!-- =========================================================== GUIDES -->
-    <!-- =================================================== ORGANISE -->
-    <div class="view" id="v-organise">
-      <div class="view-col">
-      <div class="store-head">
-        <h2>Organise</h2>
-        <div style="display:flex;gap:6px;align-items:center">
-          <select id="o-tab">
-            <option value="favourites">Favourites</option>
-            <option value="collections">Collections</option>
-            <option value="lists">Passage lists</option>
-            <option value="notebooks">Notebooks</option>
-            <option value="quotations">Quotations</option>
-            <option value="canvases">Canvases</option>
-            <option value="charts">Charts</option>
-            <option value="templates">Search templates</option>
-            <option value="sermon-starter">Sermon Starter</option>
-            <option value="qa">Questions &amp; Answers</option>
-            <option value="sense-lexicon">Sense Lexicon</option>
-            <option value="community-tags">Community Tags</option>
-            <option value="personal-books">Personal Books</option>
-            <option value="courses">Courses</option>
-            <option value="draw-on-screen">Draw on Screen</option>
-            <option value="print-export">Print / Export</option>
-          </select>
-          <select id="o-chart" style="display:none">
-            <option value="type">Resources by kind</option>
-            <option value="lang">Resources by language</option>
-            <option value="source">Resources by source</option>
-            <option value="bible">Verses per translation</option>
-            <option value="word">A word, by book</option>
-          </select>
-          <input type="search" id="o-word" placeholder="G2316" style="display:none;width:90px">
+    <!-- ====================================================== LOGS -->
+    <div class="view" id="v-logs">
+      <div class="view-head">
+        <h2>Logs <span class="view-sub">Errors G-Bible ran into, kept only on this machine.</span></h2>
+        <div class="view-actions">
+          <button class="btn" id="logs-clear">Clear logs</button>
+          <button class="btn" id="logs-close">Close</button>
         </div>
       </div>
-      <div class="store-body">
-        <div class="store-side" id="o-side"></div>
-        <div class="store-main" id="o-main"></div>
-      </div>
-     </div>
+      <div class="view-body" id="logs-body"></div>
     </div>
 
+    <!-- =========================================================== GUIDES -->
     <div class="view" id="v-guides">
-      <div class="store-head">
-        <h2>Guides</h2>
-        <div style="display:flex;gap:6px;align-items:center">
-          <select id="g-tab">
-            <option value="canon">Canon</option>
-            <option value="eusebian">Eusebian tables</option>
-            <option value="harmony">Gospel harmony</option>
-            <option value="timeline">Timeline</option>
-            <option value="biblefacts">Bible facts (weights, measures, money, calendar)</option>
-            <option value="genealogy">Genealogy</option>
-            <option value="morph">Morphology</option>
-            <option value="grammar">Grammar</option>
-            <option value="chapter">Chapter guide</option>
-            <option value="outline">Outline</option>
-            <option value="psalms">Psalms explorer</option>
-            <option value="books">Bible books</option>
-            <option value="syntax">Syntax</option>
-            <option value="counsel">Counseling</option>
-          </select>
-          <input type="search" id="g-ref" placeholder="e.g. John 3" style="width:130px">
-          <input type="search" id="g-name" placeholder="e.g. David" style="width:130px;display:none">
-          <span id="g-morph" class="tiny muted" style="display:none"></span>
-          <input type="search" id="g-term" placeholder="a topic, e.g. grief" style="width:150px;display:none">
-          <input type="search" id="g-eusec" placeholder="Ammonian number, e.g. 4.1" style="width:150px;display:none">
-          <select id="g-eus" style="display:none">
-            <option value="">All ten tables</option>
-          </select>
-          <button class="btn" id="g-browser" type="button">Bible Browser</button>
-          <button class="btn" id="g-obrowser" type="button">Outline Browser</button>
-          <button class="btn" id="g-refscan" type="button">Reference Scanner</button>
-          <button class="btn" id="g-namesgod" type="button">Names for God</button>
-          <button class="btn" id="g-sensesearch" type="button">Sense Search</button>
-          <button class="btn" id="g-syntax" type="button">Syntax Search</button>
-          <button class="btn" id="g-oexport" style="display:none"
-                  title="Open this outline in Word, Pages, LibreOffice or PowerPoint">Export</button>
-          <select id="g-trad">
-            <option value="66">Protestant 66</option>
-            <option value="39">Protestant 39</option>
-            <option value="27">Protestant 27</option>
-            <option value="catholic">Catholic</option>
-            <option value="ap">Apocrypha</option>
-          </select>
+      <div class="view-head">
+        <h2>Guides <span class="view-sub">Passage study, word study, and reference tools.</span></h2>
+      </div>
+      <div class="view-col">
+        <div class="store-head">
+          <div style="display:flex;gap:6px;align-items:center">
+            <select id="g-tab" aria-label="Choose a guide">
+              <option value="canon">Canon</option>
+              <option value="eusebian">Eusebian tables</option>
+              <option value="harmony">Gospel harmony</option>
+              <option value="timeline">Timeline</option>
+              <option value="biblefacts">Bible facts</option>
+              <option value="genealogy">Genealogy</option>
+              <option value="morph">Morphology</option>
+              <option value="grammar">Grammar</option>
+              <option value="chapter">Chapter guide</option>
+              <option value="outline">Outline</option>
+              <option value="psalms">Psalms explorer</option>
+              <option value="books">Bible books</option>
+              <option value="syntax">Syntax</option>
+              <option value="counsel">Counseling</option>
+            </select>
+            <input type="search" id="g-ref" placeholder="e.g. John 3" style="width:130px">
+            <input type="search" id="g-name" placeholder="e.g. David" style="width:130px;display:none">
+            <span id="g-morph" class="tiny muted" style="display:none"></span>
+            <input type="search" id="g-term" placeholder="a topic, e.g. grief" style="width:150px;display:none">
+            <input type="search" id="g-eusec" placeholder="Ammonian number, e.g. 4.1" style="width:150px;display:none">
+            <select id="g-eus" style="display:none" aria-label="Choose an Eusebian table">
+              <option value="">All ten tables</option>
+            </select>
+            <button class="btn" id="g-browser" type="button">Bible Browser</button>
+            <button class="btn" id="g-obrowser" type="button">Outline Browser</button>
+            <button class="btn" id="g-refscan" type="button">Reference Scanner</button>
+            <button class="btn" id="g-namesgod" type="button">Names for God</button>
+            <button class="btn" id="g-sensesearch" type="button">Sense Search</button>
+            <button class="btn" id="g-syntax" type="button">Syntax Search</button>
+            <button class="btn" id="g-oexport" style="display:none"
+                    title="Open this outline in Word, Pages, LibreOffice or PowerPoint">Export</button>
+            <select id="g-trad" aria-label="Choose a canon">
+              <option value="66">Protestant 66</option>
+              <option value="39">Protestant 39</option>
+              <option value="27">Protestant 27</option>
+              <option value="catholic">Catholic</option>
+              <option value="ap">Apocrypha</option>
+            </select>
+          </div>
+        </div>
+        <div id="g-body" class="guides-body"></div>
+      </div>
+    </div>
+    <!-- ====================================================== ORGANISE -->
+    <div class="view" id="v-organise">
+      <div class="view-head">
+        <h2>Organise <span class="view-sub">Collections, lists, notebooks, and saved searches.</span></h2>
+      </div>
+      <div class="view-col">
+        <div class="store-head">
+          <div style="display:flex;gap:6px;align-items:center">
+            <select id="o-tab" aria-label="Choose an organise section">
+              <option value="collections">Collections</option>
+              <option value="lists">Passage lists</option>
+              <option value="notebooks">Notebooks</option>
+              <option value="quotations">Quotations</option>
+
+              <option value="charts">Charts</option>
+              <option value="templates">Search templates</option>
+              <option value="sermon-starter">Sermon Starter</option>
+              <option value="qa">Questions &amp; Answers</option>
+              <option value="sense-lexicon">Sense Lexicon</option>
+              <option value="community-tags">Community Tags</option>
+
+              <option value="draw-on-screen">Draw on Screen</option>
+            </select>
+            <select id="o-chart" style="display:none" aria-label="Chart type">
+              <option value="type">Resources by kind</option>
+              <option value="lang">Resources by language</option>
+              <option value="source">Resources by source</option>
+              <option value="bible">Verses per translation</option>
+              <option value="word">A word, by book</option>
+            </select>
+            <input type="search" id="o-word" placeholder="G2316" style="display:none;width:90px">
+          </div>
+        </div>
+        <div class="store-body">
+          <div class="store-side" id="o-side"></div>
+          <div class="store-main" id="o-main"></div>
         </div>
       </div>
-      <div id="g-body" class="guides-body"></div>
     </div>
 
     <!-- ===================================================== SERMON MANAGER -->
     <div class="view" id="v-sermon-manager">
+      <div class="view-head">
+        <h2>Sermon Manager <span class="view-sub">Prepare and manage sermons.</span></h2>
+      </div>
       <div class="view-col">
         <div class="store-head">
-          <h2>Sermon Manager</h2>
           <div style="display:flex;gap:6px;align-items:center">
             <label class="tiny muted" for="sm-tab">Open</label>
             <select id="sm-tab">
@@ -498,9 +622,11 @@
 
     <!-- ============================================================ MEDIA -->
     <div class="view" id="v-media">
+      <div class="view-head">
+        <h2>Media <span class="view-sub">Images and audio for study.</span></h2>
+      </div>
       <div class="view-col">
         <div class="store-head">
-          <h2>Media</h2>
           <div class="store-filters">
             <input type="search" id="md-q" placeholder="a place, a person, a subject"
                    style="width:240px">
@@ -529,9 +655,11 @@
 
     <!-- ======================================================= WORD LISTS -->
     <div class="view" id="v-wordlists">
-     <div class="view-col">
-      <div class="store-head">
-        <h2>Word Lists</h2>
+      <div class="view-head">
+        <h2>Word Lists <span class="view-sub">Create and study word lists.</span></h2>
+      </div>
+      <div class="view-col">
+       <div class="store-head">
         <div class="store-filters">
           <input type="search" id="wl-q" placeholder="Filter lists">
           <label>Show <select id="wl-limit">
@@ -541,51 +669,136 @@
           </select> occurrences</label>
           <div class="spacer"></div>
         </div>
-      </div>
-      <div class="store-body">
+       </div>
+       <div class="store-body">
         <div class="store-side wl-side" id="wl-side"></div>
         <div class="store-main" id="wl-body"></div>
+       </div>
       </div>
-     </div>
     </div>
 
     <!-- ========================================================= MEMORIZATION -->
     <div class="view" id="v-memorization">
-     <div class="view-col">
-      <div class="store-head">
-        <h2>Memorization</h2>
-        <div class="tiny muted">Spaced-repetition cards. Add one from any passage, or type a reference below.</div>
+      <div class="view-head">
+        <h2>Memorization <span class="view-sub">Spaced-repetition cards for verses.</span></h2>
       </div>
-      <div class="row" style="gap:8px;margin:8px 0">
-        <input id="mem-ref" placeholder="Reference, e.g. John 3:16" style="flex:1">
-        <button class="btn primary" id="mem-add">Add card</button>
-        <button class="btn" id="mem-review">Review due now</button>
+      <div class="view-col">
+       <div class="tiny muted" style="margin:0 0 8px 0">Add one from any passage, or type a reference below.</div>
+       <div class="row" style="gap:8px;margin:8px 0">
+         <input id="mem-ref" placeholder="Reference, e.g. John 3:16" style="flex:1">
+         <button class="btn primary" id="mem-add">Add card</button>
+         <button class="btn" id="mem-review">Review due now</button>
+       </div>
+       <div id="mem-stats" class="tiny muted" style="margin-bottom:8px"></div>
+       <div id="mem-body"></div>
       </div>
-      <div id="mem-stats" class="tiny muted" style="margin-bottom:8px"></div>
-      <div id="mem-body"></div>
-     </div>
     </div>
 
     <!-- ========================================================= WORKFLOWS -->
     <div class="view" id="v-workflows">
-     <div class="view-col">
-      <div class="store-head">
-        <h2>Workflows</h2>
-        <div class="tiny muted">A saved arrangement of panes with a sequence:
-          open this, then this, then this — at any passage.</div>
+      <div class="view-head">
+        <h2>Workflows <span class="view-sub">Saved arrangements of panes with a sequence.</span></h2>
       </div>
-      <div class="store-body">
+      <div class="view-col">
+       <div class="store-body">
         <div class="store-side" id="wf-side"></div>
         <div class="store-main" id="wf-body"></div>
+       </div>
       </div>
-     </div>
+    </div>
+
+    <!-- =================================================== DEVOTIONAL CREATOR -->
+    <div class="view" id="v-devotions">
+      <div class="view-head">
+        <h2>Devotional creator <span class="view-sub">Turn your library into a daily devotion</span>.</h2>
+      </div>
+      <div class="view-col">
+        <div class="store-body">
+          <div class="store-side" id="dc-side">
+            <div class="org-card">
+              <div class="org-h"><b>How it works</b></div>
+              <div class="st-body">Pick any Bible or chaptered book from your library, choose how much of it you want, and the days it should fill. G-Bible builds a numbered reading plan and opens each day in the original resource pane, with temporary day markers while the plan is active.</div>
+              <div class="st-body" style="margin-top:8px">Bibles are split <b>by chapter — never mid-chapter</b>. Anything else is split at <b>sentence boundaries — never mid-sentence</b>. Days are portioned as evenly as the text allows, by word count.</div>
+              <div class="tiny muted" style="margin-top:8px">The devotion's text is copied from the installed module, so it carries that module's licence and attribution. Created devotions repeat yearly on the same month-and-day, like a printed daily devotional. If this tool made it, it can be deleted from the list below.</div>
+            </div>
+            <div class="org-card">
+              <div class="org-h"><b>My devotions <span class="muted" id="dc-mine-count"></span></b></div>
+              <div id="dc-list"><div class="tiny muted">Loading…</div></div>
+            </div>
+          </div>
+          <div class="store-main" id="dc-main">
+            <div class="org-card">
+              <div class="org-h"><b>1 · Pick your book</b></div>
+              <div class="dc-form">
+                <label class="dc-label" for="dc-book">Book</label>
+                <select id="dc-book" class="dc-input"></select>
+                <label class="dc-label" for="dc-scope">Part</label>
+                <select id="dc-scope" class="dc-input"></select>
+              </div>
+            </div>
+            <div class="org-card">
+              <div class="org-h"><b>2 · Pick the dates</b></div>
+              <div class="dc-form">
+                <label class="dc-label" for="dc-start">Start</label>
+                <input type="date" id="dc-start" class="dc-input">
+                <label class="dc-label" for="dc-months">Finish after</label>
+                <select id="dc-months" class="dc-input">
+                  <option value="1">1 month</option>
+                  <option value="2">2 months</option>
+                  <option value="3">3 months</option>
+                  <option value="4">4 months</option>
+                  <option value="5">5 months</option>
+                  <option value="6" selected>6 months</option>
+                  <option value="7">7 months</option>
+                  <option value="8">8 months</option>
+                  <option value="9">9 months</option>
+                  <option value="10">10 months</option>
+                  <option value="11">11 months</option>
+                  <option value="12">12 months</option>
+                </select>
+                <label class="dc-label" for="dc-finish">Finish</label>
+                <input type="date" id="dc-finish" class="dc-input">
+              </div>
+              <div class="tiny muted" style="margin:6px 2px">Pick a number of months and the finish date follows the start date. You can change the finish by hand instead.</div>
+              <div class="dc-days-row">
+                <span class="tiny muted">Read on</span>
+                <div class="dc-days" id="dc-days">
+                  <button class="dc-day on" data-w="1" type="button">Mon</button>
+                  <button class="dc-day on" data-w="2" type="button">Tue</button>
+                  <button class="dc-day on" data-w="3" type="button">Wed</button>
+                  <button class="dc-day on" data-w="4" type="button">Thu</button>
+                  <button class="dc-day on" data-w="5" type="button">Fri</button>
+                  <button class="dc-day on" data-w="6" type="button">Sat</button>
+                  <button class="dc-day on" data-w="0" type="button">Sun</button>
+                </div>
+                <span class="tiny"><a href="#" data-preset="all">Every day</a> · <a href="#" data-preset="week">Weekdays</a> · <a href="#" data-preset="sun">Sundays</a></span>
+              </div>
+            </div>
+            <div class="org-card">
+              <div class="org-h"><b>3 · Name and create</b></div>
+              <div class="dc-form">
+                <label class="dc-label" for="dc-title">Name</label>
+                <input type="text" id="dc-title" class="dc-input" maxlength="80" placeholder="e.g. KJV — Through the Bible">
+              </div>
+              <div class="dc-estimate" id="dc-estimate">Pick a book and your dates to see the plan.</div>
+              <ul class="warn-list" id="dc-warnings"></ul>
+              <div id="dc-result"></div>
+              <div class="org-new" style="margin-top:10px">
+                <button class="btn primary" id="dc-create">Create devotion</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- =================================================== READING PLANS -->
     <div class="view" id="v-plans">
+      <div class="view-head">
+        <h2>Reading plans <span id="plans-summary" class="view-sub">Track your reading progress</span>.</h2>
+      </div>
       <div class="view-col">
         <div class="store-head">
-          <h2>Reading plans</h2>
           <div class="tiny muted" id="plans-summary"></div>
           <div style="display:flex;gap:6px;align-items:center">
             <button class="btn" id="pl-new">New plan</button>
@@ -604,11 +817,10 @@
 
     <!-- =========================================================== PRAYER -->
     <div class="view" id="v-prayer">
+      <div class="view-head">
+        <h2>Prayer <span id="prayer-summary" class="view-sub">Prayer lists and requests</span>.</h2>
+      </div>
       <div class="view-col">
-        <div class="store-head">
-          <h2>Prayer</h2>
-          <div class="tiny muted" id="prayer-summary"></div>
-        </div>
         <div class="store-body">
           <div class="store-side" id="pt-side"></div>
           <div class="store-main" id="pt-main"></div>
@@ -618,11 +830,12 @@
 
     <!-- ======================================================== CLIPPINGS -->
     <div class="view" id="v-clippings">
+      <div class="view-head">
+        <h2>Clippings <span class="view-sub">Excerpts gathered from your library.</span></h2>
+      </div>
       <div class="view-col">
         <div class="store-head">
-          <h2>Clips</h2>
-          <div class="tiny muted">Excerpts gathered from your own library,
-            each keeping its source and its licence.</div>
+          <div class="tiny muted" style="margin:0 0 8px 0">Each clip keeps its source and its licence.</div>
           <div style="display:flex;gap:6px;align-items:center">
             <input type="search" id="cl-q" placeholder="Find in clips" style="width:170px">
             <button class="btn primary" id="cl-new">New clip</button>
@@ -635,40 +848,96 @@
       </div>
     </div>
 
-    <!-- ============================================================ NOTES -->
-    <div class="view" id="v-notes">
-      <div class="store-head">
-        <h2>Notes</h2>
-        <div class="tiny muted" id="notes-summary"></div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <select id="n-kind">
-            <option value="">All</option>
-            <option value="note">Notes</option>
-            <option value="journal">Journal</option>
-            <option value="sermon">Sermon</option>
-            <option value="prayer">Prayer</option>
-          </select>
-          <input type="search" id="n-q" placeholder="Search notes" style="width:150px">
-          <button class="btn" id="n-new">New</button>
-          <button class="btn" id="n-export">Export</button>
-          <button class="btn danger" id="n-clear">Clear all</button>
+    <!-- ============================================================ CANVAS -->
+    <div class="view" id="v-canvas">
+      <div class="view-head">
+        <h2>Canvas <span class="view-sub">A freeform study board — drag cards, connect them, print them.</span></h2>
+      </div>
+      <div class="canvas-toolbar" id="cv-toolbar">
+        <select id="cv-board" style="min-width:150px" aria-label="Select canvas board"></select>
+        <button class="btn" id="cv-newboard" title="New board">+ Board</button>
+        <button class="btn" id="cv-renameboard" title="Rename this board">Rename</button>
+        <button class="btn danger" id="cv-delboard" title="Delete this board">Delete</button>
+        <span class="spacer"></span>
+        <button class="btn" id="cv-addtext" title="Add a text card">+ Text</button>
+        <button class="btn" id="cv-addverse" title="Add a verse card">+ Verse</button>
+        <button class="btn" id="cv-color" title="Cycle card color">Color</button>
+        <button class="btn" id="cv-link" title="Connect two cards" aria-pressed="false">Link cards</button>
+        <button class="btn danger" id="cv-delcard" title="Delete selected card">Delete card</button>
+        <button class="btn" id="cv-print" title="Print this board">Print</button>
+      </div>
+      <div class="canvas-stage" id="cv-stage">
+        <div class="canvas-plane" id="cv-plane">
+          <svg class="canvas-edges" id="cv-edges" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div class="canvas-nodes" id="cv-nodes"></div>
+        </div>
+        <div class="canvas-hint" id="cv-hint">Drag cards · Scroll to zoom · Drag empty space to pan</div>
+      </div>
+    </div>
+
+    <!-- ============================================================ FAVORITES -->
+    <div class="view" id="v-favorites">
+      <div class="view-head">
+        <h2>Favorites <span class="view-sub">Modules you keep coming back to.</span></h2>
+      </div>
+      <div class="view-col">
+        <div class="store-head">
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="search" id="fv-q" placeholder="Filter favorites" style="width:200px">
+            <button class="btn" id="fv-clear">Unfavorite all</button>
+          </div>
+          <div class="tiny muted" id="fv-count" style="margin-top:6px">0 favorites</div>
+        </div>
+        <div class="store-body">
+          <div class="store-main" id="fv-list"></div>
         </div>
       </div>
-      <div class="notes-wrap">
-        <div class="notes-list" id="notes-list"></div>
-        <div class="notes-edit" id="notes-edit">
-          <div class="empty">Choose a note, or press <b>New</b>.</div>
+    </div>
+
+    <!-- ============================================================ NOTES -->
+    <div class="view" id="v-notes">
+      <div class="view-head">
+        <h2>Notes <span id="notes-summary" class="view-sub">Personal study notes</span>.</h2>
+      </div>
+      <div class="view-col">
+        <div class="store-head">
+          <div style="display:flex;gap:6px;align-items:center">
+            <select id="n-kind" aria-label="Filter by note kind">
+              <option value="">All</option>
+              <option value="note">Notes</option>
+              <option value="journal">Journal</option>
+              <option value="sermon">Sermon</option>
+              <option value="prayer">Prayer</option>
+            </select>
+            <select id="n-prayer-filter" aria-label="Prayer status">
+              <option value="">All prayer status</option>
+              <option value="answered">Answered prayers</option>
+              <option value="unanswered">Unanswered prayers</option>
+            </select>
+            <input type="search" id="n-q" placeholder="Search notes" style="width:150px">
+            <button class="btn" id="n-new">New</button>
+            <button class="btn" id="n-export">Export</button>
+            <button class="btn danger" id="n-clear">Clear all</button>
+          </div>
+        </div>
+        <div class="notes-wrap">
+          <div class="notes-list" id="notes-list"></div>
+          <div class="notes-edit" id="notes-edit">
+            <div class="empty">Choose a note, or press <b>New</b>.</div>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- ==================================================== AI ASSISTANT -->
     <div class="view" id="v-ai">
+      <div class="view-head">
+        <h2>AI Assistant <span id="ai-head" class="view-sub">Ask about a passage, a theme, a word</span>.</h2>
+      </div>
       <div class="view-col ai-col">
         <div class="store-head">
-          <h2>AI Assistant</h2>
-          <div class="tiny muted" id="ai-head"></div>
           <div style="display:flex;gap:6px;align-items:center">
+            <div class="tiny muted" style="flex:1"></div>
             <label class="tiny muted" title="Retrieve passages from your installed library and cite them">
               <input type="checkbox" id="ai-use-library"> Use my library</label>
             <label class="tiny muted" title="Retrieve your own notes, highlights and clips, and cite them as yours">
@@ -697,57 +966,64 @@
 
     <!-- ===================================================== AI SETTINGS -->
     <div class="view" id="v-aisettings">
-      <div class="store-head">
-        <h2>AI</h2>
-        <div class="tiny muted" id="ai-settings-summary"></div>
+      <div class="view-head">
+        <h2>AI <span class="view-sub">Providers and API keys.</span> <span id="ai-settings-summary" class="tiny muted"></span></h2>
       </div>
-      <div class="store-body">
-        <div class="store-side" id="ai-provider-side"></div>
-        <div class="store-main" id="ai-provider-main"></div>
+      <div class="view-col">
+        <div class="store-body">
+          <div class="store-side" id="ai-provider-side"></div>
+          <div class="store-main" id="ai-provider-main"></div>
+        </div>
       </div>
     </div>
 
+
+
+  <div class="modal-bg" id="modal-bg" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal"><h3 id="modal-title"></h3><div class="body" id="modal-body"></div>
+    <div class="foot" id="modal-foot"></div></div>
   </div>
-</div>
 
-<div class="modal-bg" id="modal-bg" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-  <div class="modal"><h3 id="modal-title"></h3><div class="body" id="modal-body"></div>
-  <div class="foot" id="modal-foot"></div></div>
-</div>
+  <div id="popup"></div>
+  <div class="refsugg" id="refsugg" style="display:none"></div>
 
-<div id="popup"></div>
-<div class="refsugg" id="refsugg" style="display:none"></div>
-<input type="file" id="fileinput" style="display:none">
-
-<script src="core.js"></script>
-<script src="app-core.js"></script>
-<script src="reader.js"></script>
-<script src="cite.js"></script>
-<script src="study-pre.js"></script>
-<script src="study.js?v=5"></script>
-<script src="panes.js"></script>
-<script src="speech.js"></script>
-<script src="appearance.js"></script>
-<script src="popup.js"></script>
-<script src="workspace.js"></script>
-<script src="library.js?v=4"></script>
-<script src="tools-misc.js?v=2"></script>
-<script src="tools-sermon.js?v=2"></script>
-<script src="tools-plans.js?v=2"></script>
-<script src="tools-prayer.js?v=2"></script>
-<script src="tools-clippings.js?v=2"></script>
-<script src="tools-diagram.js?v=2"></script>
-<script src="tools-bind.js?v=3"></script>
-<script src="tools-preach.js?v=2"></script>
-<script src="tools-selcard.js?v=2"></script>
-<script src="tools-flashcards.js?v=2"></script>
-<script src="tools-wordlists.js?v=2"></script>
-<script src="tools-outlines.js?v=2"></script>
-<script src="tools-flows.js?v=2"></script>
-<script src="tools-translate.js?v=2"></script>
-<script src="tools-catalogue.js?v=2"></script>
-<script src="tools-sync.js?v=2"></script>
-<script src="ai.js"></script>
-<script src="tools-boot.js"></script>
+  <script src="core.js?v=10"></script>
+  <script src="app-core.js?v=6"></script>
+  <script src="print.js"></script>
+  <script src="reader.js?v=2"></script>
+  <script src="cite.js"></script>
+  <script src="study-pre.js"></script>
+  <script src="study.js?v=6"></script>
+  <script src="panes.js"></script>
+  <script src="speech.js"></script>
+  <script src="appearance.js"></script>
+  <script src="popup.js"></script>
+  <script src="workspace.js?v=6"></script>
+  <script src="library.js?v=6"></script>
+  <script src="tools-misc.js?v=2"></script>
+  <script src="tools-sermon.js?v=3"></script>
+  <script src="tools-plans.js?v=2"></script>
+  <script src="tools-devotion.js?v=2"></script>
+  <script src="devotional-context.js?v=1"></script>
+  <script src="tools-prayer.js?v=2"></script>
+  <script src="tools-clippings.js?v=2"></script>
+  <script src="tools-diagram.js?v=2"></script>
+  <script src="tools-bind.js?v=4"></script>
+  <script src="tools-preach.js?v=2"></script>
+  <script src="tools-selcard.js?v=2"></script>
+  <script src="tools-flashcards.js?v=2"></script>
+  <script src="tools-wordlists.js?v=3"></script>
+  <script src="tools-outlines.js?v=2"></script>
+  <script src="tools-flows.js?v=2"></script>
+  <script src="tools-translate.js?v=2"></script>
+  <script src="tools-catalogue.js?v=2"></script>
+  <script src="tools-sync.js?v=3"></script>
+  <script src="tools-logs.js?v=1"></script>
+  <script src="import-wizard.js?v=3"></script>
+  <script src="favorites.js"></script>
+  <script src="canvas.js"></script>
+  <script src="ai.js"></script>
+  <script src="tour.js"></script>
+  <script src="tools-boot.js"></script>
 </body>
 </html>

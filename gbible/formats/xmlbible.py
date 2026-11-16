@@ -69,12 +69,12 @@ def sniff(data: bytes) -> str:
 _USFX_SKIP = ("ve", "note", "hi", "toc", "id", "p", "s", "h", "book", "bk",
               "lb", "ms", "sl", "sr", "fig", "fr", "ft", "table", "thead",
               "tbody", "row", "cell", "caption", "alt", "list", "item")
-_OSIS_SKIP = ("note", "hi", "header", "title", "transChange", "figure",
+_OSIS_SKIP = ("note", "hi", "header", "title", "figure",
               "fig", "list", "lb", "milestone", "figure", "table")
 
 
 class _State:
-    __slots__ = ("book", "chapter", "verse", "segs", "title")
+    __slots__ = ("book", "chapter", "verse", "segs", "title", "red_ids")
 
     def __init__(self):
         self.book = ""
@@ -82,6 +82,10 @@ class _State:
         self.verse = 0
         self.segs: list = []
         self.title = ""
+        # sID values of quotation milestones open in Jesus' name.  A quote can
+        # span verses; the list lives on the state, not the call, so the words
+        # stay red until the matching <q eID=.../> arrives.
+        self.red_ids: list = []
 
 
 def _flush(st, emit):
@@ -238,8 +242,9 @@ def _osis_nums(el, want: int):
 
 def _osis_walk(el, st, emit, red=False):
     if (el.text or "").strip():
-        st.segs.append(Seg("red" if red else "text", el.text))
+        st.segs.append(Seg("red" if (red or st.red_ids) else "text", el.text))
     for child in list(el):
+        is_red = red or bool(st.red_ids)
         tag = _local(child.tag)
         if tag == "chapter":
             _flush(st, emit)
@@ -250,7 +255,8 @@ def _osis_walk(el, st, emit, red=False):
             # it are never visited and the document yields no units at all.
             _osis_walk(child, st, emit, red=red)
             if child.tail:
-                st.segs.append(Seg("red" if red else "text", child.tail))
+                st.segs.append(Seg("red" if (red or st.red_ids) else "text",
+                                   child.tail))
         elif tag == "verse":
             if child.get("eID") and not child.get("osisID"):
                 # A closing milestone for the verse just read.  It ends the verse
@@ -263,11 +269,13 @@ def _osis_walk(el, st, emit, red=False):
             if list(child):
                 _osis_walk(child, st, emit, red=red)  # <w>, <note>, ... inside
             elif child.text:
-                st.segs.append(Seg("red" if red else "text", child.text))
+                st.segs.append(Seg("red" if (red or st.red_ids) else "text",
+                                   child.text))
             # An OSIS verse is a milestone: <verse osisID="Gen.1.1"/>In the
             # beginning...  -- the words are the element's tail, not its text.
             if child.tail:
-                st.segs.append(Seg("red" if red else "text", child.tail))
+                st.segs.append(Seg("red" if (red or st.red_ids) else "text",
+                                   child.tail))
         elif tag == "note":
             body = " ".join("".join(child.itertext()).split())
             if body:
@@ -276,27 +284,55 @@ def _osis_walk(el, st, emit, red=False):
                                    child.get("type") or "explanation",
                                    {"placement": child.get("placement", "foot")}))
             if child.tail:
-                st.segs.append(Seg("red" if red else "text", child.tail))
-        elif tag == "q" and _speaker_is_jesus(child.get("who", "")):
-            _osis_walk(child, st, emit, red=True)
-            if child.tail:
-                st.segs.append(Seg("red" if red else "text", child.tail))
+                st.segs.append(Seg("red" if (red or st.red_ids) else "text",
+                                   child.tail))
+        elif tag == "q":
+            who = child.get("who", "")
+            if _speaker_is_jesus(who):
+                if child.get("sID"):
+                    # Milestone form:
+                    #   <q who="Jesus" sID="M1" marker=""/>the words<q eID="M1"/>
+                    st.red_ids.append(child.get("sID"))
+                    if child.tail:
+                        st.segs.append(Seg("red", child.tail))
+                else:
+                    # Container form: <q who="Jesus">the words</q>
+                    _osis_walk(child, st, emit, red=True)
+                    if child.tail:
+                        st.segs.append(Seg("text", child.tail))
+            elif child.get("eID") and not who:
+                # Closing milestone of a Jesus quotation.  Remove it; after it,
+                # the text is narration again unless another red scope is open.
+                eid = child.get("eID")
+                if eid in st.red_ids:
+                    st.red_ids.remove(eid)
+                if child.tail:
+                    st.segs.append(Seg("text" if not st.red_ids else "red",
+                                       child.tail))
+            else:
+                _osis_walk(child, st, emit, red=red)
+                if child.tail:
+                    st.segs.append(Seg("red" if (red or st.red_ids) else "text",
+                                       child.tail))
         elif tag in _OSIS_SKIP:
             if child.tail:
-                st.segs.append(Seg("red" if red else "text", child.tail))
+                st.segs.append(Seg("red" if (red or st.red_ids) else "text",
+                                   child.tail))
         elif tag == "w":
             txt = "".join(child.itertext())
             if txt:
                 snum = (child.get("strongRef") or child.get("s") or "").strip()
                 st.segs.append(Seg("strongs" if snum else "text", txt, snum,
                                    lemma=(child.get("lemma") or "").strip(),
-                                   attrs={"wj": True} if red else {}))
+                                   attrs={"wj": True} if (red or st.red_ids) else {}))
             if child.tail:
-                st.segs.append(Seg("red" if red else "text", child.tail))
+                st.segs.append(Seg("red" if (red or st.red_ids) else "text",
+                                   child.tail))
         else:
             _osis_walk(child, st, emit, red=red)
             if child.tail:
-                st.segs.append(Seg("red" if red else "text", child.tail))
+                st.segs.append(Seg("red" if (red or st.red_ids) else "text",
+                                   child.tail))
 
 
 def _speaker_is_jesus(raw: str) -> bool:

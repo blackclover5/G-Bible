@@ -24,8 +24,11 @@ const WordLists = {
     if (!this.lists.length) {
       host.innerHTML = '<div class="empty">A word list keeps every place a word '
         + 'occurs, so it is still there tomorrow.<br><br>'
-        + 'Make one from any search result, from a Strong\'s number, or from a '
-        + 'morphology code — right-click a hit, or use <b>New</b> above.</div>';
+        + 'To make one: run a search, then choose <b>Keep as a word list</b> '
+        + 'under the results — or right-click any word and choose '
+        + '<b>Every occurrence of \u201c…\u201d as a word list</b>. '
+        + 'A list built from a word re-runs itself each time it opens, so it '
+        + 'keeps finding occurrences in books installed later.</div>';
       return;
     }
     if (!this.current || !this.lists.some(l => l.id === this.current)) {

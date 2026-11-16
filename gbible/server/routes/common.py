@@ -172,7 +172,7 @@ def gloss_for(num: str) -> str:
 
 
 def _item_dict(i) -> dict:
-    """Item carries a non-JSON _segs cache; everything else is plain data."""
+    """Internal, underscore-prefixed extras stay server-side; the client gets plain data."""
     return {"key": i.key, "label": i.label, "title": i.title, "text": i.text,
             "html": i.html, "extra": {k: v for k, v in (i.extra or {}).items()
                                       if not k.startswith("_")}}

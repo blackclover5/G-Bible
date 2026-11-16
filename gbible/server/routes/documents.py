@@ -189,6 +189,25 @@ def _sense_for(parts, q):
         lim = 12
     return _ok(**_se.senses_for(q.get("num", ""), lim))
 
+@endpoint("sense/domains")
+def _sense_domains(parts, q):
+    from ... import study as _study
+    try:
+        lim = int(q.get("limit") or 12)
+    except ValueError:
+        lim = 12
+    return _ok(**_study.senses_domains(q.get("num", ""), lim))
+
+
+@endpoint("sense/occurrences")
+def _sense_occurrences(parts, q):
+    from ... import study as _study
+    try:
+        lim = int(q.get("limit") or 60)
+    except ValueError:
+        lim = 60
+    return _ok(**_study.sense_occurrences(q.get("num", ""), q.get("code", ""), lim))
+
 
 @endpoint("apparatus/collate")
 def _apparatus_collate(parts, q):
@@ -307,7 +326,7 @@ def _highlight_palettes(parts, q):
     return _ok(**docs.highlight_palettes())
 
 
-# Pack 6: reader editions, pronunciation guide, outline export, ribbons.
+# Pack 6: reader editions, pronunciation guide, outline export.
 @endpoint("reader/edition")
 def _reader_edition(parts, q):
     if q.get("preset"):
@@ -328,15 +347,6 @@ def _pronounce_guide(parts, q):
 @endpoint("export/outline")
 def _export_outline(parts, q):
     return _ok(**docs.export_outline_doc(q.get("ref", "")))
-
-
-@endpoint("reading/ribbons")
-def _reading_ribbons(parts, q):
-    try:
-        ch = int(q.get("chapter") or 0)
-    except ValueError:
-        ch = 0
-    return _ok(**docs.reading_ribbons(q.get("book", ""), ch))
 
 
 @endpoint("passagelist/from_refs")
@@ -651,6 +661,7 @@ def _study_morph(parts, q):
     """Morph search over the tagged original-language texts."""
     return study.morph_search(conn=db.connect(), code=q.get("code", ""),
                               module_id=q.get("module_id", ""),
+                              ref=q.get("ref", ""),
                               limit=int(q.get("limit") or 400))
 
 

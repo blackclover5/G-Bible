@@ -317,13 +317,3 @@ def completeness(module_id: str) -> dict:
     return out
 
 
-def truncated_bibles() -> list:
-    """Every installed Bible that is systematically incomplete."""
-    out = []
-    for m in library.list_all():
-        if m.type != "Bible":
-            continue
-        c = completeness(m.id)
-        if c.get("truncated"):
-            out.append(c)
-    return out

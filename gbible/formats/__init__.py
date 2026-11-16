@@ -464,19 +464,11 @@ def load_usfm_zip(data: bytes, *, keep_notes: bool = True) -> Iterator[UnitIn]:
                              keep_notes=keep_notes)
 
 
-def load_usfm_file(path: Path, *, keep_notes: bool = True) -> Iterator[UnitIn]:
-    return usfm.usfm_from_dir(path.parent, keep_notes=keep_notes)
-
-
 def load_epub(data: bytes, *, kind: str = "Book", source: str = ""
               ) -> tuple[dict, Iterator[UnitIn]]:
     """A personal book.  Returns (metadata, units) -- the metadata is the
     EPUB's own, so author, language and rights come from the file."""
     return epub.load(data, kind=kind, source=source)
-
-
-def load_epub_file(path: Path, **kw) -> tuple[dict, Iterator[UnitIn]]:
-    return epub.load_file(path, **kw)
 
 
 def load_text(path: Path, *, kind: str = "", source: str = "") -> Iterator[UnitIn]:
@@ -489,12 +481,6 @@ def load_text(path: Path, *, kind: str = "", source: str = "") -> Iterator[UnitI
     else:
         k = "Book"
     return plain.units_from_articles(raw, kind=k, source=source or path.stem)
-
-
-def load_plain_bytes(data: bytes, *, kind: str = "Book", source: str = "",
-                     encoding: str = "utf-8") -> Iterator[UnitIn]:
-    raw = data.decode(sword._pyenc(encoding), "replace")
-    return plain.units_from_articles(raw, kind=kind, source=source)
 
 
 def load_wikitext(pages: list[tuple[str, str]], *, kind: str = "Commentary"

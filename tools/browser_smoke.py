@@ -81,7 +81,15 @@ def main() -> int:
                 page.locator("#status").get_by_text(
                     "1 module", exact=False
                 ).wait_for()
-                page.get_by_role("button", name="Skip").click()
+                page.get_by_role("button", name="Skip tour", exact=True).click()
+                recommended = page.get_by_role(
+                    "dialog", name="Install recommended modules?"
+                )
+                recommended.wait_for()
+                recommended.get_by_role(
+                    "button", name="Skip", exact=True
+                ).click()
+                page.locator("#modal-bg").wait_for(state="hidden")
 
                 page.locator('#nav button[data-view="search"]').click()
                 page.locator("#sq").fill("browserfixture")

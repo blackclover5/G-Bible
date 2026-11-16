@@ -484,7 +484,10 @@ const Study = {
     // First, because it is the thing a reader opening a guide is most likely
     // to want, and the only section that can answer a question about the
     // subject rather than list what is on it.
-    const first = $('.st-sec', host);
+    // The $ helper never returns real null -- it returns a _safeNull proxy,
+    // which insertBefore() rejects with "Argument 2 does not implement
+    // interface Node".  Ask the DOM directly instead.
+    const first = host.querySelector('.st-sec');
     if (first) host.insertBefore(sec, first);
     else host.appendChild(sec);
 
@@ -2643,6 +2646,26 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
         + '<div class="tiny muted">' + esc(s.note || '') + '</div>';
       host.appendChild(d);
     }).catch(() => {});
+    /* Louw–Nida sense domains from the SBLGNT data (CC BY 4.0):
+     * word-level sense tags no English or Hebrew module has. */
+    api('sense/domains', { num, limit: 10 }).then(ds => {
+      if (!ds || !ds.ok || !(ds.domains || []).length) return;
+      const host = $('#modal-body');
+      if (!host) return;
+      const d = document.createElement('div');
+      d.className = 'st-senses';
+      d.innerHTML = '<div class="st-head">Louw–Nida senses <span class="muted tiny">'
+        + ds.domains.length + ' domains</span></div>'
+        + '<div class="morph-samples" style="margin-top:2px">'
+        + ds.domains.map(x => '<button class="chip" data-sense="' + esc(x.sense) + '">'
+          + esc(x.sense) + ' <span class="muted">' + x.count.toLocaleString() + '×</span></button>').join(' ')
+        + '</div>'
+        + '<div class="tiny muted" style="margin-top:4px">Louw–Nida domain codes; tap a domain to see every SBLGNT word carrying it.</div>';
+      d.querySelectorAll('[data-sense]').forEach(btn => {
+        btn.onclick = () => this.openSenseOccurrences(num, btn.dataset.sense);
+      });
+      host.appendChild(d);
+    }).catch(() => {});
   },
 
   async openReverse(num, offset) {
@@ -2688,6 +2711,32 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
       e.preventDefault();
       this.openReverse(num, r.next);
     };
+  },
+
+  async openSenseOccurrences(num, code) {
+    Popup.hide();
+    modal('Sense ' + code + ' · ' + num,
+      '<div class="st-loading">Gathering occurrences…</div>',
+      [{ label: 'Close', cls: 'btn' }]);
+    const r = await api('sense/occurrences', { num: num, code: code, limit: 80 });
+    const body = $('#modal-body');
+    if (!r.ok) { body.innerHTML = '<div class="st-body">' + esc(r.error) + '</div>'; return; }
+    let h = '<div class="tiny muted">SBLGNT words of ' + esc(num)
+      + ' tagged with Louw–Nida domain <b>' + esc(code) + '</b> ('
+      + r.occurrences.length + ' occurrences shown, capped at 80).</div>'
+      + '<div class="st-body">'
+      + r.occurrences.map(o => '<div class="st-note"><a href="#" data-ref="'
+          + esc(o.ref) + '" class="pg-ref">' + esc(o.ref) + '</a> <b>' + esc(o.surface)
+          + '</b> <span class="tiny muted">' + esc(o.sense) + '</span></div>').join('')
+      + '</div>';
+    body.innerHTML = h;
+    body.querySelectorAll('.pg-ref').forEach(a => {
+      a.onclick = (e) => {
+        e.preventDefault();
+        App.show('workspace');
+        Reader.openRefAnywhere(a.dataset.ref);
+      };
+    });
   },
 
   async openConcordance(num, offset) {
@@ -2851,7 +2900,18 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
       items.push({ label: 'Copy citation with attribution',
                    fn: () => Cite.copy(m.id, ref) });
       items.push({ label: 'What this verse takes from the Old Testament',
-                   fn: () => { App.show('ntuseot'); Study.loadNtuSeOt(); } });
+                   fn: async () => {
+                      App.show('ntuseot');
+                      await Study.loadNtuSeOt();
+                      const ntSel = $('#ou-nt'), otSel = $('#ou-ot');
+                      if (ntSel && m && m.id) {
+                        const opt = [...ntSel.options].find(o => o.value === m.id);
+                        if (opt) { ntSel.value = m.id; if (otSel) otSel.value = m.id; }
+                      }
+                      const vref = $('#ou-vref');
+                      if (vref) vref.value = ref;
+                      Study.borrowed(ntSel ? ntSel.value : '', otSel ? otSel.value : '');
+                    } });
       items.push({ label: 'Concordance for this chapter',
                    // Set the fields *before* switching view: App.show() is what
                    // triggers the load, so switching first fetched the defaults
@@ -2975,5 +3035,4 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
  * splice in <mark> would destroy the Strong's <span>s and the verse-number
  * links the reader just built, and would have to re-escape everything in
  * between.  Splitting text nodes touches nothing else.
- */
 /* =========================================================== Info pane */

@@ -1,3 +1,5 @@
+import uuid
+
 from .common import *
 
 # ---------------------------------------------------------------- highlights
@@ -23,7 +25,6 @@ def _verse_of(module_id: str, unit_key: str):
 def _highlights(parts, q):
     conn = db.connect()
     if q.get("action") == "add":
-        import uuid
         book, chapter, verse = _verse_of(q.get("id", ""), q.get("key", ""))
         conn.execute("INSERT OR REPLACE INTO highlight(id,module_id,unit_key,"
                      "quote,color,note,label,created_at,book,chapter,verse) "

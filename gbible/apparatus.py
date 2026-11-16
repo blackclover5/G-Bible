@@ -132,11 +132,12 @@ def collate(ref: str, module_ids: list[str] | None = None) -> dict:
             "note": "",
         })
     scored = [c for c in compared if c["agreement"] is not None]
-    # Only speak for the whole set when one family is the whole set.  Picking
-    # the "largest" and labelling it as the overall figure would be inventing a
-    # number that nobody measured.
-    single = scored[0] if len(scored) == 1 else None
     langs = sorted({e["lang"] for e in eds if e["lang"]})
+    # Only speak for the whole set when one family is the whole set, AND one
+    # language is the whole language set.  A single figure drawn from, say,
+    # the English editions while a Greek edition is installed measures a
+    # fraction of what was installed; it does not measure the library.
+    single = scored[0] if len(scored) == 1 and len(langs) <= 1 else None
     note = ""
     if len(langs) > 1:
         note += ("Editions are grouped by language and aligned within each "

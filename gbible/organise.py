@@ -168,8 +168,7 @@ def _module_hit(m, field: str, val: str, mytags: list[str]) -> bool:
         return any(val in (t or "").lower() for t in mytags)
     if field in ("has", "feature"):
         feats = {"strongs": m.has_strongs, "morph": m.has_morph,
-                 "notes": m.has_notes, "xref": m.has_xref,
-                 "redletter": m.has_redletter}
+                 "notes": m.has_notes, "xref": m.has_xref}
         return bool(feats.get(val))
     attr = _RULE_FIELDS.get(field, "")
     if attr == "subject":
@@ -204,6 +203,16 @@ def collection_members(collection_id: str) -> list[str]:
 
 def collection_items(collection_id: str) -> list[str]:
     return collection_members(collection_id)
+
+
+def collection_pinned(collection_id: str) -> list[str]:
+    """Only the manually pinned module ids for a collection, not the live
+    (rule-derived) members.  Used by sync so a dynamic collection does not get
+    its derived members frozen into pinned rows on another machine."""
+    conn = db.connect()
+    return [r["module_id"] for r in conn.execute(
+        "SELECT module_id FROM collection_item WHERE collection_id=? "
+        "ORDER BY position", (collection_id,))]
 
 
 def save_collection(name: str, note: str = "", modules: list | None = None,
@@ -391,12 +400,13 @@ def save_template(name: str, query: str, options: dict | None = None) -> dict:
     q = (query or "").strip()
     if not q:
         return {"error": "a template needs a query"}
-    existing = conn.execute(
-        "SELECT id FROM search_template WHERE name=? AND query=?", (name, q)
-    ).fetchone()
-    tid = existing["id"] if existing else _id("st")
+    # Each save creates its own row.  Collapsing by (name, query) surprised
+    # users who expected a second save to keep a second copy, so a template is
+    # now identified only by its id; identical saves produce distinct rows that
+    # the user can tell apart or delete.
+    tid = _id("st")
     conn.execute(
-        "INSERT OR REPLACE INTO search_template(id,name,query,options,created_at)"
+        "INSERT INTO search_template(id,name,query,options,created_at)"
         " VALUES(?,?,?,?,?)",
         (tid, name, q, json.dumps(options or {}), time.time()))
     conn.commit()
@@ -541,6 +551,8 @@ def _morph_chart(arg: str) -> dict:
 
     # A passage: John 3:16, or a unit key.
     unit = _unit_for(arg)
+    if not unit:
+        unit = _unit_for(arg, tagged=False)
     if not unit:
         return {"ok": False,
                 "error": f"{arg!r} is not a passage this library has",
@@ -808,8 +820,17 @@ def notebook_notes(notebook_id: str) -> list[dict]:
     if nb is None:
         return []
     from . import notes as _notes
-    items = _notes.list_notes() if hasattr(_notes, "list_notes") else []
-    if not items and hasattr(_notes, "list"):
+    if hasattr(_notes, "listing"):
+        try:
+            items = _notes.listing(limit=10000)
+        except Exception:  # noqa: BLE001
+            items = []
+    elif hasattr(_notes, "list_notes"):
+        try:
+            items = _notes.list_notes()
+        except Exception:  # noqa: BLE001
+            items = []
+    elif hasattr(_notes, "list"):
         try:
             items = _notes.list()
         except Exception:  # noqa: BLE001
@@ -841,7 +862,7 @@ def library_query(q: str) -> list[dict]:
 
     Fields: title/name, author, type, subject, lang/language, source,
     publisher, series(version), license/licence, mytag/tag, has:strongs|morph|
-    notes|xref|redletter. Bare words match name/author/type. Shares the same
+    notes|xref. Bare words match name/author/type. Shares the same
     matcher as collection rules so the two cannot disagree.
     """
     mods = library.list_all(order="priority DESC, name ASC")

@@ -1019,15 +1019,21 @@ def _ws_resolve_transclusion(title: str, text: str, prog=None) -> str:
         lo, hi = int(frm), int(to)
         if hi < lo or hi - lo > 400:          # a whole book, not a section
             continue
+        section = a.get("fromsection") or a.get("tosection") or ""
         if prog is not None:
-            prog("Transcluded", note=f"{index} pp.{lo}-{hi}")
+            prog("Transcluded", note=f"{index} pp.{lo}-{hi} {section}")
         wanted = [f"Page:{index}/{n}" for n in range(lo, hi + 1)]
         missing = [w for w in wanted if w not in _SCAN_CACHE]
         if missing:
             _SCAN_CACHE.update(_ws_texts(missing))
         for w in wanted:
             got = _SCAN_CACHE.get(w)
-            if got:
+            if not got:
+                continue
+            if section:
+                parts.append(_clip_section(got, section, w == wanted[0],
+                                           w == wanted[-1]))
+            else:
                 parts.append(got)
     return "\n".join(parts) if parts else text
 
@@ -1705,13 +1711,18 @@ def _install_geo(it, mid, prog, workdir, fmt):
 # --------------------------------------------------------------------------
 
 @handler("local")
-def _install_local(it, mid, prog, workdir, fmt):
-    path = Path(it.get("path") or it.get("download_url") or "")
-    if not path.exists():
-        raise InstallErrorFailed(f"file not found: {path}")
-    data = path.read_bytes() if path.is_file() else b""
+def _import_local_bytes(data: bytes, *, path: Path, it: dict,
+                        prog=None, workdir: Path | None = None) -> tuple:
+    """Sniff bytes and convert them to (units, extra).
+
+    Split out from _install_local so the re-index tool can rebuild a module
+    from the bytes already on disk with exactly the same dispatch as an
+    upload, instead of a second copy of the table that drifts.
+    """
+    if prog is None:
+        def prog(_msg, note=""):  # re-importing outside an install: stay quiet
+            pass
     kind = formats.sniff(data, path=path, name=path.name)
-    prog("Reading", note=kind)
     extra = {"format": kind}
     if kind == "sword-zip":
         conf, units, meta = formats.load_sword_zip(data)
@@ -1726,7 +1737,26 @@ def _install_local(it, mid, prog, workdir, fmt):
                                if k in ("ModName", "Version", "SourceType", "ModDrv")},
         })
     elif kind == "usfm":
-        units = formats.load_usfm_zip(data)
+        if data[:2] == b"PK":
+            units = formats.load_usfm_zip(data)
+        else:
+            units = usfm.usfm_from_text(data.decode("utf-8", "replace"),
+                                        name=path.name)
+    elif kind in ("osis", "usfx"):
+        if kind == "osis":
+            verses, _meta = formats.xmlbible.load_osis(data)
+        else:
+            verses, _meta = formats.xmlbible.load_usfx(data)
+
+        def _gen():
+            for v in verses:
+                yield UnitIn(key=v["key"], label=v["label"],
+                             segs=v.get("segs") or [Seg("text", v["text"])],
+                             title=f'{v["book"]} {v["chapter"]}',
+                             book=v["book"], chapter=v["chapter"],
+                             verse=v["verse"], markup=v["markup"])
+
+        units = _gen()
     elif kind == "epub":
         meta, units = formats.load_epub(data,
                                         kind=it.get("category") or "Book",
@@ -1756,8 +1786,16 @@ def _install_local(it, mid, prog, workdir, fmt):
         extra["abbrev"] = str(details.get("Abbreviation", ""))[:32]
         extra["about"] = markup.parse_rtf(str(details.get("Comments", "")))[:2000]
     elif kind == "esword-legacy":
+        if workdir is None:
+            raise InstallErrorFailed(
+                "legacy e-Sword uploads cannot be re-indexed from here; "
+                "remove the module and import it again")
         units = _legacy_esword(path, prog, workdir)
     elif kind in ("image",):
+        if workdir is None:
+            raise InstallErrorFailed(
+                "image modules cannot be re-indexed from here; "
+                "remove the module and import it again")
         dest = workdir / path.name
         dest.write_bytes(data)
         segs = [Seg("img", path.name, "", "", {"alt": path.stem})]
@@ -1805,6 +1843,17 @@ def _install_local(it, mid, prog, workdir, fmt):
     else:
         units = formats.load_text(path, kind=it.get("category", ""),
                                   source=path.stem)
+    return units, extra
+
+
+def _install_local(it, mid, prog, workdir, fmt):
+    path = Path(it.get("path") or it.get("download_url") or "")
+    if not path.exists():
+        raise InstallErrorFailed(f"file not found: {path}")
+    data = path.read_bytes() if path.is_file() else b""
+    prog("Reading", note=formats.sniff(data, path=path, name=path.name))
+    units, extra = _import_local_bytes(data, path=path, it=it,
+                                       prog=prog, workdir=workdir)
     if path.is_file():
         (workdir / (path.name + ".orig")).write_bytes(data)
     return units, extra
@@ -1872,3 +1921,26 @@ def _kml_places(path: Path) -> Iterator[UnitIn]:
     if not out:
         raise InstallErrorFailed("no placemarks in KML")
     return iter(out)
+
+
+_BEGIN = re.compile(r'<section begin=["\']?(\w+)["\']?\s*/?\s*>', re.I)
+_END = re.compile(r'<section end=["\']?(\w+)["\']?\s*/?\s*>', re.I)
+
+def _clip_section(page_text: str, name: str, is_first: bool, is_last: bool) -> str:
+    """Keep only the portion of a djvu page that carries section `name`.
+
+    A section's pages are a contiguous run: the first page opens with
+    `<section begin=name />`, the last page closes with
+    `<section end=name />`, and every page in between is wholly that
+    section.  Page-quality `<noinclude>` chrome belongs to no section
+    and is dropped.
+    """
+    if is_first:
+        m = _BEGIN.search(page_text)
+        if m and m.group(1) == name:
+            page_text = page_text[m.end():]
+    if is_last:
+        m = _END.search(page_text)
+        if m and m.group(1) == name:
+            page_text = page_text[:m.start()]
+    return page_text

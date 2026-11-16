@@ -67,3 +67,6 @@ Icon.jpg
 
 # OS noise
 Thumbs.db
+
+# Rust build artifacts (root or nested, e.g. rust/target/)
+target/

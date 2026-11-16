@@ -1,0 +1,15 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "g-bible"
+version = "1.0.0"
+description = "G-Bible desktop Bible study application"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+[tool.maturin]
+manifest-path = "rust/Cargo.toml"
+module-name = "_gbible_rust_core"
+features = ["pyo3/extension-module"]

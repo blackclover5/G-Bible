@@ -39,8 +39,13 @@ def _devotional(day: str) -> list[dict]:
                          "AND key=?", (m.id, key)).fetchone()
         if r is None or not (r["text"] or "").strip():
             continue
+        meta = m.raw_meta or {}
+        generated = meta.get("generated_by") == "devotion-creator"
         out.append({"module_id": m.id, "module": m.name, "title": r["title"] or day,
-                    "text": (r["text"] or "")[:2400]})
+                    "text": (r["text"] or "")[:2400],
+                    "plan_id": (f"dev:{m.id}" if generated else ""),
+                    "source_id": (meta.get("source_id", "") if generated else ""),
+                    "source_name": (meta.get("source_name", "") if generated else "")})
     return out
 
 

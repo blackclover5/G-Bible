@@ -461,8 +461,7 @@ const SermonHub = {
       + '<div class="row" style="gap:8px;flex-wrap:wrap">'
       + '<button class="btn primary" id="sm-home-sermons">Open Sermons</button>'
       + '<button class="btn" id="sm-home-editor">Open Sermon Editor</button>'
-      + '</div></div>'
-      + '<div class="tiny muted">Use the menu above to switch between Sermon Manager, Sermons, and Sermon Editor. You can return here at any time by selecting Sermon Manager.</div>';
+      + '</div></div>';
     const sermonsBtn = body.querySelector('#sm-home-sermons');
     const editorBtn = body.querySelector('#sm-home-editor');
     if (sermonsBtn) sermonsBtn.onclick = () => { $('#sm-tab').value = 'sermons'; this.load(); };
