@@ -1,4 +1,8 @@
-# G-Bible
+##A new update coming Wednesday.
+
+Fixes the Update on the App Image and new Features. Windows APP soon!
+
+#G-Bible
 
 ### Your Bible. Your Library. Your Study.
 
