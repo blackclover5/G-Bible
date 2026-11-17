@@ -1,6 +1,6 @@
 **A new update coming Wednesday.**
 
-Fixes the Update on the App Image and new Features. Windows APP soon!
+Fixes the Update on the AppImage and new Features. Windows APP soon!
 
 **G-Bible**
 
