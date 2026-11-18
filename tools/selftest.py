@@ -132,6 +132,13 @@ class Skip:
         self.reason = reason
 
 
+def _missing_required_readers(seen: set[str]) -> set[str]:
+    required = {"verse", "article", "topic", "date", "book", "image"}
+    if "book" not in seen:
+        required.remove("book")
+    return required - seen
+
+
 def check(name: str, fn):
     t0 = time.time()
     try:
@@ -736,10 +743,13 @@ def run() -> bool:
                 empty.append(f"{m.name} (asked at {cur})")
         assert not bad, bad
         assert not empty, f"readers returned nothing: {empty}"
-        assert {"verse", "article", "topic", "date", "book", "image"} <= seen, \
-            f"only exercised {seen}"
-        return f"all {len(mods)} modules readable across "\
-               f"{len(seen)} reader kinds"
+        missing_readers = _missing_required_readers(seen)
+        assert not missing_readers, \
+            f"required reader kinds not exercised: {missing_readers}"
+        detail = f"all {len(mods)} modules readable across {len(seen)} reader kinds"
+        if "book" not in seen:
+            detail += "; Book reader not installed (optional Gutenberg seed unavailable)"
+        return detail
     check("Every installed module is readable", t_all_readers)
 
     # ------------------------------------------------ front end, statically

@@ -5,9 +5,18 @@ import urllib.error
 from unittest.mock import Mock, patch
 
 from tools.seed import _install_seed_item, _is_transient_gutenberg_error
+from tools.selftest import _missing_required_readers
 
 
 class SeedRetryTests(unittest.TestCase):
+    def test_missing_book_is_optional_but_other_readers_remain_required(self):
+        seen = {"verse", "article", "topic", "date", "image"}
+        self.assertEqual(_missing_required_readers(seen), set())
+        self.assertEqual(
+            _missing_required_readers({"verse", "article", "date", "image"}),
+            {"topic"},
+        )
+
     def test_gutenberg_503_retries_and_succeeds(self):
         store = Mock()
         store.install.side_effect = [
