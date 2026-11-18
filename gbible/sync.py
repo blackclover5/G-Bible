@@ -908,8 +908,15 @@ def save_config(cfg: dict) -> dict:
     if cfg.get("passphrase"):
         save_credentials(out["name"], cfg.get("password") or "")
         creds = _read_credentials()
-        creds.setdefault(out["name"], {})["passphrase"] = cfg.get("passphrase")
+        passphrase = str(cfg.get("passphrase") or "")
+        if out["encrypt"] and len(passphrase) < 12:
+            raise SyncError("The encryption passphrase must be at least 12 characters.")
+        creds.setdefault(out["name"], {})["passphrase"] = passphrase
         _write_credentials(creds)
+    if out["encrypt"]:
+        passphrase = encryption_passphrase(out)
+        if len(passphrase) < 12:
+            raise SyncError("Encryption is on but no valid passphrase is set.")
     if kind == "filesystem":
         out["path"] = (cfg.get("path") or "").strip()
     elif kind in ("webdav", "nextcloud"):
@@ -1001,7 +1008,7 @@ def run(force: bool = False) -> dict:
             from . import synctargets
             from . import gbz as _gbz
             target = synctargets.from_config(cfg)
-            out = _gbz.create_gbz(appearance=None, include_ai=True)
+            out = _gbz.create_gbz(appearance=None, include_ai=False)
             data = out["data"]
             if cfg.get("encrypt"):
                 pw = encryption_passphrase(cfg)

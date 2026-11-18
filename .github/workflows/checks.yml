@@ -10,6 +10,19 @@ on:
   pull_request:
 
 jobs:
+  secret-and-source-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Block common secret patterns
+        run: |
+          if rg -n "(AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|sk-[A-Za-z0-9]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]+|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY)" \
+            --hidden --glob '!**/.git/**' --glob '!**/data/**' --glob '!gbible/store/**' .; then
+            echo "Potential secret found in source"
+            exit 1
+          fi
+
   selftest:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -23,11 +36,14 @@ jobs:
           python-version: '3.12'
 
       - name: Check it compiles and imports
-        # Before anything is installed, so that a broken import or a syntax
-        # error is reported as one, and not as a hundred skips.
+        # Check import and syntax errors before installing runtime/test
+        # dependencies, so they are reported directly.
         run: |
           python3 -m compileall -q gbible tools run.py
           python3 -c "import gbible.server.app; print('imports ok')"
+
+      - name: Install test dependencies
+        run: python3 -m pip install -r requirements-test.txt
 
       - name: Run unit tests
         # Fast regression tests for the seams that break quietly:
@@ -38,9 +54,7 @@ jobs:
         run: python3 tools/test_migrations.py
 
       - name: Install browser test dependencies
-        run: |
-          python3 -m pip install -r requirements-test.txt
-          python3 -m playwright install --with-deps chromium
+        run: python3 -m playwright install --with-deps chromium
 
       - name: Install a library to test against
         # One module of every kind, so the checks that need material have

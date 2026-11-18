@@ -279,7 +279,7 @@ def main() -> int:
                 while True:
                     _t.sleep(_hours * 3600)
                     try:
-                        out = _gbz.create_gbz(appearance=None, include_ai=True)
+                        out = _gbz.create_gbz(appearance=None, include_ai=False)
                         stamp = time.strftime("%Y%m%d-%H%M%S")
                         (bdir / f"gbible-backup-{stamp}.gbz").write_bytes(out["data"])
                         # keep only the last 7

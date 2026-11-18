@@ -77,8 +77,9 @@ About → Reset G-Bible, and take a copy of `data/` first.
 or WebDAV/Nextcloud — and it does multi-way merge. But regular consumers will
 be disappointed by anything beyond that:
 
-- **Encryption for sync is not available yet.** It is on the list, not in the
-  box. Don't sync from a device or account you don't trust with plaintext data.
+- **AI credentials are never included in ordinary sync backups.** Encryption
+  protects the rest of the backup when enabled and requires a passphrase on
+  every restoring device.
 - **Large attachments / images / audio do not sync.** Only study data, notes,
   highlights, plans and markers.
 - **Sync participants must have the same G-Bible version.** Don't mix builds or

@@ -35,13 +35,21 @@ def _backup_export(parts, q):
     appearance = q.get("appearance")
     if appearance is not None and not isinstance(appearance, dict):
         appearance = None
+    include_ai = q.get("include_ai") in (1, "1", True, "true")
+    passphrase = str(q.get("passphrase") or "")
+    if include_ai and not passphrase:
+        return _ok(ok=False, error="Including AI credentials requires an encryption passphrase.")
+    if include_ai and len(passphrase) < 12:
+        return _ok(ok=False, error="The encryption passphrase must be at least 12 characters.")
     try:
         out = gbz.create_gbz(appearance=appearance,
-                             include_ai=bool(q.get("include_ai", True)))
+                             include_ai=include_ai,
+                             credential_passphrase=passphrase)
+        data = out["data"]
     except Exception as e:
         return _ok(ok=False, error=f"{type(e).__name__}: {e}")
     return _ok(ok=True, filename=out["filename"], size=out["size"],
-               data_base64=base64.b64encode(out["data"]).decode("ascii"),
+               data_base64=base64.b64encode(data).decode("ascii"),
                counts=out["counts"],
                has_ai_credentials=out["has_ai_credentials"],
                has_appearance=out["has_appearance"],
@@ -65,7 +73,7 @@ def _backup_apply(parts, q):
     try:
         data = _read_path(q)
         out = gbz.restore_gbz(data,
-                              include_ai=bool(q.get("include_ai", True)),
+                              include_ai=q.get("include_ai") in (1, "1", True, "true"),
                               passphrase=q.get("passphrase", ""))
     except Exception as e:
         return _ok(ok=False, error=str(e))

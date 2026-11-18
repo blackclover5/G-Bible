@@ -31,6 +31,9 @@ def _sync_configure(parts, q):
             "password": q.get("password") or "",
             "interval": q.get("interval") or 0,
             "wifi_only": q.get("wifi_only") in (1, "1", True, "true"),
+            "encrypt": q.get("encrypt") in (1, "1", True, "true"),
+            "passphrase": q.get("passphrase") or "",
+            "auto_backup_hours": q.get("auto_backup_hours") or 0,
         })
     except Exception as e:
         return _ok(ok=False, error=str(e))
@@ -116,7 +119,7 @@ def _sync_restore(parts, q):
             return _ok(ok=False,
                        error="This backup is encrypted. Enter the passphrase "
                              "to restore it.")
-        out = gbz.restore_gbz(data, include_ai=True, passphrase=pw)
+        out = gbz.restore_gbz(data, include_ai=False, passphrase=pw)
     except Exception as e:
         return _ok(ok=False, error=str(e))
     return _ok(**out)
