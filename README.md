@@ -57,7 +57,7 @@ New here? Read [**Get started in 5 minutes**](docs/GETTING_STARTED.md) for a gui
 
 ## Honest notes
 
-- This is a **1.0.0** open-source application. This is a Hobby Project that I think Turned out well -— Any issues, please report them in Settings → Logs. Every help is needed.
+- This is a **1.0.1** open-source application. This is a Hobby Project that I think Turned out well -— Any issues, please report them in Settings → Logs. Every help is needed.
 - **Not every Bible marks Jesus' words** — only ones whose own text does (KJV, WEB). See [words of Christ](docs/GETTING_STARTED.md#4-your-first-five-minutes).
 - **Synchronisation is still settling.** It works for folders and WebDAV, but expect rough edges. Don't point it at a library you can't afford to lose teeth to.
 - **AI Assistant is optional and key-driven.** Without your own provider key, nothing happens.

@@ -1,8 +1,8 @@
 # G-Bible — Release Notes
 
-**Version:** 1.0.0
-**Date:** 2026-11-14
-**Status:** First stable release. Free, open source, MIT; no telemetry.
+**Version:** 1.0.1
+**Date:** 2026-11-17
+**Status:** Patch release. Free, open source, MIT; no telemetry.
 
 ---
 
@@ -20,6 +20,12 @@ the OSIS importer no longer discards translator-added text. The full seeded
 self-test passes with zero failures.
 
 ## What's new in this release
+
+### Backup and update hardening
+- Hardened backup credential handling and encrypted backup operations.
+- Added backup security tests and coverage for intermittent Store resources.
+- Improved Gutenberg seed retries when resources are temporarily unavailable.
+- Updated dependency setup and CI coverage for backup tests.
 
 ### Logs
 - A red "N errors found" pill in the top-right header opens **Settings → Logs**, listing G-Bible's own errors (server, sync worker, renderer). Only the app's own faults are logged — not the browser, not extensions. Entries are capped, paths normalised, no personal data.
