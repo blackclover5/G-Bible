@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.1 — backup and update hardening
+
+- Hardened backup credential handling and protected encrypted backup operations.
+- Added backup security coverage and checks for transient Store seed failures.
+- Improved Gutenberg seed retry behavior for temporarily unavailable resources.
+- Updated the README with the latest app and update information.
+
 ## 1.0.0 — out of beta
 
 ### Backups, the G-Bible way — one mechanism, .gbz

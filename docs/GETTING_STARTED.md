@@ -131,7 +131,7 @@ The top bar is your whole map:
 
 ## 6. Honest first impressions
 
-- This is a **1.0.0, open-source** application. It does a great deal and it
+- This is a **1.0.1, open-source** application. It does a great deal and it
    does most of it well, but it is a hobby project, not a commercial product.
   - Occasionally a re-import (or an unfamiliar closing of a module) needs
     re-indexing from its source — easiest from the module's own page.
