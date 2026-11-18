@@ -10,6 +10,19 @@ on:
   pull_request:
 
 jobs:
+  secret-and-source-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Block common secret patterns
+        run: |
+          if rg -n "(AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|sk-[A-Za-z0-9]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]+|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY)" \
+            --hidden --glob '!**/.git/**' --glob '!**/data/**' --glob '!gbible/store/**' .; then
+            echo "Potential secret found in source"
+            exit 1
+          fi
+
   selftest:
     runs-on: ubuntu-latest
     timeout-minutes: 45

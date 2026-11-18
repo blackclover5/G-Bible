@@ -260,6 +260,7 @@ const Sync = {
           + 'exist here will keep their current values — only missing ones are added.'
           + '</div>';
       }
+      this._backupHasCredentials = !!info.has_ai_credentials;
       if (missing.length) {
         h += '<div class="tiny" style="color:var(--amber);margin-top:.5rem">'
           + 'You do not have: ' + esc(missing.join(', ')) + '.</div>'
@@ -288,7 +289,11 @@ const Sync = {
     result.innerHTML = '<div class="tiny">Restoring…</div>';
     const pw = this._backupPassphrase || '';
     this._backupPassphrase = '';
-    const r = await post('backup/apply', { path, passphrase: pw });
+    const r = await post('backup/apply', {
+      path,
+      passphrase: pw,
+      include_ai: this._backupHasCredentials ? 1 : 0,
+    });
     if (!r || r.ok === false) {
       result.innerHTML = '<div class="st-body" style="color:var(--error)">'
         + esc((r && r.error) || 'Restore failed.') + '</div>';
@@ -457,7 +462,7 @@ const Sync = {
     const encWrap = el('div', 'sync-field');
     encWrap.appendChild(encLabel);
     encWrap.appendChild(el('div', 'tiny muted', 'Protects the backup on the target with a passphrase. '
-      + 'The same passphrase must be set on every device that reads it.'));
+      + 'Use at least 12 characters. The same passphrase must be set on every device that reads it.'));
     wrap.appendChild(encWrap);
 
     const encPw = el('input', 'st-lbl'); encPw.type = 'password'; encPw.id = 'sync-enc-pw';

@@ -26,10 +26,10 @@ What restore does, deliberately:
 
 Security note, honestly:
 
-    ``ai-credentials.json`` makes the ``.gbz`` a password-like file.  Anyone
-    who can read it can read every key in it.  Export includes it only when
-    the user asks (default on, with a warning).  Sync *passwords* are never
-    in here — sync-credentials.json is excluded by design, always.
+    ``ai-credentials.json`` makes the ``.gbz`` a password-like file.  Ordinary
+    exports and sync backups exclude credentials unless the caller explicitly
+    opts in and supplies a passphrase.  Sync *passwords* are never in here —
+    sync-credentials.json is excluded by design, always.
 """
 
 from __future__ import annotations
@@ -108,8 +108,9 @@ def _check_members(zf: zipfile.ZipFile) -> list[zipfile.ZipInfo]:
 
 # ------------------------------------------------------------------ export
 
-def create_gbz(*, appearance: dict | None = None, include_ai: bool = True,
-               include_sync_config: bool = True) -> dict:
+def create_gbz(*, appearance: dict | None = None, include_ai: bool = False,
+               include_sync_config: bool = True,
+               credential_passphrase: str = "") -> dict:
     """Build a .gbz backup.  Returns bytes, plus the path the AI keys came
     from so the UI can say exactly what happened."""
     device = _sync.device_id()
@@ -223,8 +224,13 @@ def create_gbz(*, appearance: dict | None = None, include_ai: bool = True,
         for name, (data, perm) in sorted(members.items()):
             _zwrite(zf, name, data, perm)
     filename = time.strftime("gbible-backup-%Y%m%d-%H%M") + GZB_EXT
+    data = buf.getvalue()
+    if include_ai:
+        if not credential_passphrase:
+            raise GzError("AI credentials require an encryption passphrase.")
+        data = encrypt_gbz(data, credential_passphrase)
     return {"ok": True, "filename": filename,
-            "data": buf.getvalue(), "size": len(buf.getvalue()),
+            "data": data, "size": len(data),
             "counts": counts, "has_ai_credentials":
             bool(env["has_ai_credentials"]),
             "has_appearance": bool(appearance), "notes": notes}
@@ -399,10 +405,13 @@ def _remember(conn, kind: str, rid: str, rec: dict, payload: dict) -> None:
          rec.get("base") or ""))
 
 
-def restore_gbz(data: bytes, *, include_ai: bool = True, passphrase: str = "") -> dict:
+def restore_gbz(data: bytes, *, include_ai: bool = False, passphrase: str = "") -> dict:
     """Merge a .gbz backup into the live library.  Additive; never deletes."""
     zf = _open_checked(data, passphrase)
     members = {i.filename: i for i in zf.infolist()}
+    if include_ai and not is_encrypted(data):
+        if "restore/ai-credentials.json" in members:
+            raise GzError("Plaintext backups containing AI credentials cannot be restored.")
 
     live = _local_payloads()
 
