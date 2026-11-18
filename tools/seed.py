@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import sys
 import time
+import urllib.error
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -62,6 +63,36 @@ _ALIASES = {
     "exodus-map": "ortelius-exodus-1624",
 }
 
+_GUTENBERG_RETRY_STATUS = {500, 502, 503, 504}
+
+
+def _install_seed_item(store, repo: str, item: str, *, force: bool = False):
+    """Retry Gutenberg's transient service failures around the full install."""
+    attempts = 3 if repo == "gutenberg" else 1
+    delay = 5.0
+    for attempt in range(attempts):
+        try:
+            return store.install(repo, item, force=force)
+        except (urllib.error.HTTPError, urllib.error.URLError,
+                TimeoutError, ConnectionError) as exc:
+            if isinstance(exc, urllib.error.HTTPError):
+                retryable = exc.code in _GUTENBERG_RETRY_STATUS
+            else:
+                retryable = isinstance(
+                    exc, (urllib.error.URLError, TimeoutError, ConnectionError))
+            if not retryable or attempt == attempts - 1:
+                raise
+            wait = delay
+            if isinstance(exc, urllib.error.HTTPError) and exc.headers:
+                retry_after = exc.headers.get("Retry-After")
+                if retry_after and retry_after.strip().isdigit():
+                    wait = min(30.0, float(retry_after.strip()))
+            print(f"  ..  {repo}/{item}: transient download error; "
+                  f"retrying in {wait:g}s ({attempt + 1}/{attempts - 1})",
+                  flush=True)
+            time.sleep(wait)
+            delay = min(30.0, delay * 2)
+
 
 def _resolve(repo: str, item: str) -> str | None:
     from gbible import store
@@ -94,7 +125,7 @@ def main(argv: list[str]) -> int:
             continue
         t0 = time.time()
         try:
-            res = store.install(repo, rid, force=force)
+            res = _install_seed_item(store, repo, rid, force=force)
         except Exception as e:                       # noqa: BLE001
             print(f"  XX  {repo}/{item:<22} {type(e).__name__}: {e}", flush=True)
             failed += 1
