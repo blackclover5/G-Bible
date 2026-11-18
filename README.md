@@ -41,9 +41,9 @@ New here? Read [**Get started in 5 minutes**](docs/GETTING_STARTED.md) for a gui
 - **Words of Christ in red** — marked only where the Bible itself tags them (KJV, WEB), never guessed. Bibles that don't tag them render plainly, on purpose.
 - **Notes \& highlights** — tied to the verse, not the module, so they travel with your reading across translations.
 - **Guides** — passage guides, topic guides, outlines, harmonies, timelines, genealogies, maps.
-- **Store** — freely redistributable Bibles, commentaries and reference works, one click to install.
+- **Store** — freely redistributable Bibles, commentaries and reference works, plus public-domain books and devotionals from Project Gutenberg.
 - **Read Aloud** and an optional **AI Assistant** (bring your own provider key; it's a research aid, not an oracle).
-- **Sync \& backup** — keep your study data in sync across machines, with optional encryption.
+- **Sync \& backup** — keep your study data in sync across machines, with optional encryption. AI provider keys are excluded from sync and automatic backups.
 - **Update checker** — one click in **About** checks GitHub for a new release.
 - **Keyboard shortcuts** — press `/` to jump to Search.
 
@@ -51,8 +51,8 @@ New here? Read [**Get started in 5 minutes**](docs/GETTING_STARTED.md) for a gui
 
 - **Read Aloud** — download the voice from **Settings → Read aloud**, or run `python3 tools/install_voice.py`.
 - **AI Assistant** — off by default; configure a provider under **Settings → AI**.
-- **Sync** — works through a folder or WebDAV/Nextcloud; encryption optional.
-- **Auto-backup** — set `GBIBLE_AUTO_BACKUP=1` (optionally `GBIBLE_AUTO_BACKUP_HOURS=24`) to write a timestamped `.gbz` into `data/backups` in the background.
+- **Sync** — works through a folder or WebDAV/Nextcloud; encryption is optional. AI provider keys are not synced.
+- **Auto-backup** — set `GBIBLE_AUTO_BACKUP=1` (optionally `GBIBLE_AUTO_BACKUP_HOURS=24`) to write a timestamped `.gbz` into `data/backups` in the background. AI provider keys are excluded.
 - **Rust core** — optional acceleration for search; see [docs/rust-migration.md](docs/rust-migration.md).
 
 ## Honest notes
