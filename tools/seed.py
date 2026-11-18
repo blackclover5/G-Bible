@@ -16,7 +16,7 @@ small set that between them exercise every reader and every placement slot:
     Lexicon            Abbott-Smith           headword lookup
     OriginalLanguage   SBLGNT                 own versification
     Devotional         Daily Light            date reader
-    Book               Jewish Thoughts        book reader
+    Book               Jewish Thoughts        book reader (skipped if Gutenberg is unavailable)
     Map                Exodus map             image reader
     Atlas              Jerusalem              place coordinates
     Bible (2nd repo)   Textus Receptus        proves two repos coexist
@@ -66,6 +66,12 @@ _ALIASES = {
 _GUTENBERG_RETRY_STATUS = {500, 502, 503, 504}
 
 
+def _is_transient_gutenberg_error(exc: Exception) -> bool:
+    if isinstance(exc, urllib.error.HTTPError):
+        return exc.code in _GUTENBERG_RETRY_STATUS
+    return isinstance(exc, (urllib.error.URLError, TimeoutError, ConnectionError))
+
+
 def _install_seed_item(store, repo: str, item: str, *, force: bool = False):
     """Retry Gutenberg's transient service failures around the full install."""
     attempts = 3 if repo == "gutenberg" else 1
@@ -75,12 +81,7 @@ def _install_seed_item(store, repo: str, item: str, *, force: bool = False):
             return store.install(repo, item, force=force)
         except (urllib.error.HTTPError, urllib.error.URLError,
                 TimeoutError, ConnectionError) as exc:
-            if isinstance(exc, urllib.error.HTTPError):
-                retryable = exc.code in _GUTENBERG_RETRY_STATUS
-            else:
-                retryable = isinstance(
-                    exc, (urllib.error.URLError, TimeoutError, ConnectionError))
-            if not retryable or attempt == attempts - 1:
+            if not _is_transient_gutenberg_error(exc) or attempt == attempts - 1:
                 raise
             wait = delay
             if isinstance(exc, urllib.error.HTTPError) and exc.headers:
@@ -127,6 +128,11 @@ def main(argv: list[str]) -> int:
         try:
             res = _install_seed_item(store, repo, rid, force=force)
         except Exception as e:                       # noqa: BLE001
+            if repo == "gutenberg" and _is_transient_gutenberg_error(e):
+                print(f"  --  {repo}/{item:<22} temporarily unavailable "
+                      f"after retries; skipping this run", flush=True)
+                skipped += 1
+                continue
             print(f"  XX  {repo}/{item:<22} {type(e).__name__}: {e}", flush=True)
             failed += 1
             continue
