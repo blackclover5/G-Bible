@@ -36,11 +36,14 @@ jobs:
           python-version: '3.12'
 
       - name: Check it compiles and imports
-        # Before anything is installed, so that a broken import or a syntax
-        # error is reported as one, and not as a hundred skips.
+        # Check import and syntax errors before installing runtime/test
+        # dependencies, so they are reported directly.
         run: |
           python3 -m compileall -q gbible tools run.py
           python3 -c "import gbible.server.app; print('imports ok')"
+
+      - name: Install test dependencies
+        run: python3 -m pip install -r requirements-test.txt
 
       - name: Run unit tests
         # Fast regression tests for the seams that break quietly:
@@ -51,9 +54,7 @@ jobs:
         run: python3 tools/test_migrations.py
 
       - name: Install browser test dependencies
-        run: |
-          python3 -m pip install -r requirements-test.txt
-          python3 -m playwright install --with-deps chromium
+        run: python3 -m playwright install --with-deps chromium
 
       - name: Install a library to test against
         # One module of every kind, so the checks that need material have
