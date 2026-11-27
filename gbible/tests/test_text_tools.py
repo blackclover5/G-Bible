@@ -1,8 +1,26 @@
 """Regressions from the Study tools → Text tools audit."""
 
+import os
+import shutil
+import tempfile
 import unittest
 
 from gbible import db, study
+
+
+def _scratch_home(test_case):
+    home = tempfile.mkdtemp(prefix="gbible-text-tools-")
+    test_case.addCleanup(shutil.rmtree, home, True)
+    old = os.environ.get("GBIBLE_HOME")
+    os.environ["GBIBLE_HOME"] = home
+
+    def restore():
+        if old is None:
+            os.environ.pop("GBIBLE_HOME", None)
+        else:
+            os.environ["GBIBLE_HOME"] = old
+    test_case.addCleanup(restore)
+    return home
 
 
 def _require_modules(*ids):
@@ -13,6 +31,23 @@ def _require_modules(*ids):
 
 
 class TextToolsBackendTests(unittest.TestCase):
+    def setUp(self):
+        _scratch_home(self)
+        from gbible import library
+        db.bump_generation()
+        conn = db.connect()
+        library.register(conn, id="text-tools-bible", name="Test Bible",
+                         type="Bible", author="Jane Doe", year="2020",
+                         installed_at=1)
+        for verse in range(16, 22):
+            conn.execute(
+                "INSERT INTO unit(module_id,key,ord,book,chapter,verse,text,ref_label) "
+                "VALUES(?,?,?,?,?,?,?,?)",
+                ("text-tools-bible", f"John.3.{verse}", verse, "John", 3,
+                 verse, "Grace and mercy endure through the ages.",
+                 f"John 3:{verse}"))
+        conn.commit()
+
     def test_search_synopsis_links_to_a_real_unit(self):
         r = study.search_synopsis("grace")
         self.assertTrue(r["ok"])

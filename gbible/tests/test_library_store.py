@@ -47,6 +47,30 @@ class LibraryOrderTests(unittest.TestCase):
 
 
 class StoreScopeTests(unittest.TestCase):
+    def setUp(self):
+        home = tempfile.mkdtemp(prefix="gbible-store-scope-")
+        self.addCleanup(shutil.rmtree, home, True)
+        old = os.environ.get("GBIBLE_HOME")
+        os.environ["GBIBLE_HOME"] = home
+
+        def restore():
+            if old is None:
+                os.environ.pop("GBIBLE_HOME", None)
+            else:
+                os.environ["GBIBLE_HOME"] = old
+        self.addCleanup(restore)
+        db.bump_generation()
+        conn = db.connect()
+        for i in range(7):
+            module_id = f"installed-{i}"
+            library.register(conn, id=module_id, name=f"Installed {i}",
+                             type="Bible", installed_at=1)
+            conn.execute(
+                "INSERT INTO store_item(repo_id,item_id,title,type,module_id) "
+                "VALUES(?,?,?,?,?)",
+                ("test-repo", f"item-{i}", f"Item {i}", "Bible", module_id))
+        conn.commit()
+
     def test_installed_only_before_limit_and_true_total(self):
         page = store.list_items(installed_only=True, limit=5)
         self.assertGreater(page["total"], 5)

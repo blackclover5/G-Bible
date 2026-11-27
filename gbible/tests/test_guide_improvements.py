@@ -129,31 +129,56 @@ class GuideImprovementTests(unittest.TestCase):
 class GuideSectionDataTests(unittest.TestCase):
     """Sections that advertise 'more' must actually be able to show it."""
 
+    def setUp(self):
+        _scratch_home(self)
+        from gbible import db, library, study
+        db.bump_generation()
+        conn = db.connect()
+        library.register(conn, id="section-bible", name="Section Test Bible",
+                         type="Bible", installed_at=1)
+        conn.execute(
+            "INSERT INTO unit(module_id,key,ord,book,chapter,verse,text,ref_label) "
+            "VALUES('section-bible','Gen.4.18',1,'Gen',4,18,'Jared lived','Gen 4:18')")
+        conn.commit()
+        self.study = study
+
     def test_crossrefs_read_the_panel_directions(self):
         from gbible import guides
-        r = guides.run_section("crossrefs", "John 3:16", {"limit": 3})
+        panel = {
+            "ok": True,
+            "outgoing": [{"label": f"John 3:{n}", "osis": f"John.3.{n}"}
+                         for n in range(1, 5)],
+            "incoming": [],
+        }
+        with mock.patch.object(self.study, "crossref_panel",
+                               return_value=panel):
+            r = guides.run_section("crossrefs", "John 3:16", {"limit": 3})
         self.assertTrue(r["ok"], r.get("error"))
-        # The old code read panel['refs'], which crossref_panel never returns,
-        # so this section was permanently empty even with TSK installed.
         self.assertGreater(r["total"], 0)
         self.assertTrue(all(x.get("ref") for x in r["items"]))
         self.assertEqual(r["more"], r["total"] > 3)
 
     def test_people_pagination_reports_a_truthful_total(self):
         from gbible import guides
-        first = guides.run_section("people", "Gen 4:18", {"limit": 2})
-        second = guides.run_section("people", "Gen 4:18",
-                                    {"limit": 2, "offset": 2})
+        names = [{"word": name} for name in
+                 ("Adam", "Cain", "Enoch", "Irad", "Mehujael")]
+        with mock.patch.object(self.study, "fact_tags", return_value=names) as tags:
+            first = guides.run_section("people", "Gen 4:18", {"limit": 2})
+            second = guides.run_section("people", "Gen 4:18",
+                                        {"limit": 2, "offset": 2})
         self.assertTrue(first["ok"])
         self.assertGreater(first["total"], 2)
         self.assertEqual(len(first["items"]), 2)
         self.assertTrue(first["more"])
         self.assertNotEqual([x["word"] for x in first["items"]],
                             [x["word"] for x in second["items"]])
+        self.assertEqual(tags.call_args.kwargs["limit"], 2000)
 
     def test_section_limit_is_clamped(self):
         from gbible import guides
-        r = guides.run_section("places", "Josh 21", {"limit": -5})
+        with mock.patch.object(self.study, "places_at",
+                               return_value=[{"name": "Test place"}]):
+            r = guides.run_section("places", "Josh 21", {"limit": -5})
         self.assertTrue(r["ok"])
         self.assertGreaterEqual(len(r["items"]), 1)
 
