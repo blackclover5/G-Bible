@@ -910,10 +910,11 @@ App.bind = function () {
         + 'and could not be checked.'
       : '';
     if (!confirm(r.count + ' update(s) available. Install them now?' + caveat)) return;
-    let done = 0, failed = 0;
+    let done = 0, failed = 0, skipped = 0;
     for (const u of (r.updates || [])) {
       toast('Updating ' + u.title + '…');
-      const jr = await post('store/install', { repo: u.repo, item: u.item });
+      const jr = await post('store/install',
+        { repo: u.repo, item: u.item, force: 1 });
       if (!jr || jr.ok === false || !jr.job) {
         toast((jr && jr.error) || 'Could not start that update.', 'err');
         failed++;
@@ -926,15 +927,20 @@ App.bind = function () {
         const js = await api('store/job', { job: jr.job });
         if (!js || js.ok === false || !js.job) { error = (js && js.error) || 'Job vanished.'; break; }
         const j = js.job;
-        if (j.state === 'done') { finished = true; done++; }
+        if (j.state === 'done') {
+          finished = true;
+          if (j.result && j.result.already) skipped++;
+          else done++;
+        }
         else if (j.state === 'error' || j.state === 'cancelled') {
           error = j.error || j.message || 'The update failed.'; break;
         }
       }
       if (error) { toast(u.title + ': ' + error, 'err'); failed++; }
     }
-    toast(failed ? ('Updated ' + done + ' resource(s); ' + failed + ' failed.')
-                 : ('Finished ' + done + ' update(s). Refreshing library…'));
+    toast((done ? 'Updated ' + done + ' resource(s). ' : '')
+      + (skipped ? skipped + ' were already current. ' : '')
+      + (failed ? failed + ' failed.' : 'Refreshing library…'));
     await App.loadLibrary();
     if (typeof Store !== 'undefined' && Store.fetch) Store.fetch();
     if (typeof Store !== 'undefined') Store._repos = null;

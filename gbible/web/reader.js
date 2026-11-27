@@ -1145,6 +1145,38 @@ const Reader = {
       strongs, pos);
   },
 
+  /* Open an AI chat pane in a NEW column on the far right of the workspace.
+
+     Splitting the rightmost leaf sideways leaves the reader's existing panes
+     exactly where they are; adding the pane to the last leaf would only make
+     another tab in that column. */
+  async openAiPane(scope) {
+    const lay = S.layout;
+    if (!lay || !lay.id) { toast('No workspace open.'); return; }
+    const tree = App.ensureTiles();
+    const leaves = App.leafTileIds(tree);
+    const rightMost = App.tileKey(leaves[leaves.length - 1] || 't0_0');
+    const newId = 't' + Date.now().toString(36)
+      + Math.random().toString(36).slice(2, 6);
+    const split = App.splitTile(tree, rightMost, 'row', newId);
+    if (!split) { toast('Could not make room for the AI pane.', 'err'); return; }
+    lay.tiles = tree;
+    const r = await post('workspace/pane', {
+      action: 'add', layout: lay.id, module: '', tile: newId,
+      cursor: Object.assign({ view: 'ai' }, scope || {}),
+      view: 'ai', options: {}, link_set: '' });
+    if (!r || r.ok === false || !r.pane) {
+      toast((r && r.error) || 'Could not open the AI pane.', 'err'); return;
+    }
+    if (!lay.panes) lay.panes = [];
+    lay.panes.push(r.pane);
+    const saved = await post('workspace/save', {
+      id: lay.id, name: lay.name || 'Layout', tiles: tree, panes: lay.panes });
+    if (saved && saved.layout) S.layout = saved.layout;
+    App.renderWorkspace();
+    App.showPane(newId, r.pane.id);
+  },
+
   /* Open a Word Study pane for a Strong's number, in the workspace. */
   async openWordStudyPane(number) {
     const lay = S.layout;

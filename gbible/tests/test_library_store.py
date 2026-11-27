@@ -83,5 +83,39 @@ class RemovalTests(unittest.TestCase):
         self.assertIn("Not installed", first["error"])
 
 
+
+class LocalImportTests(unittest.TestCase):
+    def setUp(self):
+        self.home = tempfile.mkdtemp(prefix="gbible-local-")
+        self.addCleanup(shutil.rmtree, self.home, True)
+        old = os.environ.get("GBIBLE_HOME")
+        os.environ["GBIBLE_HOME"] = self.home
+
+        def restore():
+            if old is None:
+                os.environ.pop("GBIBLE_HOME", None)
+            else:
+                os.environ["GBIBLE_HOME"] = old
+        self.addCleanup(restore)
+        db.init()
+
+    def test_same_filename_in_two_folders_gets_two_items(self):
+        a = Path(self.home) / "one" / "Bible.txt"
+        b = Path(self.home) / "two" / "Bible.txt"
+        for p in (a, b):
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text("In the beginning God created the heaven and the earth.",
+                         encoding="utf-8")
+        first = store.register_local(a)
+        second = store.register_local(b)
+        self.assertNotEqual(first["item_id"], second["item_id"])
+        self.assertEqual(store.register_local(a)["item_id"], first["item_id"])
+
+    def test_custom_catalogues_live_with_user_data(self):
+        path = store._catalog_path("custom-example.json")
+        self.assertTrue(path.is_relative_to(Path(db.app_dir()).resolve()))
+        self.assertEqual(path.name, "custom-example.json")
+
+
 if __name__ == "__main__":
     unittest.main()

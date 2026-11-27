@@ -6,6 +6,14 @@ import tempfile
 import unittest
 
 
+
+def _require_modules(*ids):
+    import unittest
+    from gbible import library
+    missing = [mid for mid in ids if library.get_installed(mid) is None]
+    if missing:
+        raise unittest.SkipTest("not installed: " + ", ".join(missing))
+
 class CanonRangeTests(unittest.TestCase):
     def test_chapter_range_expands_every_chapter(self):
         from gbible import canon
@@ -29,6 +37,7 @@ class NtUseTests(unittest.TestCase):
             self.assertNotIn("\\n", fh.read())
 
     def test_verse_count_is_not_the_truncated_page(self):
+        _require_modules('crosswire-kjv', 'crosswire-asv')
         from gbible import ntuseot
         r = ntuseot.for_verse("crosswire-kjv", "John.3.16", "crosswire-asv")
         self.assertTrue(r["ok"])
@@ -38,6 +47,7 @@ class NtUseTests(unittest.TestCase):
 
 class WordListTests(unittest.TestCase):
     def test_strongs_total_respects_module_filter_and_orders_canonically(self):
+        _require_modules('crosswire-kjv',)
         from gbible import db, wordlist
         db.init()
         all_rows = wordlist._from_strongs("H3068", limit=5, offset=0)

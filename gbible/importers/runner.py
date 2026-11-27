@@ -92,17 +92,17 @@ def _fetch_retry(url: str, *, timeout: int, attempts: int = 4):
             try:
                 ra = e.headers.get("Retry-After") if e.headers else None
                 if ra and ra.strip().isdigit():
-                    wait = min(30.0, float(ra.strip()))
+                    wait = min(5.0, float(ra.strip()))
             except Exception:
                 pass
             time.sleep(wait)
-            delay = min(20.0, delay * 2)
+            delay = min(5.0, delay * 2)
         except (urllib.error.URLError, TimeoutError, OSError) as e:
             last = e
             if i == attempts - 1:
                 raise
             time.sleep(delay)
-            delay = min(20.0, delay * 2)
+            delay = min(5.0, delay * 2)
     raise last
 
 
@@ -213,13 +213,14 @@ _INSTALL_LOCK = threading.Lock()
 
 
 def install(repo_id: str, item_id: str, *, fmt: str = "",
-            force: bool = False) -> dict:
+            force: bool = False, progress_factory=None) -> dict:
     with _INSTALL_LOCK:
-        return _install_impl(repo_id, item_id, fmt=fmt, force=force)
+        return _install_impl(repo_id, item_id, fmt=fmt, force=force,
+                             progress_factory=progress_factory)
 
 
 def _install_impl(repo_id: str, item_id: str, *, fmt: str = "",
-                  force: bool = False) -> dict:
+                  force: bool = False, progress_factory=None) -> dict:
     conn = db.connect()
     repo = REPO_BY_ID.get(repo_id)
     if not repo:
@@ -260,7 +261,7 @@ def _install_impl(repo_id: str, item_id: str, *, fmt: str = "",
         (tid, "install", repo_id, str(item_id), it.get("title", ""), "running",
          time.time()))
     conn.commit()
-    prog = Progress(tid)
+    prog = (progress_factory or Progress)(tid)
 
     try:
         result = _install_one(repo_id, it, mid, fmt, prog, tid, conn)
@@ -531,6 +532,32 @@ def _install_ebible(it, mid, prog, workdir, fmt):
 # CrossWire SWORD
 # --------------------------------------------------------------------------
 
+def _sword_license(conf: dict, it: dict) -> tuple[str, str]:
+    """Reconcile a module's own licence claim with the curated catalogue.
+
+    CrossWire's KJV conf says ``DistributionLicense=GPL``.  In a SWORD
+    catalogue that is an unrestricted redistribution grant for the module
+    file, not a software licence, and the bundled catalogue records exactly
+    that in ``license_source``.  Trusting only the conf field refused one of
+    the most widely distributed public-domain texts in the library.  A
+    conflict is only accepted when the curated entry explicitly documents an
+    unrestricted grant; every other disagreement is still refused.
+    """
+    declared = taxonomy.normalise_license(
+        conf.get("DistributionLicense") or it.get("license"))
+    if taxonomy.license_ok(declared):
+        return declared, ""
+    source = str(it.get("license_source") or "")
+    curated = taxonomy.normalise_license(it.get("license") or "")
+    if (taxonomy.license_ok(curated)
+            and "unrestricted" in source.lower()
+            and "grant" in source.lower()):
+        note = (f"module declares '{declared}'; the curated catalogue "
+                f"documents: {source}")
+        return curated, note
+    return declared, ""
+
+
 @handler("crosswire")
 def _install_crosswire(it, mid, prog, workdir, fmt):
     d = _pick_download(it, ("sword-zip", "sword"))
@@ -593,15 +620,18 @@ def _install_crosswire(it, mid, prog, workdir, fmt):
     units = itertools.chain(probe, units)
 
     (workdir / "module.zip").write_bytes(data)
-    lic = taxonomy.normalise_license(conf.get("DistributionLicense") or it.get("license"))
+    lic, conflict = _sword_license(conf, it)
     if not taxonomy.license_ok(lic):
         raise InstallErrorFailed(f"module licence '{lic}' is not offerable")
+    rights = (conf.get("CopyrightNotes") or conf.get("Copyright")
+              or it.get("attribution", ""))
+    if conflict:
+        rights = " — ".join(p for p in (rights, conflict) if p)
     return units, {
         "v11n": conf.get("Versification") or "KJV",
         "format": f"SWORD/{conf.get('ModDrv', '?')}",
         "license": lic,
-        "rights": (conf.get("CopyrightNotes") or conf.get("Copyright")
-                   or it.get("attribution", ""))[:600],
+        "rights": rights[:600],
         "about": conf.get("About", "")[:2000],
         "abbrev": (conf.get("Abbreviation") or it.get("abbrev") or "")[:32],
         "raw_meta_sword": {k: v for k, v in meta.items()
@@ -929,12 +959,12 @@ def _ws_texts(titles: list[str]) -> dict[str, str]:
              "format": "json", "redirects": "1"}
         url = _WS_API + "?" + urllib.parse.urlencode(q)
         data = None
-        for attempt in range(3):
-            try:
-                data = json.loads(fetch(url, timeout=90))
-                break
-            except Exception:
-                time.sleep(1.5 * (attempt + 1))
+        # fetch() already has its own bounded retry budget.  A second loop
+        # with 1.5/3/4.5 s sleeps multiplied the delay on a throttled batch.
+        try:
+            data = json.loads(fetch(url, timeout=90))
+        except Exception:
+            data = None
         if data is None or "query" not in data:
             # Never drop a batch silently.  A long download that quietly loses
             # four-fifths of its pages is worse than a slow one: the install
@@ -984,13 +1014,11 @@ def _ws_expand(title: str, text: str) -> str:
     url = _WS_API + "?" + urllib.parse.urlencode({
         "action": "expandtemplates", "format": "json", "prop": "wikitext",
         "title": title, "text": text})
-    data = None
-    for attempt in range(3):
-        try:
-            data = json.loads(fetch(url, timeout=90))
-            break
-        except Exception:
-            time.sleep(1.5 * (attempt + 1))
+    # One retry budget lives in fetch(); do not nest another one here.
+    try:
+        data = json.loads(fetch(url, timeout=90))
+    except Exception:
+        data = None
     if not data or "error" in data:
         return text
     return (data.get("expandtemplates", {}) or {}).get("wikitext", "") or text

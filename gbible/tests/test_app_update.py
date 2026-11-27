@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import tempfile
+import time
 import unittest
 from unittest import mock
 from pathlib import Path
@@ -88,6 +89,13 @@ class UpdateApplyTests(unittest.TestCase):
         manifest = json.loads((backups[-1] / "manifest.json").read_text())
         self.assertIn("run.py", manifest["replaced"])
         self.assertIn("data/gbible.db", manifest["protected"])
+
+    def test_retry_delay_accepts_seconds_and_http_date(self):
+        self.assertEqual(appupdate._retry_delay("2", 9.0), 2.0)
+        self.assertEqual(appupdate._retry_delay("not a date", 9.0), 9.0)
+        import email.utils
+        future = email.utils.formatdate(time.time() + 8, usegmt=True)
+        self.assertGreaterEqual(appupdate._retry_delay(future, 0.0), 7.0)
 
     def test_apply_requires_confirmation(self):
         r = appupdate.apply("v9.9.9")

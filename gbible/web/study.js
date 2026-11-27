@@ -3000,6 +3000,49 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
       } }, { label: 'Close', cls: 'btn' }]);
   },
 
+  /* Open a scoped AI chat pane.  `kind` is word, verse or chapter: the scope
+     text is read from the module at click time, so a stale selection cannot
+     silently become the question the assistant answers. */
+  async askAiPane(kind, word, m, unitKey, ref, selText) {
+    if (!m || !m.id) { toast('Open a resource first.', 'warn'); return; }
+    const scope = { module_id: m.id, module_name: m.name || '',
+                    key: unitKey || '', ref: ref || '', word: '',
+                    label: '', text: '', chapter: '' };
+    try {
+      if (kind === 'word') {
+        scope.word = word || '';
+        scope.label = (word || ref || 'this word');
+        scope.text = (selText || word || '').trim();
+      } else if (kind === 'verse') {
+        // `read` resolves a human reference, not a raw unit key: passing
+        // {key:'John.3.16'} silently returned the module's first verse.
+        const wanted = ref || String(unitKey || '').replace(/\./g, ' ');
+        const r = await api('read', { id: m.id,
+          cursor: { ref: wanted }, options: {}, span: 'verse', context: 0 });
+        if (!r || r.ok === false) throw new Error((r && r.error) || 'Could not read the verse.');
+        const it = (r.items || [])[0] || {};
+        scope.text = (selText || it.text || '').trim();
+        scope.label = r.ref_label || it.label || ref || 'this verse';
+        scope.ref = scope.label;
+      } else {
+        const chapter = chapterOf(ref || '');
+        const r = await api('read', { id: m.id,
+          cursor: { ref: chapter, span: 'chapter' }, options: {},
+          span: 'chapter', context: 0 });
+        if (!r || r.ok === false) throw new Error((r && r.error) || 'Could not read the chapter.');
+        scope.text = (r.items || []).map(i => i.text || '').join('\n')
+          .trim().slice(0, 8000);
+        scope.label = (r.ref_label || chapter || ref || m.name);
+        scope.chapter = chapter;
+      }
+    } catch (e) {
+      toast((e && e.message) || 'Could not prepare that passage for AI.', 'err');
+      return;
+    }
+    if (!scope.text) { toast('There is no text here to ask about.', 'warn'); return; }
+    await Reader.openAiPane(scope);
+  },
+
   wordMenu(x, y, word, m, unitKey, ref, selText, strongs, pos) {
     const items = [];
     /* A term for word-based tools.  The per-verse handler passes the word under
@@ -3042,10 +3085,19 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
         items.push({ label: 'Every occurrence of “' + word + '” as a word list',
           fn: () => WordLists.fromQuery(word) });
       }
+      if (!aiOff()) {
+        items.push({ label: 'Ask AI about “' + (topicTerm || word) + '”',
+          fn: () => Study.askAiPane('word', word || topicTerm, m, unitKey,
+                                    ref, selText) });
+      }
     }
 
     if (ref) {
       items.push({ section: 'THIS PASSAGE' });
+      if (!aiOff()) {
+        items.push({ label: 'Ask AI about this verse',
+          fn: () => Study.askAiPane('verse', word, m, unitKey, ref, selText) });
+      }
       items.push({ label: 'Cross-references for ' + ref,
                    fn: () => Study.openCrossrefs(ref) });
       items.push({ label: 'What this verse takes from the Old Testament',
@@ -3152,6 +3204,10 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
       items.push({ label: 'Exegetical Guide: ' + ref,
         fn: () => Reader.openGuidePane(ref, 'exegetical') });
       items.push({ label: 'Bible Browser', fn: () => Study.openBibleBrowser() });
+      if (!aiOff() && m && ref) {
+        items.push({ label: 'Ask AI about this chapter',
+          fn: () => Study.askAiPane('chapter', '', m, '', ref, '') });
+      }
 
       items.push({ section: 'COPY & CITE' });
       items.push({ label: 'Cite / export this',

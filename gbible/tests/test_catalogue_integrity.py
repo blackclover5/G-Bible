@@ -29,5 +29,24 @@ class CatalogueIntegrityTests(unittest.TestCase):
         self.assertFalse(taxonomy.redistributable(unknown)[0])
 
 
+
+class SwordLicenseTests(unittest.TestCase):
+    def test_documented_unrestricted_grant_overrides_conf_field(self):
+        from gbible.importers import runner
+        it = {"license": "Public Domain",
+              "license_source": "unrestricted grant in About/Copyright (GPL)"}
+        lic, note = runner._sword_license(
+            {"DistributionLicense": "GPL"}, it)
+        self.assertEqual(lic, "Public Domain")
+        self.assertIn("module declares", note)
+
+    def test_conflict_without_documented_grant_is_still_refused(self):
+        from gbible.importers import runner
+        lic, note = runner._sword_license(
+            {"DistributionLicense": "GPL"}, {"license": "Public Domain"})
+        self.assertEqual(lic, "Copyrighted")
+        self.assertEqual(note, "")
+
+
 if __name__ == "__main__":
     unittest.main()

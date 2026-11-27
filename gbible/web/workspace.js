@@ -231,7 +231,9 @@ const Workspace = {
     const paneEl = tile ? tile.querySelector('.pane[data-pane="' + p.id + '"]') : null;
     const html = paneEl ? paneEl.outerHTML.replace(/<div class="pane-tools"[\s\S]*?<\/div>/, '') : '';
     const m = modById(p.module_id);
-    const title = (m ? m.name : (p.view === 'guide' ? 'Passage' : (p.view === 'wordstudy' ? 'Word Study' : 'Pane')))
+    const title = (m ? m.name : (p.view === 'guide' ? 'Passage'
+      : (p.view === 'wordstudy' ? 'Word Study'
+        : (p.view === 'ai' ? 'G-Bible AI' : 'Pane'))))
       + (p.cursor && (p.cursor.ref || p.cursor.number) ? ' — ' + (p.cursor.ref || p.cursor.number) : '');
     const w = window.open('', '_blank', 'width=900,height=700,menubar=no,toolbar=no');
     if (!w) { toast('Pop-up blocked — allow pop-ups for this site.', 'warn'); return; }

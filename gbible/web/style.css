@@ -2526,3 +2526,20 @@ body.ai-off .ai-only { display: none !important; }
 
 /* Search-result action sits at the end of the hit header. */
 .hit-send { margin-left: auto; }
+
+
+
+
+
+/* A scoped "Ask AI" chat in its own far-right workspace column. */
+.pane-body.ai-pane {
+  display: flex; flex-direction: column; gap: 8px;
+  overflow: hidden; padding: 10px 12px 12px;
+}
+.pane-body.ai-pane .ai-chat { padding: 8px 4px; }
+.pane-body.ai-pane .ai-scope-head { font-size: 13px; }
+.pane-body.ai-pane .ai-compose {
+  flex-wrap: wrap; padding: 8px 0 0; background: transparent;
+  border-top: 1px solid var(--line);
+}
+.pane-body.ai-pane .ai-compose textarea { width: 100%; min-height: 58px; }

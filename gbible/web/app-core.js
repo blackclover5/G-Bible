@@ -399,6 +399,7 @@ const App = {
     if (p.view === 'guide') return 'Passage Guide';
     if (p.view === 'wordstudy') return 'Word Study';
     if (p.view === 'factbook') return 'Factbook';
+    if (p.view === 'ai') return 'G-Bible AI';
     return 'Study pane';
   },
 
@@ -514,7 +515,8 @@ const App = {
       const m = modById(p.module_id);
       const tabName = m ? m.name
         : (p.view === 'guide' ? 'Passage'
-          : (p.view === 'wordstudy' ? 'Word Study' : '(closed)'));
+          : (p.view === 'wordstudy' ? 'Word Study'
+            : (p.view === 'ai' ? 'G-Bible AI' : '(closed)')));
       const tab = el('div', 'tile-tab' + (idx === activeIdx ? ' on' : ''));
       if (p.link_set) tab.appendChild(el('span', 'ls ' + p.link_set, p.link_set));
       tab.appendChild(el('span', 'modname', esc(tabName)));
@@ -697,6 +699,64 @@ const App = {
     if (pane) { pane.dataset.pane = panes[idx].id; this.fillPane(pane, panes[idx]); }
   },
 
+  /* A scoped chat pane keeps its own conversation, so two passages can be
+     discussed side by side without one overwriting the other. */
+  fillAiPane(body, p) {
+    const c = p.cursor || {};
+    const state = {
+      paneId: p.id,
+      label: c.label || c.ref || c.word || 'this passage',
+      scope: { text: c.text || '', label: c.label || c.ref || '',
+               module_id: c.module_id || '', module_name: c.module_name || '',
+               key: c.key || '' },
+      history: [], sources: [], chatId: '',
+    };
+    const chip = el('span', 'chip ai-ctx-label', 'AI');
+    chip.title = (c.word ? 'Word: ' + c.word + '\n' : '')
+      + (c.ref ? 'Passage: ' + c.ref + '\n' : '')
+      + (c.chapter ? 'Chapter: ' + c.chapter : '');
+    body.closest('.pane').querySelector('.pane-tools').appendChild(chip);
+    body.classList.add('ai-pane');
+    const head = el('div', 'ai-scope-head');
+    head.innerHTML = '<b>' + esc(state.label) + '</b>'
+      + (c.word ? ' <span class="tiny muted">word</span>' : '');
+    const note = el('div', 'tiny muted',
+      'Asks your configured provider about this selection. If the provider '
+      + 'is in the cloud, the question and the passage text leave this computer.');
+    const chat = el('div', 'ai-chat');
+    const compose = el('div', 'ai-compose');
+    const input = el('textarea');
+    input.rows = 3;
+    input.placeholder = 'Ask about ' + state.label + '…';
+    const send = el('button', 'btn primary', 'Ask');
+    const stop = el('button', 'btn', 'Stop');
+    stop.disabled = true;
+    const fresh = el('button', 'btn', 'New chat');
+    compose.appendChild(input);
+    const row = el('div', 'row');
+    row.style.gap = '6px';
+    row.appendChild(send); row.appendChild(stop); row.appendChild(fresh);
+    compose.appendChild(row);
+    body.appendChild(head); body.appendChild(note);
+    body.appendChild(chat); body.appendChild(compose);
+    send.onclick = () => {
+      const q = input.value.trim();
+      if (!q) return;
+      input.value = '';
+      Ai.paneRun(body, state, q);
+    };
+    input.onkeydown = (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send.onclick(); }
+    };
+    stop.onclick = () => { if (Ai && Ai.ctrl) Ai.stop(); };
+    fresh.onclick = async () => {
+      state.history = []; state.sources = []; state.chatId = '';
+      Ai.paneRender(body, state);
+      await Reader.saveNow(p);
+    };
+    if (Ai && Ai.paneRestore) Ai.paneRestore(body, state);
+  },
+
   async fillPane(pane, p) {
     pane.innerHTML = '';
     const m = modById(p.module_id);
@@ -760,7 +820,10 @@ const App = {
       }
       return { key: it.key, label: c.ref_label || it.label || '' };
     };
-    if (!m && p.view !== 'guide') { body.appendChild(el('div', 'empty', 'No resource in this tab.')); return; }
+    if (!m && p.view !== 'guide' && p.view !== 'ai') {
+      body.appendChild(el('div', 'empty', 'No resource in this tab.')); return;
+    }
+    if (p.view === 'ai') { this.fillAiPane(body, p); return; }
     if (p.view === 'guide') {
       const refBox = el('input', 'refbox');
       refBox.value = (p.cursor && (p.cursor.ref || p.cursor.key)) || '';
@@ -1508,6 +1571,11 @@ const RecommendedPrompt = {
   maybeShow: async function() {
     const st = await api('recommended/status');
     if (!st || !st.ok || st.dismissed) return;
+    if (st.catalogue_missing) {
+      toast('The bundled module catalogues could not be read. Restore them '
+        + 'before installing recommendations.', 'err');
+      return;
+    }
     if (st.total > 0 && st.installed >= st.total) {
       await post('recommended/dismiss', {});
       return;
@@ -1516,11 +1584,13 @@ const RecommendedPrompt = {
   },
   show: function(st) {
     this.running = false; this.job = null; this.cancelRequested = false; this.slideIndex = 0;
+    const cb0 = document.getElementById('rec-dismiss');
+    this.dismissAfterInstall = !!(cb0 && cb0.checked);
     modal('Install recommended modules?',
       '<div class="st-body" style="margin-bottom:10px">'
-      + 'This looks like a fresh library. Install the recommended set of '
-      + st.total + ' modules (Bibles, commentaries, maps, lexica and more)? '
-      + 'This may take a while and needs network access.'
+      + 'You have ' + st.installed + ' of ' + st.total
+      + ' recommended modules installed. Add the rest (Bibles, commentaries, '
+      + 'maps, lexica and more)? This may take a while and needs network access.'
       + '</div>'
       + '<label class="tiny" style="display:block;margin-bottom:8px">'
       + '<input type="checkbox" id="rec-dismiss"> Do not show this again'
@@ -1562,14 +1632,24 @@ const RecommendedPrompt = {
     const msg = j.message || 'Installing recommended modules…';
     const failures = j.failures || (j.result && j.result.failures) || [];
     const details = failures.slice(-3).map(f => `${f.repo}/${f.item}: ${f.error}`);
+    const current = j.current ? ' · ' + j.current : '';
     const total = Math.max(0, Number(j.total) || 0);
-    const done = Math.max(0, Number(j.done) || 0);
-    const pct = total ? Math.max(0, Math.min(100, Math.round(done * 100 / total))) : 0;
+    const failedNow = Number((j.result && j.result.failed)
+      || (j.failures || []).length || 0);
+    // j.done counts attempts, including failures.  A run with 0 installs and
+    // 39 failures must not paint a full bar.
+    const done = Math.max(0, Number(j.done || 0) - failedNow);
+    const pt = Number(j.progress_total) || 0;
+    const frac = pt > 0 ? Math.min(1, (Number(j.progress_done) || 0) / pt) : 0;
+    const pct = total ? Math.max(0, Math.min(100,
+      Math.round((done + frac) * 100 / total))) : 0;
     const fill = document.getElementById('rec-progress-fill');
     const percent = document.getElementById('rec-progress-percent');
     if (fill) { fill.style.width = pct + '%'; fill.setAttribute('aria-valuenow', String(pct)); }
-    if (percent) percent.textContent = pct + '% (' + done + ' of ' + total + ')';
-    prog.textContent = msg + (details.length ? ' · Latest failures: ' + details.join(' · ') : '');
+    if (percent) percent.textContent = pct + '% (' + done + ' of ' + total + ')'
+      + (pt && frac ? ' · current ' + Math.round(frac * 100) + '%' : '');
+    prog.textContent = msg + current
+      + (details.length ? ' · Latest failures: ' + details.join(' · ') : '');
     if (failures.length > 3) prog.textContent += ` · ${failures.length - 3} earlier failure(s) omitted`;
   },
   setInstallButton: function(disabled) {
@@ -1596,8 +1676,6 @@ const RecommendedPrompt = {
     if (this.running) return;
     this.running = true;
     this.setInstallButton(true);
-    const cb = document.getElementById('rec-dismiss');
-    this.dismissAfterInstall = !!(cb && cb.checked);
     this.renderSlide();
     const prog = document.getElementById('rec-progress');
     if (prog) prog.textContent = 'Starting installation…';
@@ -1634,6 +1712,13 @@ const RecommendedPrompt = {
 
       const result = j.result || {};
       const failed = Number(result.failed || (j.failures || []).length || 0);
+      if (j.state === 'cancelled') {
+        this.job = null;
+        this.setInstallButton(false);
+        const prog = document.getElementById('rec-progress');
+        if (prog) prog.textContent = j.message || 'Stopped.';
+        return;
+      }
 
       if (failed > 0) {
         this.job = null;

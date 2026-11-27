@@ -135,6 +135,7 @@ class Indexer:
         self._buf_markers: list[tuple] = []
         self._buf_xrefs: list[tuple] = []
         self._buf_fts: list[tuple] = []
+        self._seen_fts: set[tuple] = set()
         self._buf_roles: list[tuple] = []
         self._coref = coref.Resolver()
         self.stats = dict(units=0, words=0, chars=0, strongs=0, lemmas=0,
@@ -215,8 +216,15 @@ class Indexer:
             # table has no such key.  A repeated key in an earlier batch used
             # to leave a stale row beside the new one, producing search hits
             # whose text did not match the unit they pointed at.
-            c.executemany("DELETE FROM unit_fts WHERE module_id=? AND unit_key=?",
-                          [(m, k) for m, k, _t, _x in rows])
+            # Only a repeated key in this import can leave an old row behind:
+            # run_import() removes the module's previous FTS rows first.  A
+            # delete per unit made a fresh install of a 31k-unit Bible do 31k
+            # pointless index rewrites.
+            stale = [(m, k) for m, k, _t, _x in rows if (m, k) in self._seen_fts]
+            if stale:
+                c.executemany(
+                    "DELETE FROM unit_fts WHERE module_id=? AND unit_key=?", stale)
+            self._seen_fts.update((m, k) for m, k, _t, _x in rows)
             c.executemany("INSERT INTO unit_fts(module_id,unit_key,title,text) "
                           "VALUES(?,?,?,?)", rows)
             self._buf_fts.clear()
@@ -485,12 +493,16 @@ def run_import(module_id: str, units: Iterator[UnitIn], *,
         conn.commit()
         raise
     st = idx.finalise()
+    # Duplicate keys collapse in `unit` (INSERT OR REPLACE), but `st["units"]`
+    # counts every add() call.  Show the number of rows that actually exist.
+    actual = conn.execute(
+        "SELECT COUNT(*) c FROM unit WHERE module_id=?", (mid,)).fetchone()["c"]
     # ---- apply derived capabilities -------------------------------------
     conn.execute(
         "UPDATE module SET chapters=?, verses=?, entries=?, has_strongs=?, "
         "has_morph=?, has_notes=?, has_xref=?, heading_count=?, "
         "v11n_source=?, error=NULL WHERE id=?",
-        (st["chapters"], st["units"] if st["books"] else 0, st["units"],
+        (st["chapters"], st["units"] if st["books"] else 0, actual,
          int(st["strongs"] > 0), int(st["morphs"] > 0), int(st["notes"] > 0),
          int(st["xrefs"] > 0), st["headings"],
          "module" if st["books"] else "builtin", mid))

@@ -5,6 +5,13 @@ import unittest
 from gbible import db, study
 
 
+def _require_modules(*ids):
+    from gbible import library
+    missing = [mid for mid in ids if library.get_installed(mid) is None]
+    if missing:
+        raise unittest.SkipTest("not installed: " + ", ".join(missing))
+
+
 class TextToolsBackendTests(unittest.TestCase):
     def test_search_synopsis_links_to_a_real_unit(self):
         r = study.search_synopsis("grace")
@@ -22,6 +29,7 @@ class TextToolsBackendTests(unittest.TestCase):
         self.assertFalse(any("Key Themes" in t for t in titles), titles)
 
     def test_read_verse_span_returns_one_verse(self):
+        _require_modules('crosswire-kjv',)
         from gbible import library
         chapter = library.read("crosswire-kjv", {"ref": "John 3:16"},
                                span="chapter")
@@ -32,6 +40,7 @@ class TextToolsBackendTests(unittest.TestCase):
         self.assertEqual(verse.items[0].label, "John 3:16")
 
     def test_compare_reports_skipped_modules_and_ranges(self):
+        _require_modules('crosswire-kjv', 'crosswire-asv')
         r = study.compare("John 3:16-17",
                           ["crosswire-kjv", "crosswire-asv", "no-such"])
         self.assertTrue(r["ok"])

@@ -87,12 +87,15 @@ def _install_seed_item(store, repo: str, item: str, *, force: bool = False):
             if isinstance(exc, urllib.error.HTTPError) and exc.headers:
                 retry_after = exc.headers.get("Retry-After")
                 if retry_after and retry_after.strip().isdigit():
-                    wait = min(30.0, float(retry_after.strip()))
+                    # Gutenberg asks for 30 s; a seed run has many items and
+                    # a single unavailable book should not stall it for a
+                    # minute.  A short retry is enough for a transient blip.
+                    wait = min(8.0, float(retry_after.strip()))
             print(f"  ..  {repo}/{item}: transient download error; "
                   f"retrying in {wait:g}s ({attempt + 1}/{attempts - 1})",
                   flush=True)
             time.sleep(wait)
-            delay = min(30.0, delay * 2)
+            delay = min(8.0, delay * 2)
 
 
 def _resolve(repo: str, item: str) -> str | None:

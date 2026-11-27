@@ -137,6 +137,10 @@ class ZText:
                  compress: str = "ZIP"):
         self.bzs = bzs
         self.bzv = bzv
+        # The verse index is only ~10 bytes per entry (a few hundred KB even
+        # for a large Bible).  Reading it once avoids an open/seek/close per
+        # verse, which dominated install time on 24 CrossWire modules.
+        self._verse_index = bzv.read_bytes() if bzv.is_file() else b""
         self.bzz = bzz
         self.encoding = _pyenc(encoding)
         self.source_type = source_type
@@ -223,12 +227,10 @@ class ZText:
         return self.block_bytes(n).decode(self.encoding, "replace")
 
     def entry(self, i: int) -> tuple[int, int, int]:
-        with self.bzv.open("rb") as f:
-            f.seek(10 * i)
-            raw = f.read(10)
-        if len(raw) < 10:
+        at = 10 * i
+        if at < 0 or at + 10 > len(self._verse_index):
             raise SwordError(f"verse index {i} out of range")
-        return _VERSE.unpack(raw)
+        return _VERSE.unpack_from(self._verse_index, at)
 
     def entry_count(self) -> int:
         return self.bzv.stat().st_size // 10

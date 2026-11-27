@@ -1015,6 +1015,144 @@ const Ai = {
     return Ai.ask('translate', text, label, target.trim());
   },
 
+  /* ---------------------------------------------------------------- panes */
+  /* One scoped chat per pane.  It uses the same stream and renderer as the
+     main assistant, but never touches Ai.history or the panel's controls. */
+  paneRender(host, state) {
+    const chat = host && host.querySelector('.ai-chat');
+    if (!chat) return;
+    if (!state.history.length) {
+      chat.innerHTML = '<div class="ai-empty">Ask a question about '
+        + esc(state.label || 'this passage') + '. The answer is drawn from '
+        + 'your installed library and cited.</div>';
+      return;
+    }
+    chat.innerHTML = '';
+    state.history.forEach(m => {
+      const b = el('div', 'ai-msg ' + (m.role === 'user' ? 'user' : 'bot'));
+      const body = el('div', 'ai-body');
+      body.innerHTML = m.role === 'user' ? esc(m.content) : Ai.render(m.content);
+      b.appendChild(body);
+      if (m.role === 'assistant' && m.backend) {
+        const local = m.backend === 'local';
+        const tag = el('div', 'ai-backend');
+        tag.innerHTML = '<span class="chip ' + (local ? 'pd' : 'no') + '">'
+          + (local ? 'Answered by a local server' : 'Answered via API') + '</span>';
+        b.appendChild(tag);
+      }
+      if (m.role === 'assistant' && m.citations && m.citations.length) {
+        const local = m.citations.filter(c => !c.external);
+        if (local.length) b.appendChild(Ai.sourceList(local));
+      }
+      chat.appendChild(b);
+    });
+    chat.scrollTop = chat.scrollHeight;
+  },
+
+  paneSending(host, state, busy) {
+    const e = host && host.querySelector('.ai-compose');
+    if (!e) return;
+    const b = e.querySelectorAll('button');
+    if (b[0]) b[0].disabled = !!busy;
+    if (b[1]) b[1].disabled = !busy;
+  },
+
+  paneRestore(host, state) {
+    state.chatId = 'pane_' + String(state.paneId || '').replace(/[^A-Za-z0-9_-]/g, '');
+    api('ai/chats', { action: 'open', id: state.chatId }).then(r => {
+      if (r && r.ok !== false && r.chat && (r.chat.turns || []).length) {
+        state.history = r.chat.turns;
+        Ai.paneRender(host, state);
+      }
+    }).catch(() => {});
+  },
+
+  async paneRun(host, state, question) {
+    if (aiOff()) {
+      toast('AI Assistant is not set up. Enable it in Settings → AI Assistant.', 'warn');
+      App.show('aisettings'); return;
+    }
+    await this.ensure();
+    const blocked = this.blocked();
+    if (blocked) { toast(blocked, 'warn'); App.show('aisettings'); return; }
+    const chat = host && host.querySelector('.ai-chat');
+    if (!chat) return;
+    const q = String(question || '').trim();
+    if (!q) return;
+    state.history.push({ role: 'user', content: q });
+    const bot = { role: 'assistant', content: '', citations: [], backend: '' };
+    state.history.push(bot);
+    this.paneRender(host, state);
+    const live = chat.lastChild && chat.lastChild.querySelector('.ai-body');
+    const liveSources = chat.lastChild && chat.lastChild.querySelector('.ai-sources');
+    const liveBackend = el('div', 'ai-backend');
+    if (chat.lastChild && liveSources) chat.lastChild.insertBefore(liveBackend, liveSources);
+    this.paneSending(host, state, true);
+    const st = this.settings || {};
+    const scope = state.scope || {};
+    await this.streamTo({
+      question: q,
+      history: state.history.slice(0, -2),
+      context_text: scope.text || '',
+      context_label: scope.label || '',
+      context_module_id: scope.module_id || '',
+      context_module_name: scope.module_name || '',
+      context_key: scope.key || '',
+      use_library: st.use_library !== false,
+      use_mine: st.use_mine !== false,
+      deep_research: false,
+      smart_query: st.smart_query !== false,
+      scope: st.scope || '',
+    }, {
+      onBackend: (ev) => {
+        bot.backend = ev.backend || 'api';
+        const local = bot.backend === 'local';
+        liveBackend.innerHTML = '<span class="chip ' + (local ? 'pd' : 'no') + '">'
+          + (local ? 'Answered by a local server'
+                   : 'Answered via ' + esc(ev.provider || 'API')) + '</span>';
+      },
+      onSources: (ev) => {
+        state.sources = ev.citations || [];
+        bot.citations = state.sources;
+        if (liveSources && liveSources.parentNode) {
+          liveSources.parentNode.replaceChild(Ai.sourceList(state.sources), liveSources);
+        }
+      },
+      onDelta: (t) => {
+        bot.content += t;
+        if (live) live.innerHTML = Ai.render(bot.content);
+        chat.scrollTop = chat.scrollHeight;
+      },
+      onReplace: (ev) => {
+        bot.content = ev.text || '';
+        if (live) live.innerHTML = Ai.render(bot.content);
+      },
+      onStatus: (ev) => {
+        if (live) live.insertAdjacentHTML('beforeend',
+          '<div class="tiny muted">' + esc(ev.text || '') + '</div>');
+      },
+      onError: (err, hint) => {
+        bot.content = (err || 'The provider refused the request.')
+          + (hint ? '\n\n' + hint : '');
+        if (live) live.innerHTML = Ai.render(bot.content);
+      },
+      onAbort: () => { bot.content += '\n\n_(stopped)_'; },
+      onFragments: (frags) => {
+        (frags || []).forEach(f => {
+          const c = (state.sources || []).find(x => x.n === f.n);
+          if (c) c.fragment = f;
+        });
+      },
+      onFinally: () => {
+        if (!bot.content) bot.content = '(no answer)';
+        this.paneSending(host, state, false);
+        this.paneRender(host, state);
+        post('ai/chats', { action: 'save', id: state.chatId,
+          title: 'AI · ' + state.label, turns: state.history }).catch(() => {});
+      },
+    });
+  },
+
   async run(req, display) {
     if (aiOff()) {
       toast('AI Assistant is not set up. Enable it in Settings → AI Assistant.',

@@ -60,16 +60,16 @@ def _store_install(parts, q):
         def cb(phase, done=0, total=0, note=""):
             msg = note or (f"{phase} {done}" + (f"/{total}" if total else ""))
             with _job_lock:
-                _jobs[jid].update(state="running", message=msg,
-                                  phase=phase, done=done, total=total)
-            # Deliberately outside the lock above: _prune_jobs() takes the same
-            # one, and threading.Lock is not reentrant, so calling it inside
-            # would deadlock the very request that reported the problem.
-        from ...importers import runner
-        real = runner.Progress
-        runner.Progress = lambda _tid: cb  # route progress into the job record
+                job = _jobs.get(jid)
+                if job is None:      # the job was pruned; never abort the install
+                    return
+                job.update(state="running", message=msg,
+                           phase=phase, done=done, total=total)
+
         try:
-            res = store.install(repo, item, fmt=q.get("format", ""))
+            res = store.install(repo, item, fmt=q.get("format", ""),
+                                force=_flag(q.get("force")),
+                                progress_factory=lambda _tid: cb)
             # Report where it landed, so the UI can say "into the commentary
             # pane" rather than making the user go and look.
             try:
@@ -86,8 +86,6 @@ def _store_install(parts, q):
                                   message=f"{type(e).__name__}: {e}")
             _prune_jobs()          # outside the lock: see _prune_jobs()
             raise
-        finally:
-            runner.Progress = real
 
     th = threading.Thread(target=work, daemon=True, name=f"install-{jid}")
     th.start()
@@ -123,7 +121,9 @@ def _store_updates(parts, q):
             unchecked.append({"module_id": m.id, "title": m.name,
                               "why": "the catalogue records no version"})
             continue
-        if available != str(m.version or ""):
+        def _v(v):
+            return tuple(int(x) for x in re.findall(r"\d+", str(v or ""))) or (0,)
+        if _v(available) > _v(m.version or ""):
             out.append({"repo": row["repo_id"], "item": row["item_id"],
                         "title": row["title"] or m.name,
                         "installed_version": m.version or "",
@@ -162,28 +162,38 @@ def _store_job(parts, q):
 def _recommended_status(parts, q):
     from ... import recommended as _rec, db, library
     conn = db.connect()
-    total = len(_rec.RECOMMENDED)
+    from ... import store as _store
+    by_repo = {repo: {str(x.get("id")) for x in _store.repo_items(repo)}
+               for repo, _ in _rec.RECOMMENDED}
+    pairs = [(repo, item) for repo, item in _rec.RECOMMENDED
+             if item in by_repo.get(repo, set())]
+    total = len(pairs)
+    catalogue_missing = total == 0
+    installed_ids = {m.id for m in library.list_all()
+                     if getattr(m, "installed_at", 0)}
+    ph = ",".join("(?,?)" for _ in pairs)
+    mapped = {}
+    if ph:
+        for r in conn.execute(
+                "SELECT repo_id,item_id,module_id FROM store_item "
+                f"WHERE (repo_id,item_id) IN ({ph})",
+                [v for pair in pairs for v in pair]):
+            mapped[(r["repo_id"], r["item_id"])] = r["module_id"]
     installed = 0
-    for repo, item in _rec.RECOMMENDED:
+    for repo, item in pairs:
         # The installer names a module after its repo and item id, so check
         # that first.  The store_item mapping is a fallback, not the source of
         # truth: modules installed by a seed, a restore or a local import have
         # no store_item row, and counting only mapped ones kept the prompt
         # appearing forever even after every recommended module was present.
-        mid = library.slugify(f"{repo}-{item}")
-        m = library.get(mid)
-        if m and getattr(m, "installed_at", 0):
+        if library.slugify(f"{repo}-{item}") in installed_ids:
             installed += 1
             continue
-        row = conn.execute(
-            "SELECT module_id FROM store_item WHERE repo_id=? AND item_id=?",
-            (repo, item)).fetchone()
-        if row and row["module_id"]:
-            m = library.get(row["module_id"])
-            if m and getattr(m, "installed_at", 0):
-                installed += 1
+        if mapped.get((repo, item)) in installed_ids:
+            installed += 1
     dismissed = db.get_setting("recommended_prompt_dismissed", False)
     return _ok(total=total, installed=installed,
+               catalogue_missing=catalogue_missing,
                dismissed=bool(dismissed))
 
 
@@ -214,48 +224,87 @@ def _recommended_install(parts, q):
     from ... import recommended as _rec, store, db
     jid = "job_" + uuid.uuid4().hex[:16]
     dismiss_on_finish = _flag(q.get("dismiss"))
-    _remember_job(jid, {"state": "running", "message": "starting",
+    _remember_job(jid, {"state": "running", "started": time.time(),
+                        "message": "starting",
                         "done": 0, "total": len(_rec.RECOMMENDED),
                         "failures": [],
                         "dismiss_on_finish": dismiss_on_finish})
     items = list(_rec.RECOMMENDED)
+    # A seed, a restore or a local import can leave a recommended module on
+    # disk without a store_item row.  Link those first, then skip anything
+    # already present instead of downloading and indexing it again.
+    try:
+        store.link_installed_modules()
+        from ... import library as _lib
+        installed_ids = {m.id for m in _lib.list_all()
+                         if getattr(m, "installed_at", 0)}
+    except Exception:  # noqa: BLE001
+        installed_ids = set()
 
     def work():
         done = 0; skipped = 0; failed = 0
         failures = []
         cancelled = False
-        for repo, item in items:
-            # An install already in progress is allowed to finish safely; do not
-            # begin another item once the user has asked to stop.
+        # Route per-file and per-unit progress into this job.  Without it the
+        # bar froze while a 25 MB module downloaded or the Gesenius scan ran.
+        from ... import library as _lib
+
+        def cb(phase, done_=0, total_=0, note=""):
+            msg = note or (f"{phase} {done_}" + (f"/{total_}" if total_ else ""))
             with _job_lock:
-                if _jobs.get(jid, {}).get("cancel_requested"):
-                    cancelled = True
-                    break
-            try:
-                res = store.install(repo, item)
-                if res.get("already"):
+                job = _jobs.get(jid, {})
+                if job.get("cancel_requested"):
+                    return
+                job.update(phase=phase, progress_done=done_,
+                           progress_total=total_, failures=list(failures))
+                if not job.get("message", "").startswith("Stopping"):
+                    job["message"] = msg
+
+        try:
+            for repo, item in items:
+                if _lib.slugify(f"{repo}-{item}") in installed_ids:
                     skipped += 1
-                else:
-                    done += 1
-            except Exception as e:   # noqa: BLE001
-                failed += 1
-                detail = {"repo": repo, "item": item,
-                          "error": f"{type(e).__name__}: {e}"[:500]}
-                failures.append(detail)
-                # Logging is best-effort: a second SQLite error must not kill
-                # the worker and hide the actual installation failure.
+                    with _job_lock:
+                        _jobs[jid].update(
+                            state="running", done=done + skipped + failed,
+                            total=len(items), current=f"{repo}/{item}",
+                            message=f"already installed: {repo}/{item}")
+                    continue
+                # An install already in progress may finish safely, but do not
+                # begin another item once the reader has asked to stop.
+                with _job_lock:
+                    if _jobs.get(jid, {}).get("cancel_requested"):
+                        cancelled = True
+                        break
                 try:
-                    db.log_history("recommended-install-failed",
-                                   f"{repo}/{item}: {detail['error']}", detail)
-                except Exception:
-                    pass
+                    res = store.install(repo, item,
+                                        progress_factory=lambda _tid: cb)
+                    if res.get("already"):
+                        skipped += 1
+                    else:
+                        done += 1
+                except Exception as e:   # noqa: BLE001
+                    failed += 1
+                    detail = {"repo": repo, "item": item,
+                              "error": f"{type(e).__name__}: {e}"[:500]}
+                    failures.append(detail)
+                    try:
+                        db.log_history("recommended-install-failed",
+                                       f"{repo}/{item}: {detail['error']}", detail)
+                    except Exception:
+                        pass
+                with _job_lock:
+                    _jobs[jid].update(
+                        state="running", current=f"{repo}/{item}",
+                        message=(f"installed {done}, already present {skipped}, "
+                                 f"failed {failed}"),
+                        done=done + skipped + failed,
+                        total=len(items), failures=list(failures))
+        except Exception as e:   # noqa: BLE001
             with _job_lock:
-                _jobs[jid].update(
-                    state="running",
-                    message=(f"installed {done}, already present {skipped}, "
-                             f"failed {failed}"),
-                    done=done + skipped + failed,
-                    total=len(items), failures=list(failures))
+                _jobs[jid].update(state="error",
+                                  message=f"{type(e).__name__}: {e}")
+            raise
         # Dismiss on an explicit choice, and also after a clean run: leaving
         # the checkbox unticked used to bring the same prompt back on every
         # start.  Failures stay retryable on the next launch.
@@ -317,22 +366,51 @@ def _store_repo_remove(parts, q):
         traceback.print_exc()
         print("repo removal failed:", exc, flush=True)
     installed_ids = [m.get("id") for m in installed if m.get("id")]
+    jid = "job_" + uuid.uuid4().hex[:16]
+    if remove_installed:
+        _remember_job(jid, {"state": "running", "started": time.time(),
+                            "message": "removing modules", "kind": "repo-remove",
+                            "repo": repo_id, "total": len(installed_ids),
+                            "done": 0, "failed": []})
 
     def _run():
         if not remove_installed:
             return
-        for mid in installed_ids:
-            try:
-                from gbible import library
-                library.remove_module(mid)
-            except Exception as exc:             # noqa: BLE001
-                print("module removal failed:", mid, exc, flush=True)
+        removed, failed = [], []
+        try:
+            from gbible import library
+            for mid in installed_ids:
+                try:
+                    library.remove_module(mid)
+                    removed.append(mid)
+                except Exception as exc:         # noqa: BLE001
+                    failed.append({"id": mid,
+                                   "error": f"{type(exc).__name__}: {exc}"[:300]})
+                with _job_lock:
+                    job = _jobs.get(jid)
+                    if job is not None:
+                        job.update(done=len(removed), failed=list(failed),
+                                   message=f"removed {len(removed)} of "
+                                   f"{len(installed_ids)} module(s)")
+        finally:
+            with _job_lock:
+                job = _jobs.get(jid)
+                if job is not None:
+                    job.update(state="done", removed=removed,
+                               result={"removed": removed, "failed": failed,
+                                       "catalogue_items": pv.get("catalogue_items", 0)},
+                               message=f"removed {len(removed)} module(s)"
+                               + (f"; {len(failed)} failed" if failed else ""))
+            _prune_jobs()
 
-    threading.Thread(target=_run, daemon=True).start()
+    if remove_installed:
+        threading.Thread(target=_run, daemon=True,
+                         name=f"repo-remove-{jid}").start()
     return _ok(ok=True, repo=repo_id, name=pv.get("name"),
                catalogue_items=pv.get("catalogue_items", 0),
                removed_modules=installed, permanent=permanent,
-               background=True)
+               job=jid if remove_installed else "",
+               background=bool(remove_installed))
 
 
 @endpoint("store/repo/preview")
@@ -394,8 +472,8 @@ def _store_import(parts, q):
     it ever reaches a route.
     """
     path = q.get("path", "")
-    if not path or not Path(path).exists():
-        return {"ok": False, "error": f"file not found: {path}"}
+    if not path or not Path(path).is_file():
+        return {"ok": False, "error": f"not a file: {path}"}
     from ... import formats
     data = Path(path).read_bytes() if Path(path).is_file() else None
     kind = formats.sniff(data, path=Path(path))
@@ -515,7 +593,11 @@ def _store_inspect(parts, q):
     from ...formats import sniff
     try:
         with p.open("rb") as fh:
-            head = fh.read(262144)
+            # ZIP central directories live at the end; a head-only read made
+            # USFM and e-Sword archives look like SWORD packages.
+            head = fh.read()
+            if len(head) > 64 * 1024 * 1024:
+                head = head[:262144]
     except OSError:
         head = b""
     try:
@@ -686,7 +768,7 @@ def _store_folder(parts, q):
         "bmap", "mybible", "epub", "usfm", "usfx", "osis", "txt", "md",
         "kmz", "kml", "jpg", "jpeg", "png", "svg", "gif", "tif", "tiff",
         "htm", "html", "wiki", "wikitext", "notx", "brpx", "memx", "prlx",
-        "harx", "lstx", "ovlx", "bzs", "bzu", "bzz", "mapx",
+        "harx", "lstx", "ovlx", "bzs", "bzu", "bzz", "mapx", "conllu",
     }
     files = []
     it = p.rglob("*") if recursive else p.iterdir()
@@ -724,7 +806,6 @@ def _store_import_folder(parts, q):
     paths = q.get("paths") or []
     if isinstance(paths, str):
         paths = [x for x in paths.split("|") if x]
-    skip_existing = str(q.get("skip_existing", "1")).lower() not in ("0", "false", "no")
     files = []
     for raw in paths:
         p = Path(str(raw)).expanduser()
@@ -747,29 +828,43 @@ def _store_import_folder(parts, q):
                         break
                 base = Path(path)
                 try:
-                    reg = store.register_local(base, fmt="", title=base.stem)
+                    from ... import formats as _formats, taxonomy as _tax
+                    if _formats.sniff(base.read_bytes(), path=base) == "conllu":
+                        lic = (q.get("license") or "").strip()
+                        year = (q.get("year") or "").strip()
+                        ok, why = _tax.redistributable({"license": lic,
+                                                        "year": year})
+                        if not ok:
+                            raise ValueError(
+                                f"Treebank refused: {why}. State its licence.")
+                    reg = store.register_local(base)
                     res = store.install("local", reg["item_id"])
-                    imported += 1
-                    msg = f"imported {imported} of {len(files)}: {base.name}"
+                    if res.get("already"):
+                        skipped += 1
+                        msg = f"already present: {base.name}"
+                    else:
+                        imported += 1
+                        msg = f"imported {imported} of {len(files)}: {base.name}"
                 except Exception as e:
                     failed.append({"path": path,
                                    "error": f"{type(e).__name__}: {e}"[:300]})
                     msg = f"failed: {base.name}"
                 with _job_lock:
                     _jobs[jid].update(state="running", message=msg,
-                                      done=imported, failed_count=len(failed),
-                                      current=str(base))
+                                      done=imported, skipped=skipped,
+                                      failed_count=len(failed), current=str(base))
         finally:
             with _job_lock:
                 if _jobs.get(jid, {}).get("cancel_requested"):
                     _jobs[jid].update(state="cancelled",
                                       message=f"stopped after {imported} imports",
-                                      done=imported, failed=failed)
+                                      done=imported, skipped=skipped, failed=failed)
                 else:
                     _jobs[jid].update(state="done",
                                       message=f"imported {imported} of {len(files)}"
+                                      + (f" ({skipped} already present)" if skipped else "")
                                       + (f" ({len(failed)} failed)" if failed else ""),
-                                      done=imported, failed=failed)
+                                      done=imported, skipped=skipped, failed=failed)
             _prune_jobs()
 
     threading.Thread(target=work, daemon=True, name=f"import-folder-{jid}").start()

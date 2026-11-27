@@ -478,6 +478,10 @@ const About = {
       + 'place. Your database, installed modules, notes, settings and keys are '
       + 'not touched. Every replaced app file is backed up first, and the app '
       + 'restarts itself when the files are in place.</div>'
+      + (safeUrl(r.page_url) ? '<div class="tiny muted" style="margin-top:6px">'
+        + 'Running an AppImage? <a href="' + esc(safeUrl(r.page_url))
+        + '" target="_blank" rel="noopener noreferrer">Open the release page</a> '
+        + 'to download the standalone build instead.</div>' : '')
       + '<div class="tiny muted" id="upd-status" style="margin-top:6px"></div>';
     modal('Update available', body, [
       { label: 'Update in place', cls: 'btn primary', close: false, fn: async () => {
@@ -533,7 +537,12 @@ const About = {
       + '<b>MIT License</b> — you are welcome to use it, study it, modify it, '
       + 'and fork it however you like.'
       + '</div>'
-      + '<div class="tiny muted">© 2026 G-Bible contributors</div>',
+      + '<div class="tiny muted">© 2026 G-Bible contributors</div>'
+      + '<div class="tiny muted" style="margin-top:8px">Using the AppImage? '
+      + '<a href="https://github.com/blackclover5/G-Bible/releases" '
+      + 'target="_blank" rel="noopener noreferrer">Get the latest AppImage '
+      + 'from the releases page</a>. The in-app updater updates a source '
+      + 'installation in place; it does not replace an AppImage.</div>',
       [ { label: 'Check for Updates', cls: 'btn', fn: async () => {
           await About.checkForUpdates();
         } },

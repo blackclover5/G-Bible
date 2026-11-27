@@ -13,6 +13,7 @@ Nothing here runs automatically.  ``check`` is a read; ``prepare`` downloads;
 """
 from __future__ import annotations
 
+import email.utils
 import json
 import os
 import re
@@ -51,13 +52,90 @@ def _version(v: str) -> tuple:
     return tuple(out)
 
 
+def _retry_delay(value: str | None, default: float) -> float:
+    """Honour Retry-After in either seconds or HTTP-date form."""
+    if not value:
+        return default
+    try:
+        return min(30.0, max(0.0, float(value)))
+    except (TypeError, ValueError):
+        pass
+    try:
+        when = email.utils.parsedate_to_datetime(value)
+        now = email.utils.parsedate_to_datetime(
+            email.utils.formatdate(usegmt=True))
+        return min(30.0, max(0.0, (when - now).total_seconds()))
+    except Exception:  # noqa: BLE001
+        return default
+
+
+def _open(url: str, *, timeout: int = 20, headers: dict | None = None):
+    """Open a URL with bounded retries for transient network failures."""
+    hdrs = {"User-Agent": "G-Bible-Updater",
+            "Accept": "application/vnd.github+json"}
+    if headers:
+        hdrs.update(headers)
+    last = None
+    for attempt in range(4):
+        if attempt:
+            time.sleep(min(8.0, 1.5 * attempt))
+        try:
+            req = urllib.request.Request(url, headers=hdrs)
+            return urllib.request.urlopen(req, timeout=timeout)
+        except urllib.error.HTTPError as exc:
+            last = exc
+            limited = (exc.code == 429 or 500 <= exc.code < 600
+                       or (exc.code == 403
+                           and exc.headers.get("X-RateLimit-Remaining") == "0"))
+            if not limited:
+                break
+            time.sleep(_retry_delay(exc.headers.get("Retry-After"), 1.5 * attempt))
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            last = exc
+    raise last
+
+
 def _get(url: str, timeout: int = 20) -> bytes:
-    req = urllib.request.Request(url, headers={
-        "User-Agent": "G-Bible-Updater",
-        "Accept": "application/vnd.github+json",
-    })
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with _open(url, timeout=timeout) as r:
         return r.read()
+
+
+def _download(url: str, dest: Path, max_bytes: int, timeout: int = 90) -> int:
+    """Stream a download to ``dest``, resuming from a partial file."""
+    tmp = dest.with_name(dest.name + ".part")
+    size = tmp.stat().st_size if tmp.is_file() else 0
+    if size > max_bytes:
+        tmp.unlink(missing_ok=True)
+        size = 0
+    last = None
+    for attempt in range(4):
+        try:
+            headers = {"Range": f"bytes={size}-"} if size else None
+            with _open(url, timeout=timeout, headers=headers) as r:
+                if size and getattr(r, "status", 200) != 206:
+                    size = 0
+                ctype = (r.headers.get("Content-Type") or "").lower()
+                if "text/html" in ctype:
+                    raise ValueError("the release server returned a web page")
+                with open(tmp, "ab" if size else "wb") as fh:
+                    while True:
+                        chunk = r.read(256 * 1024)
+                        if not chunk:
+                            break
+                        size += len(chunk)
+                        if size > max_bytes:
+                            raise ValueError("the download is too large")
+                        fh.write(chunk)
+            with open(tmp, "rb") as fh:
+                if fh.read(2) != b"PK":
+                    raise ValueError("the download is not a zip archive")
+            tmp.replace(dest)
+            return size
+        except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
+            last = exc
+            if attempt < 3:
+                time.sleep(min(8.0, 1.5 * (attempt + 1)))
+    raise last
 
 
 def current_version() -> str:
@@ -114,7 +192,9 @@ def _safe_root(zf: zipfile.ZipFile) -> str:
 
 def prepare(tag: str) -> dict:
     """Download and stage a validated source archive for ``tag``."""
-    rel = check(force=False)
+    # Cached release data may be an hour old.  Re-check before staging so a
+    # newly published release is not refused as "no longer the latest".
+    rel = check(force=True)
     if not rel.get("ok"):
         return rel
     if tag != rel.get("tag"):
@@ -126,17 +206,14 @@ def prepare(tag: str) -> dict:
         return {"ok": False, "error": "the source URL is not HTTPS"}
     dest = _STAGE / tag
     try:
-        blob = _get(url, timeout=90)
-    except Exception as exc:
-        return {"ok": False, "error": f"Could not download the source: {exc}"}
-    if len(blob) > _MAX_SOURCE_BYTES:
-        return {"ok": False, "error": "the source archive is too large"}
-    try:
         if dest.exists():
             shutil.rmtree(dest)
         dest.mkdir(parents=True)
         archive = dest / "source.zip"
-        archive.write_bytes(blob)
+        downloaded = _download(url, archive, _MAX_SOURCE_BYTES, timeout=90)
+    except Exception as exc:
+        return {"ok": False, "error": f"Could not download the source: {exc}"}
+    try:
         with zipfile.ZipFile(archive) as zf:
             prefix = _safe_root(zf)
             # A compressed blob can be small while expanding to gigabytes.
@@ -167,7 +244,7 @@ def prepare(tag: str) -> dict:
     src = dest / "src"
     files = [p for p in src.rglob("*") if p.is_file()]
     return {"ok": True, "tag": tag, "files": len(files),
-            "bytes": len(blob), "staged": str(src)}
+            "bytes": downloaded, "staged": str(src)}
 
 
 def _protected(rel: str) -> bool:

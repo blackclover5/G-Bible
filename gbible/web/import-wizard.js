@@ -19,6 +19,12 @@ const ImportWizard = {
       + '<button class="btn" id="iw-folder" title="Import every importable file in a folder">Import a folder…</button>'
       + '</div>'
       + '<div id="iw-preview"></div>'
+      + '<div class="row" style="gap:6px;margin-top:8px">'
+      + '<input id="iw-lic" style="flex:1;min-width:0" '
+      + 'placeholder="Treebank licence (e.g. CC BY-SA 4.0)">'
+      + '<input id="iw-year" style="width:90px" placeholder="Year"></div>'
+      + '<div class="tiny muted" style="margin-top:3px">Only needed for '
+      + 'CoNLL-U treebanks, which have their own licence.</div>'
       + '<div class="iw-personal" style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line)">'
       + '<div class="tiny muted" style="margin-bottom:6px">Import a personal book (PDF, EPUB or plain text) into your library:</div>'
       + '<div class="row" style="gap:6px"><input id="iw-pb-path" style="flex:1" placeholder="/path/to/book.epub">'
@@ -178,7 +184,13 @@ const ImportWizard = {
       '<div class="tiny muted" id="iw-fo-path">' + esc(path) + '</div>'
       + '<div id="iw-folder-list" style="max-height:55vh;overflow:auto;margin:8px 0;border:1px solid var(--line);border-radius:6px;padding:4px">'
       + '<div class="st-loading">Scanning…</div></div>'
-      + '<div class="tiny muted" id="iw-folder-sum"></div>',
+      + '<div class="tiny muted" id="iw-folder-sum"></div>'
+      + '<div class="row" style="gap:6px;margin-top:8px">'
+      + '<input id="iw-lic" style="flex:1;min-width:0" '
+      + 'placeholder="Treebank licence (e.g. CC BY-SA 4.0)">'
+      + '<input id="iw-year" style="width:90px" placeholder="Year"></div>'
+      + '<div class="tiny muted" style="margin-top:3px">Only needed for '
+      + '.conllu treebanks in the selection.</div>',
       [
         { label: 'Import selected', cls: 'btn primary', close: false,
           fn: () => this._importFolder() },
@@ -226,7 +238,9 @@ const ImportWizard = {
     const boxes = $$('.iw-fsel', host);
     const paths = this._folderFiles.filter((f, i) => boxes[i] && boxes[i].checked).map(f => f.path);
     if (!paths.length) { toast('Tick at least one file.', 'warn'); return; }
-    const r = await post('store/import-folder', { paths });
+    const r = await post('store/import-folder', { paths,
+      license: (($('#iw-lic') || {}).value || '').trim(),
+      year: (($('#iw-year') || {}).value || '').trim() });
     if (!r.ok) { toast(r.error || 'could not start', 'err'); return; }
     this._trackFolderJob(r.job, r.total);
   },
@@ -279,7 +293,9 @@ const ImportWizard = {
     const path = ($('#iw-path') || {}).value;
     const p = (path || '').trim();
     if (!p) { toast('Point me at a file first.', 'warn'); return; }
-    const r = await post('store/import', { path: p });
+    const r = await post('store/import', { path: p,
+      license: (($('#iw-lic') || {}).value || '').trim(),
+      year: (($('#iw-year') || {}).value || '').trim() });
     if (!r.ok) { toast(r.error || 'import failed', 'err'); return; }
     this.lastPath = p;
     const status = $('#iw-preview');

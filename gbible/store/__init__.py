@@ -196,11 +196,27 @@ _load_custom_repos()
 # Catalogue loading
 # --------------------------------------------------------------------------
 
+def _catalog_path(name: str) -> Path:
+    """Bundled catalogues ship with the app; custom ones live with user data.
+
+    Writing a custom catalogue into the installed package directory failed on
+    a read-only/system install and was inconsistent with custom_repos.json.
+    """
+    bundled = {r.catalog for r in REPOSITORIES
+               if r.id in BUNDLED_REPO_IDS and r.catalog}
+    if name in bundled:
+        return DATA_DIR / name
+    from .. import db
+    folder = Path(db.app_dir()) / "catalogs"
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder / name
+
+
 def load_catalog(repo_id: str) -> dict:
     r = REPO_BY_ID.get(repo_id)
     if not r or not r.catalog:
         return {}
-    p = DATA_DIR / r.catalog
+    p = _catalog_path(r.catalog)
     if not p.exists():
         return {}
     try:
@@ -210,6 +226,27 @@ def load_catalog(repo_id: str) -> dict:
 
 
 def repo_items(repo_id: str) -> list[dict]:
+    """Normalised, licence-checked item list, cached until the catalogue changes.
+
+    A bulk install used to reload and renormalise the same JSON for every
+    module; CrossWire alone has 232 items and was parsed two dozen times.
+    """
+    r = REPO_BY_ID.get(repo_id)
+    p = (_catalog_path(r.catalog)) if r and r.catalog else None
+    stamp = (str(p), p.stat().st_mtime_ns) if p and p.exists() else None
+    hit = _REPO_ITEMS_CACHE.get(repo_id)
+    if repo_id != "local" and hit and hit[0] == stamp:
+        return [dict(x) for x in hit[1]]
+    items = _repo_items_uncached(repo_id)
+    if repo_id != "local":
+        _REPO_ITEMS_CACHE[repo_id] = (stamp, items)
+    return [dict(x) for x in items]
+
+
+_REPO_ITEMS_CACHE: dict = {}
+
+
+def _repo_items_uncached(repo_id: str) -> list[dict]:
     """Normalised, licence-checked item list for a repository."""
     raw = load_catalog(repo_id)
     out: list[dict] = []
@@ -295,7 +332,6 @@ def register_local(path: Path, *, fmt: str = "", title: str = "",
                    category: str = "", extra: dict | None = None) -> dict:
     """Record a file chosen with "Import a file…" so it can be installed."""
     p = Path(path)
-    item_id = library.slugify(p.stem) or "book"
     from .. import formats
     kind = fmt or formats.sniff(p.read_bytes() if p.is_file() else None, path=p)
     # An EPUB carries its own title and rights; anything else is named after
@@ -323,6 +359,20 @@ def register_local(path: Path, *, fmt: str = "", title: str = "",
         except Exception:
             meta = dict(extra or {})
     conn = db.connect()
+    # Two files with the same name in different folders used to collapse into
+    # one local item; the later import then reported "already installed" and
+    # installed nothing.  Keep an existing item for this exact path (so a
+    # re-import still updates the same module) and give new paths a stable
+    # discriminator derived from the path itself.
+    prior = conn.execute(
+        "SELECT item_id FROM store_item WHERE repo_id='local' "
+        "AND download_url=?", (str(p),)).fetchone()
+    if prior and prior["item_id"]:
+        item_id = prior["item_id"]
+    else:
+        import hashlib
+        tag = hashlib.sha256(str(p.resolve()).encode("utf-8")).hexdigest()[:8]
+        item_id = (library.slugify(p.stem) or "book") + "-" + tag
     lic = taxonomy.normalise_license(meta.get("rights")
                                     or meta.get("publisher") or "")
     conn.execute(
@@ -637,6 +687,9 @@ def list_items(*, repo: str | None = None, lang: str | None = None,
                 if (placement.preview(r["repo_id"], r["item_id"],
                                       r.get("type") or "Other",
                                       r.get("title") or "")["slot"] == slot)]
+        # The SQL total cannot see the derived slot, so report the filtered
+        # count instead of a number the UI never shows rows for.
+        total = len(rows)
     if slot and limit:
         rows = rows[:int(limit)]
 
@@ -867,7 +920,7 @@ def remove_repo(repo_id: str, *, remove_installed: bool = False,
         REPO_BY_ID.pop(repo_id, None)
         if cat:
             try:
-                (DATA_DIR / cat).unlink()
+                _catalog_path(cat).unlink(missing_ok=True)
             except OSError:
                 pass
         _save_custom_repos()
@@ -974,7 +1027,7 @@ def add_repo(source: str, *, name: str = "") -> dict:
     license_note = data.get("license_note") or ""
 
     catalog_name = "custom-%s.json" % slug
-    (DATA_DIR / catalog_name).write_text(
+    _catalog_path(catalog_name).write_text(
         json.dumps(data, ensure_ascii=False), encoding="utf-8")
 
     rd = RepoDef(id=slug, name=repo_name, vendor=vendor, home=home,
@@ -995,7 +1048,7 @@ def add_repo(source: str, *, name: str = "") -> dict:
         REPOSITORIES[:] = [x for x in REPOSITORIES if x.id != rd.id]
         REPO_BY_ID.pop(rd.id, None)
         try:
-            (DATA_DIR / catalog_name).unlink()
+            _catalog_path(catalog_name).unlink(missing_ok=True)
         except OSError:
             pass
         _save_custom_repos()
@@ -1004,7 +1057,7 @@ def add_repo(source: str, *, name: str = "") -> dict:
         REPOSITORIES[:] = [x for x in REPOSITORIES if x.id != rd.id]
         REPO_BY_ID.pop(rd.id, None)
         try:
-            (DATA_DIR / catalog_name).unlink()
+            _catalog_path(catalog_name).unlink(missing_ok=True)
         except OSError:
             pass
         _save_custom_repos()
@@ -1065,11 +1118,12 @@ class InstallError(Exception):
 
 
 def install(repo_id: str, item_id: str, *, fmt: str = "",
-            force: bool = False) -> dict:
+            force: bool = False, progress_factory=None) -> dict:
     """Download, convert and index one store item.  Synchronous and blocking;
     the server runs it in a worker thread and streams progress."""
     from ..importers import runner
-    return runner.install(repo_id, item_id, fmt=fmt, force=force)
+    return runner.install(repo_id, item_id, fmt=fmt, force=force,
+                          progress_factory=progress_factory)
 
 
 def remove(module_id: str) -> dict:

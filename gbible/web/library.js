@@ -49,6 +49,9 @@ const Store = {
     }
     modal('Recent transfers', h, [
       { label: 'Clear', cls: 'btn danger', close: false, fn: async () => {
+          if (!confirm('Clear the transfer history and the full history log? '
+            + 'This removes install, removal and error records, not your '
+            + 'modules or notes.')) return;
           const r = await api('store/transfers/clear');
           if (r && r.ok) {
             toast('Transfers cleared', 'ok');
@@ -129,17 +132,42 @@ const Store = {
             permanent: permanent ? '1' : '' });
           if (btn) { btn.disabled = false; btn.textContent = '−'; }
           if (!r.ok) { toast(r.error || 'Could not remove', 'err'); return; }
-          const gone = (r.removed_modules || []).length;
+          const refresh = async () => {
+            $('#f-repo').value = '';
+            this._repos = null;
+            await this.repos();
+            await App.loadLibrary();
+            this.fetch();
+            closeModal();
+          };
+          if (r.job) {
+            toast('Removing ' + (r.removed_modules || []).length
+              + ' module(s) in the background…', 'warn');
+            const poll = async () => {
+              const js = await api('store/job', { job: r.job });
+              const j = js && js.job;
+              if (!j) {
+                toast('Could not check removal progress. Refresh the Library '
+                  + 'in a moment.', 'err'); return;
+              }
+              if (j.state !== 'done' && j.state !== 'error') {
+                setTimeout(poll, 600); return;
+              }
+              const res = j.result || {};
+              const failed = (res.failed || []).length;
+              toast('Removed ' + r.name + ' (' + (r.catalogue_items || 0)
+                + ' entries, ' + (res.removed || []).length + ' modules'
+                + (failed ? ', ' + failed + ' failed' : '') + ')'
+                + (r.permanent ? ' — permanently.' : '.'), failed ? 'err' : 'ok');
+              await refresh();
+            };
+            poll();
+            return;
+          }
           toast('Removed ' + r.name + ' (' + r.catalogue_items + ' entries'
-            + (gone ? ', ' + gone + ' modules being deleted in the background'
-                    : ', installed modules kept') + ')'
+            + ', installed modules kept)'
             + (r.permanent ? ' — permanently.' : '.'));
-          $('#f-repo').value = '';
-          this._repos = null;
-          await this.repos();
-          await App.loadLibrary();
-          this.fetch();
-          closeModal();
+          await refresh();
         } },
         { label: 'Cancel', fn: () => {} }]);
 
@@ -364,9 +392,10 @@ const Store = {
       b.onclick = () => this.doInstall(it, b);
       a.appendChild(b);
     }
-    if (it.page_url) {
+    const sourceUrl = safeUrl(it.page_url);
+    if (sourceUrl) {
       const l = el('a', 'btn', 'Source');
-      l.href = it.page_url; l.target = '_blank'; l.rel = 'noopener';
+      l.href = sourceUrl; l.target = '_blank'; l.rel = 'noopener';
       a.appendChild(l);
     }
     n.appendChild(a);
@@ -388,7 +417,7 @@ const Store = {
     if (r.already) { toast('Already installed.'); btn.textContent = 'Installed';
       if (spin) spin.hidden = true; await refresh(); return; }
     const job = r.job;
-    let attempts = 0;
+    const started = Date.now();
     const poll = async () => {
       const res = await api('store/job', { job: job });
       const j = res && res.job;
@@ -398,8 +427,13 @@ const Store = {
         toast(msg, 'err');
       };
       if (!res || res.ok === false || !j) { fail((res && res.error) || 'Install job lost.'); return; }
-      if (++attempts > 300) { fail('Install timed out. Check Transfers.'); return; }
-      btn.textContent = j.message ? j.message.slice(0, 18) : '…';
+      // A large module can legitimately take minutes.  A fixed poll count
+      // declared "timed out" while the server was still installing.
+      if (Date.now() - started > 30 * 60 * 1000) {
+        fail('Install is taking unusually long. Check Transfers.'); return;
+      }
+      const msg = j.message || '';
+      btn.textContent = msg ? (msg.length > 26 ? msg.slice(0, 25) + '…' : msg) : '…';
       btn.title = j.message || '';
       if (j.state === 'done') {
         if (spin) spin.hidden = true;
@@ -2117,8 +2151,9 @@ const MapsUI = {
     const bits = [];
     if (m.license) bits.push(esc(m.license));
     if (m.author) bits.push(esc(m.author));
-    if (m.source) {
-      bits.push('<a href="' + esc(m.source) + '" target="_blank" '
+    const src = safeUrl(m.source);
+    if (src) {
+      bits.push('<a href="' + esc(src) + '" target="_blank" '
         + 'rel="noopener noreferrer">source</a>');
     }
     if (m.attribution) bits.push(esc(m.attribution));
@@ -2412,8 +2447,8 @@ const Media = {
         + esc(it.url) + '" alt="' + esc(it.title) + '">'
         : '<div class="md-noimg">no preview</div>');
     return '<figure class="md-card' + (it.reusable ? '' : ' restricted') + '">'
-      + '<a href="' + esc(it.landing_url || it.url) + '" target="_blank"'
-      + ' rel="noopener noreferrer">' + preview + '</a>'
+      + '<a href="' + esc(safeUrl(it.landing_url || it.url) || '#')
+      + '" target="_blank" rel="noopener noreferrer">' + preview + '</a>'
       + '<figcaption>'
       + '<div class="md-title">' + esc(it.title) + '</div>'
       + '<div class="tiny muted">' + esc(it.creator) + '</div>'
