@@ -49,10 +49,11 @@ const SermonFinder = {
     out.querySelectorAll('[data-smnote]').forEach(a => a.onclick = async (e) => {
       e.preventDefault();
       const s = items[+a.dataset.smnote];
-      await post('notes/save', { kind: 'sermon', title: s.title, ref_label: ref,
-        module_id: s.module_id,
+      const r = await post('notes/save', { kind: 'sermon', title: s.title,
+        ref_label: ref, module_id: s.module_id,
         body: (s.points || []).map(p => '- ' + p).join('\n')
           + '\n\n— ' + s.module + '\n\nSource: ' + s.module });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not start the sermon.', 'err'); return; }
       App.show('notes');
       toast('Started a sermon note from these points.');
     });
@@ -74,13 +75,17 @@ const SermonBuilder = {
     const noteId = params.get('note') || '';
     if (noteId) {
       const r = await api('sermon', { action: 'builder_get', id: noteId });
-      if (r.ok) { this._noteId = noteId; this._render(body, r); return; }
+      if (!r || r.ok === false) {
+        toast((r && r.error) || 'Could not load that sermon.', 'err');
+      } else {
+        this._noteId = noteId; this._render(body, r); return;
+      }
     }
     this._noteId = '';
     this._render(body, {
       title: '', ref_label: '', outline: [], introduction: '',
       points: [], illustrations: [], conclusion: '', delivery: '',
-      series: '', scheduled: '',
+      series: '', scheduled: '', body: '',
     });
   },
 
@@ -104,7 +109,11 @@ const SermonBuilder = {
       + '<input id="sb-scheduled" placeholder="Scheduled date (YYYY-MM-DD)"'
       + ' value="' + esc(d.scheduled || '') + '" style="width:180px">'
       + '</div>'
-      + '<div class="org-card" id="sb-research">'
+      // A plain imported sermon has its content in the note's body, not in the
+      // structured meta fields.  Without this field it opened as blank.
+      + field('sb-body', 'Sermon text', d.body,
+        'Your manuscript or imported sermon text')
+      + '<div class="org-card ai-only" id="sb-research">'
       + '<div class="org-h"><b>Research</b><span class="org-a">'
       + '<button class="btn tiny" id="sb-r-outline">outline ideas</button>'
       + '<button class="btn tiny" id="sb-r-illustration">illustrations</button>'
@@ -137,7 +146,11 @@ const SermonBuilder = {
       + '</div>';
     this._wire(body);
     const back = body.querySelector('#sb-back');
-    if (back) back.onclick = () => { history.pushState(null, '', window.location.pathname); $('#sm-tab').value = 'sermon-manager'; SermonHub.load(); };
+    if (back) back.onclick = () => {
+      history.pushState(null, '', window.location.pathname);
+      $('#sm-tab').value = 'sermon-manager';
+      SermonHub.load();
+    };
   },
 
   _pointRow(text, i) {
@@ -149,6 +162,10 @@ const SermonBuilder = {
   },
 
   _wire(body) {
+    // The scheduled date used to be free text: "tomorrow", "12/24", even
+    // "soon" all saved and then never matched the calendar.  Use the shared
+    // picker while keeping the ISO string the backend already expects.
+    DatePicker.attach($('#sb-scheduled'), { label: 'Scheduled date' });
     const research = (kind) => async () => {
       const ref = ($('#sb-ref').value || '').trim();
       if (!ref) { toast('Enter the passage first.', 'warn'); return; }
@@ -202,8 +219,13 @@ const SermonBuilder = {
       this._render(body, this._gather(body, pts));
     };
     body.querySelectorAll('[data-sbdel]').forEach(b => b.onclick = () => {
-      const pts = this._getPoints();
-      pts.splice(+b.dataset.sbdel, 1);
+      // Index by DOM position: _getPoints() drops blank rows, so using its
+      // index removed the wrong point whenever a blank row was present.
+      const rows = Array.from(document.querySelectorAll('.sb-point'));
+      const at = rows.indexOf(b.closest('.row'));
+      if (at < 0) return;
+      rows.splice(at, 1);
+      const pts = rows.map(n => n.value.trim()).filter(Boolean);
       this._render(body, this._gather(body, pts));
     });
     $('#sb-save').onclick = async () => {
@@ -235,7 +257,9 @@ const SermonBuilder = {
     const del = $('#sb-delete');
     if (del) del.onclick = async () => {
       if (!this._noteId) return;
-      await post('notes/delete', { id: this._noteId });
+      if (!confirm('Delete this sermon? This cannot be undone.')) return;
+      const r = await post('notes/delete', { id: this._noteId });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not delete the sermon.', 'err'); return; }
       this._noteId = '';
       toast('Sermon deleted.');
       this.load(body);
@@ -284,9 +308,12 @@ const SermonBuilder = {
       // New rows arrive with unwired remove buttons; the counterpart of the
       // ones `_wire` connected, so they behave the same.
       wrap.querySelectorAll('[data-sbdel]').forEach(b => b.onclick = () => {
-        const pts = this._getPoints();
-        pts.splice(+b.dataset.sbdel, 1);
-        this._render(body, this._gather(body, pts));
+        const rows = Array.from(wrap.querySelectorAll('.sb-point'));
+        const at = rows.indexOf(b.closest('.row'));
+        if (at < 0) return;
+        rows.splice(at, 1);
+        this._render(body, this._gather(body,
+          rows.map(n => n.value.trim()).filter(Boolean)));
       });
     }
     toast('Added ' + lines.length + ' line' + (lines.length === 1 ? '' : 's')
@@ -297,6 +324,7 @@ const SermonBuilder = {
     return {
       title: $('#sb-title').value.trim(),
       ref_label: $('#sb-ref').value.trim(),
+      body: ($('#sb-body') || {}).value || '',
       series: $('#sb-series').value.trim(),
       scheduled: $('#sb-scheduled').value.trim(),
       introduction: $('#sb-intro').value.trim(),
@@ -348,7 +376,7 @@ const SermonManager = {
       + '</div><div id="sm-find-panel" style="display:none;margin-bottom:10px"></div>';
     if (!sermons.length) {
       h += '<div class="empty">No sermons yet. Start one in the Sermon '
-        + 'Sermon Editor, or import one above.</div>';
+        + 'Editor, or import one above.</div>';
       body.innerHTML = h;
       this.wireImport(body);
       this.wireFinder(body);
@@ -383,16 +411,24 @@ const SermonManager = {
       $('#sm-tab').value = 'sermon-editor';
       App.show('sermon-manager');
     });
-    body.querySelectorAll('[data-smsched]').forEach(a => a.onclick = async (e) => {
+    body.querySelectorAll('[data-smsched]').forEach(a => a.onclick = (e) => {
       e.preventDefault();
-      const date = prompt('Date (YYYY-MM-DD):');
-      if (!date) return;
-      await post('sermon', { action: 'schedule', date, id: a.dataset.smsched });
-      this.load(body);
+      DatePicker.open({
+        anchor: a, label: 'Schedule this sermon',
+        onPick: async (date) => {
+          if (!date) return;
+          const r = await post('sermon', { action: 'schedule', date,
+            id: a.dataset.smsched });
+          if (!r || r.ok === false) { toast((r && r.error) || 'Could not schedule.', 'err'); return; }
+          this.load(body);
+        },
+      });
     });
     body.querySelectorAll('[data-smunsched]').forEach(a => a.onclick = async (e) => {
       e.preventDefault();
-      await post('sermon', { action: 'schedule', date: '', id: a.dataset.smunsched });
+      const r = await post('sermon', { action: 'schedule', date: '',
+        id: a.dataset.smunsched });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not unschedule.', 'err'); return; }
       this.load(body);
     });
     body.querySelectorAll('[data-smexport]').forEach(a => a.onclick = async (e) => {
@@ -468,10 +504,3 @@ const SermonHub = {
     if (editorBtn) editorBtn.onclick = () => { history.pushState(null, '', window.location.pathname); $('#sm-tab').value = 'sermon-editor'; this.load(); };
   },
 };
-
-/* ======================================================= Reading plans
- *
- * Every plan, grouped by what it is asking of you: a day waiting, no
- * schedule, not yet due, or put away.  The grouping is read from the stored
- * pace and the archived list, so a plan moves between sections by changing
- * one control here rather than by being re-created and losing its history. */

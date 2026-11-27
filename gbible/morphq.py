@@ -99,15 +99,29 @@ def parse_code(code: str) -> dict:
     * A verb's person digit is optional: HVqp3ms carries one and HVqrmsa does
       not, the second meaning third person.
     """
-    raw = (code or "").strip()
+    original = (code or "").strip()
+    raw = original
+    # Strip the scheme prefix FIRST.  A KJV Greek tag is stored as
+    # `robinson:V-PAI-3S` and a Hebrew one as `strongMorph:TH8804`; leaving the
+    # prefix on made the Greek regex below fail and handed both to the OSHB
+    # letter parser, which read them as an article with a stray stem.  The
+    # prefixed Robinson codes are exactly the ones the real KJV module uses.
+    scheme = ""
+    for prefix, name in (("robinson:", "Robinson"),
+                         ("strongmorph:", "strongMorph"),
+                         ("macula:", "MACULA"),
+                         ("proiel:", "PROIEL")):
+        if raw.lower().startswith(prefix):
+            scheme, raw = name, raw[len(prefix):]
+            break
     # MACULA/PROIEL Greek tags use a compact, explicit POS + feature code
     # (for example N-NSM, V-AAI-3S, V-PAP-NSM). Decode these before the
     # Hebrew/Robinson parser; treating them as OSHB codes loses every feature.
-    greek = re.sub(r"^(?:MACULA|PROIEL):", "", raw, flags=re.I)
-    gm = re.fullmatch(r"([A-Z]+)(?:-([A-Z0-9-]+))?", greek.upper())
+    gm = re.fullmatch(r"([A-Z]+)(?:-([A-Z0-9-]+))?", raw.upper())
     if gm and gm.group(1) in {"N", "V", "A", "C", "D", "I", "P", "RA", "RD", "RI", "RP", "RR", "X", "T"}:
         pos, codepart = gm.group(1), gm.group(2) or ""
-        f = {"raw": raw, "scheme": "MACULA", "pos": {
+        f = {"raw": original,
+             "scheme": scheme or "MACULA", "pos": {
             "N":"noun", "V":"verb", "A":"adjective", "C":"conjunction",
             "D":"adverb", "I":"interjection", "P":"preposition",
             "RA":"article", "RD":"demonstrative pronoun", "RI":"interrogative pronoun",
@@ -143,20 +157,14 @@ def parse_code(code: str) -> dict:
                     f["person"] = {"1":"first", "2":"second", "3":"third"}[pm.group(1)]
                     f["number"] = nums[pm.group(2)]
         return f
-    f: dict = {"raw": raw, "scheme": "", "pos": None, "pos_label": "",
-               "gender": None, "number": None, "state": None,
+    f: dict = {"raw": original,
+               "scheme": scheme or "OSHB", "pos": None, "pos_label": "",
+               "gender": None, "number": None, "case": None, "degree": None,
+               "voice": None, "mood": None, "state": None,
                "conjugation": None, "tense": None, "person": None,
                "participle": None, "particles": [], "stem": None}
     if not raw:
         return f
-    if raw.lower().startswith("robinson:"):
-        f["scheme"] = "Robinson"
-        raw = raw.split(":", 1)[1]
-    elif raw.lower().startswith("strongmorph:"):
-        f["scheme"] = "strongMorph"
-        raw = raw.split(":", 1)[1]
-    else:
-        f["scheme"] = "OSHB"
     body = raw[1:] if raw[:1].upper() == "H" else raw
 
     parts = [p for p in body.split("/") if p]
@@ -260,7 +268,200 @@ def parse_code(code: str) -> dict:
 
 
 _FILTERS = ("pos", "gender", "number", "case", "degree", "state", "conjugation", "tense",
-            "voice", "mood", "person", "participle", "scheme", "pos_particle")
+            "voice", "mood", "person", "participle", "scheme", "pos_particle", "stem")
+
+# ---------------------------------------------------------------- search ---
+# `search.py` used to resolve `morph:...` with `value LIKE '%code%'`.  That is a
+# prefix search wearing a morphology costume: it finds a tag *spelling*, not a
+# grammatical feature.  `parse_code` already decodes every tag into features, so
+# resolve the request to the concrete tag values first and let the search engine
+# look those up exactly.  A reader can then ask for "third person" without
+# knowing that Hebrew writes it `3ms` and Greek writes it `-3S`.
+
+#: Distinct codes are a closed vocabulary (~4,300 here) and decoding all of them
+#: on every keystroke is wasteful.  The key includes the database path as well as
+#: the generation because a fresh scratch database in a test process does not
+#: bump the in-process generation.
+_MORPH_VOCAB: dict[tuple, dict[str, dict]] = {}
+
+#: Common short spellings, accepted alongside the full feature names that
+#: `parse_code` returns.  `not:` negation is preserved by the caller.
+_ALIASES = {
+    "person": {"1": "first", "2": "second", "3": "third"},
+    "number": {"s": "singular", "p": "plural", "d": "dual"},
+    "gender": {"m": "masculine", "f": "feminine", "b": "common (both)",
+               "c": "common (both)"},
+    "case": {"n": "nominative", "g": "genitive", "d": "dative",
+             "a": "accusative", "v": "vocative"},
+    "voice": {"a": "active", "m": "middle", "p": "passive", "e": "middle/passive"},
+    "mood": {"i": "indicative", "s": "subjunctive", "o": "optative",
+             "m": "imperative", "n": "infinitive", "p": "participle"},
+    "pos": {"n": "noun", "v": "verb", "a": "adjective", "c": "conjunction",
+            "d": "adverb", "p": "preposition", "t": "article"},
+}
+
+
+def _all_codes(conn=None) -> dict[str, dict]:
+    """The distinct morph codes and their decoded features, cached per library."""
+    conn = conn or db.connect()
+    key = (db.GENERATION, str(db.db_path()))
+    got = _MORPH_VOCAB.get(key)
+    if got is None:
+        got = {}
+        for r in conn.execute(
+                "SELECT DISTINCT value FROM marker WHERE kind='morph'").fetchall():
+            if r[0]:
+                got[r[0]] = parse_code(r[0])
+        if len(_MORPH_VOCAB) > 4:
+            _MORPH_VOCAB.clear()
+        _MORPH_VOCAB[key] = got
+    return got
+
+
+def _normalise_filter_value(key: str, value: str) -> str:
+    negated = value.startswith("not:")
+    if negated:
+        value = value[4:].strip()
+    low = value.lower()
+    value = _ALIASES.get(key, {}).get(low, low)
+    return ("not:" if negated else "") + value
+
+
+def _feature_filters(value: str) -> dict[str, str]:
+    """Parse `tense=perfect person=third` (commas accepted) into filters."""
+    out: dict[str, str] = {}
+    for part in re.split(r"[\s,]+", (value or "").strip()):
+        if not part or "=" not in part:
+            continue
+        key, val = part.split("=", 1)
+        key = key.strip().lower().replace("-", "_")
+        val = val.strip()
+        # Both `tense=not:aorist` and `not:tense=aorist` are used: the first is
+        # the form morphq.query() takes as a filter value, the second reads
+        # better in a typed query.  Normalise them to one representation before
+        # checking the key against the known features.
+        if key.startswith("not:"):
+            key, val = key[4:].strip(), "not:" + val
+        if key in _FILTERS and val:
+            out[key] = _normalise_filter_value(key, val)
+    return out
+
+
+def _matches(filters: dict[str, str], features: dict, code: str) -> bool:
+    """Do `features` satisfy every requested filter?"""
+    for key, want in filters.items():
+        negated = want.startswith("not:")
+        if negated:
+            want = want[4:]
+        if key == "pos_particle":
+            hit = want.lower() in [str(x).lower() for x in (features.get("particles") or [])]
+        elif key == "scheme":
+            # `OSHB` is the decoder's name for an unprefixed Hebrew tag, so no
+            # stored value literally starts with it.  Match the decoded scheme
+            # as well as a literal prefix, which covers `robinson:` and the
+            # other explicitly prefixed codes.
+            hit = (str(features.get("scheme") or "").lower() == want.lower()
+                   or code.lower().startswith(want.lower()))
+        elif key == "stem":
+            hit = str(features.get("stem") or "").lower() == want.lower()
+        else:
+            got = features.get(key)
+            hit = got is not None and str(got).lower() == want.lower()
+        if hit == negated:
+            return False
+    return True
+
+
+def resolve_query(value: str, *, conn=None) -> dict:
+    """Resolve a `morph:` search expression to concrete marker values.
+
+    Three shapes are accepted:
+
+      * an exact code -- ``robinson:V-PPM-2S`` -- matched exactly;
+      * a code fragment -- ``HNcms`` -- decoded to its features and matched
+        against every code carrying those features, in any tagging scheme;
+      * explicit features -- ``morph:"tense=perfect not:conjugation=qal"`` --
+        matched feature by feature.  ``not:`` negates a feature, and a feature
+        a code does not carry at all never satisfies a positive request.
+
+    The return value carries ``codes`` (concrete ``marker.value`` strings) and
+    ``mode`` (``exact`` / ``features`` / ``substring``) so the caller can report
+    what it did.  The last mode is a safety net for a value that decodes to
+    nothing at all; it keeps the old behaviour for a tag scheme this decoder
+    does not know yet rather than silently returning zero hits.
+    """
+    value = (value or "").strip()
+    codes = _all_codes(conn)
+    filters = _feature_filters(value)
+    if filters:
+        matched = [c for c, f in codes.items() if _matches(filters, f, c)]
+        return {"codes": matched, "filters": filters, "mode": "features",
+                "features": filters}
+
+    lowered = value.lower()
+    exact = [c for c in codes if c.lower() == lowered]
+    if exact:
+        return {"codes": exact, "filters": {"code": value}, "mode": "exact",
+                "features": parse_code(value)}
+
+    parsed = parse_code(value)
+    # `stem` is the decoder's leftovers, not a stable feature: a fragment such
+    # as G2316 is stored there, and matching on it would find nothing useful.
+    lit = {k: v for k, v in parsed.items()
+           if k in _FILTERS and k not in ("stem", "scheme")
+           and v not in (None, "", [])}
+    if lit:
+        matched = [c for c, f in codes.items() if _matches(lit, f, c)]
+        if matched:
+            return {"codes": matched, "filters": lit, "mode": "features",
+                    "features": parsed}
+
+    matched = [c for c in codes if lowered in c.lower()]
+    return {"codes": matched, "filters": {}, "mode": "substring",
+            "features": parsed}
+
+
+_LEMMA_VOCAB: dict[tuple, dict[str, str]] = {}
+
+
+def _all_lemmas(conn=None) -> dict[str, str]:
+    """Distinct lemma headwords mapped to their folded (case/accent-free) form."""
+    conn = conn or db.connect()
+    key = (db.GENERATION, str(db.db_path()))
+    got = _LEMMA_VOCAB.get(key)
+    if got is None:
+        got = {}
+        for r in conn.execute(
+                "SELECT DISTINCT value FROM marker WHERE kind='lemma'").fetchall():
+            if r[0]:
+                got[r[0]] = db.fold(r[0])
+        if len(_LEMMA_VOCAB) > 4:
+            _LEMMA_VOCAB.clear()
+        _LEMMA_VOCAB[key] = got
+    return got
+
+
+def resolve_lemma(value: str, *, conn=None) -> dict:
+    """Resolve a `lemma:` search expression to concrete marker values.
+
+    Headwords are stored in the spelling of their source -- `ἀγαπάω`, with
+    breathing and accent -- while a reader types `agapao`-ish or unaccented
+    Greek.  Fold both sides the way the rest of the engine folds text, then
+    match exactly before falling back to a substring of the folded headword.
+    The old `lemma:` branch searched `kind='morph'` for the literal string, so
+    a documented search mode returned nothing even when the headword was in
+    the library hundreds of times.
+    """
+    value = (value or "").strip()
+    lemmas = _all_lemmas(conn)
+    folded = db.fold(value)
+    if not folded:
+        return {"codes": [], "mode": "empty", "filters": {}}
+    exact = [v for v, f in lemmas.items() if f == folded]
+    if exact:
+        return {"codes": exact, "mode": "exact", "filters": {"lemma": value}}
+    partial = [v for v, f in lemmas.items() if folded in f]
+    return {"codes": partial, "mode": "substring", "filters": {"lemma": value}}
 
 
 def query(*, limit: int = 300, offset: int = 0, order: str = "count",
@@ -490,9 +691,9 @@ def _passage_clause(alias: str = "m") -> str:
 def wordforms(module_id: str, word: str, *, limit: int = 20, ref: str = "") -> dict:
     """Every morphology code carried by one word (lemma or surface) in a module.
 
-    This is the engine behind the Logos-style "type a word, press @, pick the
-    grammatical form you want" picker.  A word is looked up by lemma first
-    (Logos defaults to the lemma), then by its surface form.  Each matching code
+    This is the engine behind the "type a word, press @, pick the grammatical
+    form you want" picker.  A word is looked up by lemma first, then by its
+    surface form.  Each matching code
     is decoded into its grammatical features so the user can choose by meaning
     (e.g. "verb, present, active, indicative, 3rd singular") rather than by a
     raw code such as `V-PAI-3S`.

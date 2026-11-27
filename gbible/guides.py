@@ -18,6 +18,8 @@ Three different kinds of thing, and the difference matters:
 
 from __future__ import annotations
 
+import re
+
 from . import canon, db, library
 
 # --------------------------------------------------------------------------
@@ -621,7 +623,8 @@ def sec_commentaries(key: str, limit: int = 10, sort: str = "priority",
         want = set(organise.collection_members(collection))
     else:
         want = set()
-    rows = study.commentaries_at(conn, f.book, f.chapter or 0, f.verse or 0) or []
+    rows = study.commentaries_at(conn, f.book, f.chapter or 0, f.verse or 0,
+                                  limit=1000) or []
     items = []
     for r in (rows if isinstance(rows, list) else rows.get("notes", [])):
         mid = r.get("module_id") if isinstance(r, dict) else None
@@ -676,10 +679,22 @@ def sec_crossrefs(key: str, limit: int = 10, offset: int = 0, **_) -> dict:
         panel = study.crossref_panel(key)
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "error": str(exc)}
-    items = panel.get("refs") or panel.get("items") or []
+    if not panel.get("ok"):
+        return {"ok": False, "error": panel.get("error") or "could not read the cross-references"}
+    # crossref_panel returns two directions under outgoing/incoming.  Reading
+    # refs/items here made this section permanently empty even with TSK installed.
+    items = []
+    for r in panel.get("outgoing") or []:
+        items.append({"kind": "outgoing", "label": r.get("label") or r.get("osis"),
+                      "ref": r.get("osis") or r.get("label"), "note": ""})
+    for r in panel.get("incoming") or []:
+        items.append({"kind": "incoming", "label": r.get("label") or r.get("key"),
+                      "ref": r.get("key") or r.get("label"),
+                      "note": r.get("text") or ""})
     total = len(items)
     return {"ok": True, "total": total, "items": items[offset:offset + limit],
-            "more": total > offset + limit}
+            "more": total > offset + limit,
+            "notice": panel.get("notice", "")}
 
 
 def sec_parallel(key: str, limit: int = 10, **_) -> dict:
@@ -688,14 +703,15 @@ def sec_parallel(key: str, limit: int = 10, **_) -> dict:
         return {"ok": False, "error": f"Cannot read {key!r}"}
     out = []
     if f.book in ("Matt", "Mark", "Luke", "John"):
+        want = {"Matt": "Matthew", "Mark": "Mark",
+                "Luke": "Luke", "John": "John"}.get(f.book, f.book)
         for row in harmony()["rows"]:
-            for cell in row["refs"]:
-                if cell["gospel"] == f.book or (
-                        cell["gospel"] == {"Matt": "Matthew"}.get(f.book, f.book)):
-                    pass
             per = {c["gospel"]: c["pericope"] for c in row["refs"]}
-            if any(p != "—" for p in per.values()):
-                out.append({"event": row["event"], "pericopes": per})
+            # An event belongs here only when *this* gospel has a pericope
+            # for it; the old loop tested the condition and did nothing.
+            if per.get(want, "—") in ("", "—"):
+                continue
+            out.append({"event": row["event"], "pericopes": per})
     conn = db.connect()
     rr = canon.parse_ref(key)
     osis = next(iter(rr.refs())).osis_id() if rr else key
@@ -747,7 +763,7 @@ def sec_literary(key: str, **_) -> dict:
             "note": genre}
 
 
-def sec_media(key: str, limit: int = 8, **_) -> dict:
+def sec_media(key: str, limit: int = 8, offset: int = 0, **_) -> dict:
     """Maps and atlas places that bear on this passage.
 
     Matching used to be `title LIKE '%Exodus 2%'`, which could only ever find a
@@ -786,7 +802,7 @@ def sec_media(key: str, limit: int = 8, **_) -> dict:
             "SELECT u.module_id, m.name, u.key, u.title FROM unit u "
             "JOIN module m ON m.id=u.module_id "
             "WHERE m.type='Map' AND m.installed_at>0 "
-            "ORDER BY m.name LIMIT ?", (limit,)).fetchall()
+            "ORDER BY m.name").fetchall()
         ids = [r["module_id"] for r in rows]
     items = [{"module_id": r["module_id"], "module": r["name"],
               "key": r["key"], "title": r["title"], "map": "image"}
@@ -808,41 +824,50 @@ def sec_topics(key: str, limit: int = 6, **_) -> dict:
             "items": items}
 
 
-def sec_places(key: str, limit: int = 12, **_) -> dict:
+def sec_places(key: str, limit: int = 12, offset: int = 0, **_) -> dict:
     from . import study
     f = _ref_parts(key)
     if f is None:
         return {"ok": False, "error": f"Cannot read {key!r}"}
-    rows = study.places_at(f.book, f.chapter or 0, f.verse or 0) or []
-    return {"ok": True, "total": len(rows), "items": rows[:limit],
-            "more": len(rows) > limit}
+    # A chapter-only reference is expanded by _ref_parts to verse 1; pass 0
+    # so places_at matches the whole chapter instead of just its first verse.
+    chapter_only = not re.search(r"\d+\s*:\s*\d+", str(key))
+    rows = study.places_at(f.book, f.chapter or 0,
+                           0 if chapter_only else (f.verse or 0)) or []
+    return {"ok": True, "total": len(rows),
+            "items": rows[offset:offset + limit],
+            "more": len(rows) > offset + limit}
 
 
-def sec_people(key: str, limit: int = 12, **_) -> dict:
+def sec_people(key: str, limit: int = 12, offset: int = 0, **_) -> dict:
     from . import study
     f = _ref_parts(key)
     if f is None:
         return {"ok": False, "error": f"Cannot read {key!r}"}
-    conn = db.connect()
+    # Names come from the fact-tag index over the *verse text*, not over its
+    # reference string: "Matt 2:1" contains no personal name to tag.
+    text = ""
     try:
-        bundle = study.verse_bundle("", "")  # shape probe, ignored
+        osis = canon.Ref(f.book, f.chapter or 0, f.verse or 0).osis_id()
+        row = db.connect().execute(
+            "SELECT u.text FROM unit u JOIN module m ON m.id=u.module_id "
+            "WHERE u.key=? AND m.type='Bible' AND m.installed_at>0 "
+            "ORDER BY m.priority DESC, m.name LIMIT 1", (osis,)).fetchone()
+        text = (row["text"] or "") if row else ""
     except Exception:  # noqa: BLE001
-        bundle = {}
-    del bundle
-    # Names come from the fact-tag index over the verse text.
+        text = ""
     try:
-        names = study.fact_tags(f"{f.book} {f.chapter}:{f.verse or 1}",
-                                limit=limit) or []
+        # fact_tags stops as soon as it reaches `limit`, so asking it for the
+        # page size silently threw away every later name and made `more` false.
+        names = study.fact_tags(text, limit=max(2000, offset + limit + 1)) or []
     except Exception:  # noqa: BLE001
         names = []
-    void = conn  # keep linters quiet about the unused handle
-    del void
-    return {"ok": True, "total": len(names), "items": names[:limit],
-            "more": len(names) > limit}
+    total = len(names)
+    return {"ok": True, "total": total, "items": names[offset:offset + limit],
+            "more": total > offset + limit}
 
 
-def sec_variants(key: str, limit: int = 12, **_) -> dict:
-    from . import study
+def sec_variants(key: str, limit: int = 12, offset: int = 0, **_) -> dict:
     f = _ref_parts(key)
     if f is None:
         return {"ok": False, "error": f"Cannot read {key!r}"}
@@ -851,18 +876,19 @@ def sec_variants(key: str, limit: int = 12, **_) -> dict:
         "SELECT u.module_id, m.name, substr(u.text,1,400) t FROM unit u "
         "JOIN module m ON m.id=u.module_id "
         "WHERE u.book=? AND u.chapter=? AND u.verse=? AND m.type='Bible' "
-        "ORDER BY m.priority DESC LIMIT ?", (f.book, f.chapter, f.verse or 1,
-                                             limit)).fetchall()
+        "ORDER BY m.priority DESC", (f.book, f.chapter, f.verse or 1)).fetchall()
     items = [{"module_id": r["module_id"], "module": r["name"],
-              "text": r["t"]} for r in rows]
+              "text": r["t"]} for r in rows[offset:offset + limit]]
+    # Compare every installed rendering, not just this page: a later
+    # translation could be the only one that differs.
     diff = len({(r["t"] or "").strip() for r in rows}) > 1
-    del study
     return {"ok": True, "ref": key, "differ": diff, "items": items,
+            "total": len(rows), "more": len(rows) > offset + limit,
             "note": "Renderings from installed translations — a comparison, "
                     "not an apparatus."}
 
 
-def sec_grammars(key: str, limit: int = 8, **_) -> dict:
+def sec_grammars(key: str, limit: int = 8, offset: int = 0, **_) -> dict:
     f = _ref_parts(key)
     if f is None:
         return {"ok": False, "error": f"Cannot read {key!r}"}
@@ -872,8 +898,8 @@ def sec_grammars(key: str, limit: int = 8, **_) -> dict:
         "SELECT u.module_id, m.name, u.title, substr(u.text,1,300) t FROM unit u "
         "JOIN module m ON m.id=u.module_id "
         "WHERE m.type IN ('Book','Dictionary','Grammar') AND u.text LIKE ? "
-        "LIMIT ?",
-        (like, limit)).fetchall()
+        "ORDER BY m.name, u.title",
+        (like,)).fetchall()
     items = [{"module_id": r["module_id"], "module": r["name"],
               "title": r["title"], "text": r["t"],
               "subject": _grammar_subject(
@@ -912,7 +938,7 @@ def _grammar_subject(blob: str) -> str:
     return "General"
 
 
-def sec_extrabiblical(key: str, limit: int = 8, **_) -> dict:
+def sec_extrabiblical(key: str, limit: int = 8, offset: int = 0, **_) -> dict:
     f = _ref_parts(key)
     if f is None:
         return {"ok": False, "error": f"Cannot read {key!r}"}
@@ -923,8 +949,8 @@ def sec_extrabiblical(key: str, limit: int = 8, **_) -> dict:
         "JOIN module m ON m.id=u.module_id "
         "WHERE m.type='Book' AND (m.name LIKE '%Josephus%' "
         "OR m.name LIKE '%Tacitus%' OR m.name LIKE '%Apostolic%' "
-        "OR m.name LIKE '%Eusebius%' OR u.text LIKE ?) LIMIT ?",
-        (like, limit)).fetchall()
+        "OR m.name LIKE '%Eusebius%' OR u.text LIKE ?) "
+        "ORDER BY m.name, u.title", (like,)).fetchall()
     return {"ok": True, "total": len(rows),
             "items": [{"module_id": r["module_id"], "module": r["name"],
                        "title": r["title"], "text": r["t"]} for r in rows],
@@ -946,7 +972,7 @@ def sec_words(key: str, limit: int = 40, **_) -> dict:
     mid = bibles[0]
     key_osis = f"{f.book}.{f.chapter}.{f.verse or 1}"
     rows = study.strongs_in_unit(conn, mid, key_osis) or []
-    return {"ok": True, "module_id": mid, "total": len(rows),
+    return {"ok": True, "ref": key, "module_id": mid, "total": len(rows),
             "items": rows[:limit], "more": len(rows) > limit}
 
 
@@ -1127,9 +1153,17 @@ def run_section(section: str, key: str, opts: dict | None = None) -> dict:
     if fn is None:
         return {"ok": False, "error": f"Unknown section {section!r}"}
     try:
-        out = fn(key, limit=int(opts.get("limit") or 10),
+        try:
+            limit = max(1, min(500, int(opts.get("limit") or 10)))
+        except (TypeError, ValueError):
+            limit = 10
+        try:
+            offset = max(0, int(opts.get("offset") or 0))
+        except (TypeError, ValueError):
+            offset = 0
+        out = fn(key, limit=limit,
                  sort=opts.get("sort", "priority"),
-                 offset=int(opts.get("offset") or 0),
+                 offset=offset,
                  collection=opts.get("collection", ""))
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "section": section, "error": str(exc)}

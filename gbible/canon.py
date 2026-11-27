@@ -186,7 +186,10 @@ def lookup_book(token: str) -> Book | None:
     # "1 sam" / "1samuel" already covered; handle roman-numeral prefixes
     m = re.match(r"^(i{1,3}|iv|v|vi{0,3})\s+(.+)$", key)
     if m:
-        roman = {"i": "1", "ii": "2", "iii": "3", "iv": "4", "v": "5", "vi": "6", "vii": "7"}[m.group(1)]
+        roman = {"i": "1", "ii": "2", "iii": "3", "iv": "4", "v": "5",
+                 "vi": "6", "vii": "7", "viii": "8"}.get(m.group(1))
+        if roman is None:
+            return None
         b = _BY_KEY.get(f"{roman} {m.group(2)}")
         if b is not None:
             return b
@@ -604,8 +607,13 @@ class RefRange(NamedTuple):
 
     def refs(self, scheme: str = "KJV") -> Iterable[Ref]:
         cur = self.start
-        if self.end.verse == 0 and self.start.chapter == self.end.chapter:
-            # chapter-only range
+        if (self.end.verse == 0 and self.start.verse == 0
+                and self.start.book == self.end.book
+                and self.start.chapter > 0):
+            # Chapter-only range: "Gen 1-3" means every verse of chapters 1–3.
+            # Requiring both ends to be the *same* chapter made a wider range
+            # fall through to the generic loop, which yielded a pseudo-verse for
+            # the start and only verse 1 of the last chapter.
             for c in range(self.start.chapter, self.end.chapter + 1):
                 n = verse_count(scheme, self.start.book, c)
                 for v in range(1, (n or 1) + 1):
@@ -820,6 +828,8 @@ _GREEK = (
     ("ω", "o"),
     ("ου", "ou"), ("αι", "ai"), ("ει", "ei"), ("αυ", "au"), ("ευ", "eu"),
 )
+# Digraphs must be tested before their first letter, or "ου" becomes "oy".
+_GREEK_SORTED = tuple(sorted(_GREEK, key=lambda pair: -len(pair[0])))
 
 #: Hebrew.  Consonants carry the word; the vowel points are not pronounced in
 #: unpointed text, so an unpointed Hebrew word transliterates to its consonants.
@@ -869,7 +879,7 @@ def transliterate(text: str) -> dict:
         out = []
         i = 0
         while i < len(t):
-            for two, tr in _GREEK:
+            for two, tr in _GREEK_SORTED:
                 if t.startswith(two, i):
                     out.append(tr)
                     i += len(two)

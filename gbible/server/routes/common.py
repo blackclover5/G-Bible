@@ -8,7 +8,7 @@ import traceback
 import urllib.parse
 from pathlib import Path
 
-from ... import ai, aichat, audio, canon, citation, clause, concordance, community, dashboard, db, \
+from ... import ai, aichat, audio, canon, canvases, citation, clause, concordance, community, dashboard, db, \
     docs, eusebian, genealogy, grammar, guides, library, maps, markup, media, \
     merge, mine, morphq, notes, ntuseot, organise, outline, publish, readingplan, \
     search, study, sync, taxonomy, timeline, translate, tts, workspace, \
@@ -86,9 +86,37 @@ def _obj(v, default=None):
             return json.loads(s)
         except json.JSONDecodeError:
             return default
-    if s.startswith("[") and "," in s:
-        return [x for x in s.split(",") if x]
     return v
+
+
+def _id_list(v) -> list[str]:
+    """A query parameter that names one or more ids, comma-separated or JSON.
+
+    Six of these tools take `module_ids`.  `_obj` used to hand `a,b` back as a
+    bare string, which callers then iterated one character at a time — so an
+    explicit module filter silently matched nothing.
+    """
+    got = _obj(v, [])
+    if got is None:
+        return []
+    if isinstance(got, list):
+        return [str(x).strip() for x in got if str(x).strip()]
+    if isinstance(got, dict):
+        return [str(x).strip() for x in got.values() if str(x).strip()]
+    return [x.strip() for x in str(got).split(",") if x.strip()]
+
+
+def _bounded_int(v, default: int, *, low: int = 1, high: int = 2000) -> int:
+    """A query-string integer clamped to a sane range.
+
+    Unvalidated limits were a real hazard: a non-numeric value raised deep in
+    SQLite (HTTP 500) and a negative one meant "unlimited" in SQLite, turning
+    a page request into a whole-library scan.
+    """
+    try:
+        return max(low, min(high, int(v)))
+    except (TypeError, ValueError):
+        return default
 
 
 def _flag(v) -> bool:
@@ -97,8 +125,38 @@ def _flag(v) -> bool:
     return str(v).strip().lower() in ("1", "true", "yes", "on")
 
 
+#: The handful of routes that must answer even while AI is switched off: they
+#: report that state and perform the one action that turns it on.
+_AI_SETUP_ROUTES = {
+    "ai/status", "ai/setup/start", "ai/setup/disable",
+}
+
+
+def _ai_gate(path: str) -> dict | None:
+    """A clean refusal for AI calls before the feature has been enabled.
+
+    A fresh install has no AI at all.  Rather than letting every AI endpoint
+    fail on a missing provider or model, one gate gives the reader a single,
+    actionable message and points at the setup card that creates them.
+    """
+    from ... import aisetup
+    if aisetup.enabled():
+        return None
+    name = path.strip("/")
+    if name in _AI_SETUP_ROUTES:
+        return None
+    if name.startswith("ai/") or name.startswith("webresearch/"):
+        return {"ok": False, "ai_disabled": True,
+                "error": "AI Assistant is not set up. Open Settings → AI "
+                         "Assistant to enable it."}
+    return None
+
+
 def route(path: str, body: dict | None = None):
     """Dispatch an API path.  Returns a JSON-serialisable dict."""
+    blocked = _ai_gate(path)
+    if blocked is not None:
+        return blocked
     q = body or {}
     parts = [p for p in path.strip("/").split("/") if p]
     if not parts:
@@ -117,6 +175,14 @@ def route(path: str, body: dict | None = None):
     try:
         return fn(parts, q)
     except Exception as e:
+        # Without this, an endpoint that throws is invisible in Settings →
+        # Logs, so the log panel's claim "if something breaks it shows here"
+        # was false for most API failures.
+        try:
+            from ... import errorlog
+            errorlog.log_exception("api", e)
+        except Exception:
+            pass
         out = {"ok": False, "error": f"{type(e).__name__}: {e}"}
         if os.environ.get("GBIBLE_DEBUG"):
             out["trace"] = traceback.format_exc(limit=6)

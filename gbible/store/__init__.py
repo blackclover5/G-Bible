@@ -184,6 +184,11 @@ def _save_custom_repos() -> None:
 
 _BUILTIN_REPO_IDS = {r.id for r in REPOSITORIES}
 
+#: Ids whose catalogues ship with the app and are curated for public-domain
+#: status.  Captured before user-added repos are loaded so a custom repo can
+#: never inherit this provenance by accident.
+BUNDLED_REPO_IDS = frozenset(r.id for r in REPOSITORIES)
+
 _load_custom_repos()
 
 
@@ -218,12 +223,15 @@ def repo_items(repo_id: str) -> list[dict]:
         # in the United States, so they are not offered unless they carry a
         # documented dedication.  Without this, a 1934 Bible translation whose
         # upstream simply says "public domain" is offered as redistributable.
-        ok, _why = taxonomy.redistributable({**it, "license": lic})
+        ok, _why = taxonomy.redistributable({
+            **it, "license": lic,
+            "bundled_catalog": repo_id in BUNDLED_REPO_IDS})
         if not ok:
             continue
         item = dict(it)
         item["license"] = lic
         item["repo"] = repo_id
+        item["bundled_catalog"] = repo_id in BUNDLED_REPO_IDS
         item["repo_name"] = REPO_BY_ID[repo_id].name
         item["subjects"] = taxonomy.normalise_subjects(it.get("subjects"))
         item["category"] = _category(it, repo_id)
@@ -590,6 +598,10 @@ def list_items(*, repo: str | None = None, lang: str | None = None,
     if search:
         q.append(" AND (s.title LIKE ? OR s.description LIKE ? OR s.author LIKE ?)")
         a += [f"%{search}%"] * 3
+    if installed_only:
+        # Filtering in Python after LIMIT drops installed items that sort past
+        # the page boundary. Apply the same predicate in SQL instead.
+        q.append(" AND m.installed_at > 0")
     order = {
         "slot": "s.type ASC, s.title ASC",
         "title": "s.title ASC",
@@ -610,10 +622,13 @@ def list_items(*, repo: str | None = None, lang: str | None = None,
     if sql_limit:
         q.append(" LIMIT ?")
         a.append(sql_limit)
+    # Total is counted with the same filters, before LIMIT, so the caller can
+    # tell "N of M" from "all N".
+    count_sql = "".join(q).split(" ORDER BY ")[0]
+    count_args = a[:count_sql.count("?")]
+    total = conn.execute(
+        "SELECT count(*) c FROM (" + count_sql + ")", count_args).fetchone()["c"]
     rows = [dict(r) for r in conn.execute("".join(q), a)]
-
-    if installed_only:
-        rows = [r for r in rows if r.get("installed")]
 
     # "Goes in" is applied after the SQL filter because placement is derived
     # from the type and the override table, not stored in a column.
@@ -641,7 +656,8 @@ def list_items(*, repo: str | None = None, lang: str | None = None,
         r["lang_label"] = r.get("lang_name") or taxonomy.language_name(r.get("lang"))
         r["size_label"] = human_size(r.get("size_bytes"))
         _decorate(r, layouts, installed)
-    return {"items": rows, "facets": facets, "total": len(rows),
+    return {"items": rows, "facets": facets, "total": total,
+            "returned": len(rows), "has_more": total > len(rows),
             "slots": _slot_summary(rows)}
 
 
@@ -915,7 +931,10 @@ def add_repo(source: str, *, name: str = "") -> dict:
         except Exception as exc:
             return {"ok": False, "error": "repository unreachable: %s" % exc}
     else:
-        if not (url.startswith("http://") or url.startswith("https://")):
+        # Catalogue URLs must be HTTPS (localhost is allowed for development).
+        if not (url.startswith("https://")
+                or url.startswith("http://localhost")
+                or url.startswith("http://127.0.0.1")):
             return {"ok": False, "error": "unknown repository: %s" % source}
         ctx = ssl.create_default_context()
         try:
@@ -1055,6 +1074,35 @@ def install(repo_id: str, item_id: str, *, fmt: str = "",
 
 def remove(module_id: str) -> dict:
     return library.remove_module(module_id)
+
+
+def link_installed_modules() -> int:
+    """Recover the store_item -> module link for seeded or restored modules.
+
+    A Store install records ``store_item.module_id``.  Seeds, restores and
+    older installs did not, so Check updates could not see most of the
+    library: its query joined on that column and silently skipped them.  The
+    installer names a module ``slugify(repo-item)`` (the same rule
+    ``recommended.py`` uses to find installed starters), so the link can be
+    rebuilt without guessing.  Returns the number of rows repaired.
+    """
+    conn = db.connect()
+    installed = {m.id for m in library.list_all()}
+    candidates = conn.execute(
+        "SELECT repo_id, item_id FROM store_item WHERE module_id IS NULL"
+    ).fetchall()
+    repaired = 0
+    for r in candidates:
+        mid = library.slugify(f"{r['repo_id']}-{r['item_id']}")
+        if mid not in installed:
+            continue
+        cur = conn.execute(
+            "UPDATE store_item SET module_id=? WHERE repo_id=? AND item_id=? "
+            "AND module_id IS NULL", (mid, r["repo_id"], r["item_id"]))
+        repaired += cur.rowcount
+    if repaired:
+        conn.commit()
+    return repaired
 
 
 def installed_summary() -> dict:

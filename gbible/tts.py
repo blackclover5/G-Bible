@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import os
 import sys
 import threading
 import wave
@@ -89,14 +90,6 @@ def _quiet():
         yield
     finally:
         sys.stdout = out
-
-
-def available() -> bool:
-    """Is there a working voice behind this?"""
-    try:
-        return load() is not None
-    except Unavailable:
-        return False
 
 
 def status() -> dict:
@@ -165,6 +158,18 @@ def load():
             _error = ("the voice is not installed -- "
                       f"pip install onnxruntime kittentts ({exc.name} is missing)")
             raise Unavailable(_error) from exc
+        # The model is fetched from Hugging Face on first use. Offline that
+        # fetch has no timeout and can hang the status request for a long time,
+        # then poison the status for the rest of the process. Check the local
+        # hub cache first and say plainly when it has not been downloaded.
+        hub = Path(os.environ.get("HF_HOME") or (Path.home() / ".cache" / "huggingface"))
+        cached = hub / "hub" / ("models--" + MODEL.replace("/", "--"))
+        if not cached.is_dir():
+            _error = ("the voice model is not downloaded yet -- use "
+                      "Read aloud settings → Install voice model "
+                      "(needs an internet connection)")
+            raise Unavailable(_error)
+        os.environ.setdefault("HF_HUB_OFFLINE", "1")
         try:
             with _quiet():
                 _model = KittenTTS(MODEL)

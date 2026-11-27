@@ -2,12 +2,16 @@ const WordLists = {
   current: '',
   data: null,
   side: null,
+  _loadSeq: 0,
+  _openSeq: 0,
 
   async load() {
     const host = $('#wl-body');
     if (!host) return;
     host.innerHTML = '<div class="empty">Loading…</div>';
+    const seq = ++this._loadSeq;
     const r = await api('wordlist', { q: ($('#wl-q') || {}).value || '' });
+    if (seq !== this._loadSeq) return;
     if (!r.ok) { host.innerHTML = '<div class="warn">' + esc(r.error) + '</div>'; return; }
     this.lists = r.lists || [];
     const side = $('#wl-side');
@@ -22,6 +26,12 @@ const WordLists = {
       });
     }
     if (!this.lists.length) {
+      const filtered = (($('#wl-q') || {}).value || '').trim();
+      if (filtered) {
+        host.innerHTML = '<div class="empty">No word lists match “'
+          + esc(filtered) + '”.</div>';
+        return;
+      }
       host.innerHTML = '<div class="empty">A word list keeps every place a word '
         + 'occurs, so it is still there tomorrow.<br><br>'
         + 'To make one: run a search, then choose <b>Keep as a word list</b> '
@@ -42,7 +52,9 @@ const WordLists = {
     if (!host) return;
     this.current = id;
     host.innerHTML = '<div class="empty">Loading…</div>';
+    const seq = ++this._openSeq;
     const r = await api('wordlist/occurrences', { id, limit: ($('#wl-limit') || {}).value || 1500 });
+    if (seq !== this._openSeq) return;
     if (!r.ok) { host.innerHTML = '<div class="warn">' + esc(r.error) + '</div>'; return; }
     this.data = r;
     this.paint(host, r);
@@ -74,11 +86,11 @@ const WordLists = {
     const max = bars.length ? bars[0].value : 1;
 
     const row = (i, keptRow) => '<div class="wl-row' + (keptRow ? ' kept' : '') + '">'
-      + '<span class="ref" data-go="' + esc(i.module_id) + '" data-key="'
-        + esc(i.unit_key) + '">' + esc(i.ref_label || '—') + '</span>'
+      + '<a href="#" class="ref" data-go="' + esc(i.module_id) + '" data-key="'
+        + esc(i.unit_key) + '">' + esc(i.ref_label || '—') + '</a>'
       + (keptRow ? '' : '<span class="term">' + esc(i.term || '') + '</span>')
       + '<span class="txt">' + esc((i.snippet || i.text || '').trim()) + '</span>'
-      + '<span class="n">' + esc(i.module_id ? (modById(i.module_id) || {}).name || '' : '') + '</span>'
+      + '<span class="n">' + esc(i.module_id ? modLabel(i.module_id) : '') + '</span>'
       + '<span class="n">'
       + (keptRow
           ? '<button class="btn" data-up="' + esc(i.id) + '">↑</button>'
@@ -102,6 +114,7 @@ const WordLists = {
       + '</div>'
       + '<div class="wl-sum">' + (r.total || 0).toLocaleString()
       + ' occurrence' + ((r.total || 0) === 1 ? '' : 's') + ' now'
+      + (r.more ? ' · showing ' + (r.items || []).length : '')
       + (kept.length ? ' · ' + kept.length + ' kept by hand' : '')
       + (!l.query && kept.length
           // A list captured from a result set holds the rows it was given and
@@ -141,10 +154,13 @@ const WordLists = {
       const r = await api(path, params);
       if (!r.ok) { toast(r.error || 'That did not work.', 'err'); return; }
       if (msg) toast(msg);
+      // A deleted list cannot be reopened; the caller reloads the sidebar.
+      if (params && params.action === 'delete') return;
       await this.open(this.current);
     };
     $$('[data-go]', host).forEach(x => {
-      x.onclick = () => {
+      x.onclick = (e) => {
+        e.preventDefault();
         const m = modById(x.dataset.go);
         if (!m) { toast('That resource is not installed.', 'warn'); return; }
         closeModal();
@@ -227,7 +243,8 @@ const WordLists = {
     });
   },
 
-  /* Add one occurrence by hand, from a selection or a search hit. */
+  /* Add one occurrence by hand, from a selection or a search hit.  Resolves to
+   * the list that actually received it, so callers can name it in a toast. */
   async addOccurrence(text, label, moduleId, key) {
     if (!this.lists || !this.lists.length) {
       const name = prompt('No word lists yet. Name this one:', text.slice(0, 40));
@@ -239,34 +256,48 @@ const WordLists = {
       await this.load();
       return made.list;
     }
-    modal('Add to a word list',
-      '<div class="st-body">Which list should hold '
-      + '<b>' + esc((label || 'this occurrence')) + '</b>?</div>'
-      + '<div id="wl-pick"></div>', [
-      { label: 'Cancel', cls: 'btn' },
-      { label: 'New list', cls: 'btn', close: false, fn: async () => {
-        const name = prompt('Name the new list', text.slice(0, 40));
-        closeModal();
-        if (!name) return;
-        const made = await api('wordlist', { action: 'from-results', name,
-          hits: [{ term: text, module_id: moduleId, key, label }] });
-        if (made.ok) { this.current = made.list.id; await this.load(); }
-      } }]);
-    const host = $('#wl-pick');
-    host.innerHTML = this.lists.map(x =>
-      '<div class="store-list"><div class="item" data-id="' + esc(x.id) + '">'
-      + '<div><b>' + esc(x.name) + '</b><div class="tiny muted">'
-      + esc(x.kind) + (x.query ? ' · ' + esc(x.query) : '') + '</div></div>'
-      + '</div></div>').join('');
-    $$('.item', host).forEach(x => {
-      x.onclick = async () => {
-        await api('wordlist', { action: 'pin', id: x.dataset.id, term: text,
-          surface: text, module: moduleId, key, label });
-        closeModal();
-        toast('Added.');
+    return new Promise((resolve) => {
+      let settled = false;
+      const settle = (v) => { if (!settled) { settled = true; resolve(v); } };
+      modal('Add to a word list',
+        '<div class="st-body">Which list should hold '
+        + '<b>' + esc((label || 'this occurrence')) + '</b>?</div>'
+        + '<div id="wl-pick"></div>', [
+        { label: 'Cancel', cls: 'btn', fn: () => settle(null) },
+        { label: 'New list', cls: 'btn', close: false, fn: async () => {
+          const name = prompt('Name the new list', text.slice(0, 40));
+          closeModal();
+          if (!name) { settle(null); return; }
+          const made = await api('wordlist', { action: 'from-results', name,
+            hits: [{ term: text, module_id: moduleId, key, label }] });
+          if (made.ok) { this.current = made.list.id; await this.load(); }
+          settle(made.ok ? made.list : null);
+        } }]);
+      // Dismissing via the backdrop must not leave the caller waiting forever.
+      const bg = $('#modal-bg');
+      const onBg = (e) => {
+        if (e.target.id === 'modal-bg') {
+          bg.removeEventListener('click', onBg, true);
+          settle(null);
+        }
       };
+      bg.addEventListener('click', onBg, true);
+      const host = $('#wl-pick');
+      host.innerHTML = this.lists.map(x =>
+        '<div class="store-list"><div class="item" data-id="' + esc(x.id) + '">'
+        + '<div><b>' + esc(x.name) + '</b><div class="tiny muted">'
+        + esc(x.kind) + (x.query ? ' · ' + esc(x.query) : '') + '</div></div>'
+        + '</div></div>').join('');
+      $$('.item', host).forEach(x => {
+        const list = this.lists.find(l => l.id === x.dataset.id);
+        x.onclick = async () => {
+          const r = await api('wordlist', { action: 'pin', id: x.dataset.id,
+            term: text, surface: text, module: moduleId, key, label });
+          closeModal(); settle(r && r.ok ? list : null);
+          if (!r || r.ok === false) toast((r && r.error) || 'Could not add it.', 'err');
+        };
+      });
     });
-    return this.lists[0];
   },
 
   /* A list of every occurrence of one term.  The list stores the query, so it
@@ -279,9 +310,8 @@ const WordLists = {
     const r = await api('wordlist', { action: 'from-search', query: '"' + t + '"' });
     if (!r.ok) { toast(r.error || 'Could not make that list.', 'err'); return; }
     toast('A word list for every “' + t + '”.');
-    App.show('wordlists');
     this.current = r.list.id;
-    await this.load();
+    App.show('wordlists');   // its load() opens this.current once
   },
 
   /* The book a kept row belongs to, read off its reference.
@@ -313,9 +343,8 @@ const WordLists = {
                                         hits: rows });
     if (!r.ok) { toast(r.error || 'Could not save it.', 'err'); return; }
     toast('Kept ' + rows.length + ' occurrences as "' + n + '".');
-    App.show('wordlists');
     this.current = r.list.id;
-    await this.load();
+    App.show('wordlists');
   },
 };
 

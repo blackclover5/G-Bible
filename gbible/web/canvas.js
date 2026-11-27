@@ -15,6 +15,7 @@ const Canvas = {
 
   async load() {
     const r = await api('canvas/boards');
+    if (!r || r.ok === false) { toast((r && r.error) || 'Could not load boards.', 'err'); return; }
     this.boards = r.boards || [];
     const sel = $('#cv-board');
     if (sel) sel.innerHTML = this.boards.map(b =>
@@ -42,23 +43,29 @@ const Canvas = {
       const name = prompt('Board name:', 'New study');
       if (!name) return;
       const r = await post('canvas/board', { action: 'create', name });
-      if (r.ok) this.load();
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not create the board.', 'err'); return; }
+      this.load();
     };
     $('#cv-renameboard').onclick = async () => {
       if (!this.board) return;
       const b = this.boards.find(x => x.id === this.board);
       const name = prompt('Rename board:', b ? b.name : 'Board');
       if (!name) return;
-      await post('canvas/board', { action: 'rename', board: this.board, name });
+      const r = await post('canvas/board', { action: 'rename',
+        board: this.board, name });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not rename the board.', 'err'); return; }
       this.load();
     };
     $('#cv-delboard').onclick = async () => {
       if (!this.board || !confirm('Delete this board and its cards?')) return;
-      await post('canvas/board', { action: 'remove', board: this.board });
+      const r = await post('canvas/board', { action: 'remove', board: this.board });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not delete the board.', 'err'); return; }
       this.board = null;
+      toast('Board deleted.');
       this.load();
     };
     $('#cv-addtext').onclick = () => this.addNode('text');
+    $('#cv-addheading').onclick = () => this.addNode('heading');
     $('#cv-addverse').onclick = () => {
       const ref = prompt('Passage reference (e.g. John 3:16):', '');
       if (!ref) return;
@@ -78,13 +85,7 @@ const Canvas = {
       toast(this.linking ? 'Click a card to connect from…' : 'Link mode off.', 'ok');
       this.linkFrom = null;
     };
-    $('#cv-delcard').onclick = () => {
-      if (!this.selected) { toast('Select a card first.', 'warn'); return; }
-      this.nodes = this.nodes.filter(n => n !== this.selected);
-      this.edges = this.edges.filter(e => e.from !== this.selected.id && e.to !== this.selected.id);
-      this.selected = null;
-      this.render(); this.save();
-    };
+    $('#cv-delcard').onclick = () => this.deleteCard(this.selected);
     $('#cv-print').onclick = () => {
       const host = $('#cv-plane');
       if (!host) return;
@@ -134,18 +135,32 @@ const Canvas = {
   },
 
   async open(boardId) {
+    if (this._saveTimer) { clearTimeout(this._saveTimer); this._saveTimer = null; }
     this.board = boardId;
     const r = await post('canvas/board', { board: boardId });
     if (!r.ok) { toast('Could not load board.', 'err'); return; }
     this.nodes = (r.nodes || []).map(n => ({
       id: n.id, kind: n.kind, x: n.x, y: n.y, w: n.w, h: n.h,
-      text: n.text || '', ref: n.ref || '', color: n.color || 'yellow' }));
+      text: n.text || '', ref: n.ref || '', color: n.color || 'yellow',
+      // Carried from a migrated canvas: the translation a verse was written
+      // against, and the exact JSON of any element kind we do not draw.
+      module_id: n.module_id || '', data: n.data || '' }));
     this.edges = (r.edges || []).map(e => ({ from: e.from_id, to: e.to_id }));
     this.selected = null;
     this.linkFrom = null;
     this._wire();
     const sel = $('#cv-board'); if (sel) sel.value = boardId;
     this.render();
+  },
+
+  deleteCard(n) {
+    if (!n) { toast('Select a card first.', 'warn'); return; }
+    if (!confirm('Delete this card and its links?')) return;
+    this.nodes = this.nodes.filter(x => x !== n);
+    this.edges = this.edges.filter(e => e.from !== n.id && e.to !== n.id);
+    if (this.selected === n) this.selected = null;
+    if (this.linkFrom === n) this.linkFrom = null;
+    this.render(); this.save();
   },
 
   addNode(kind, ref) {
@@ -158,22 +173,30 @@ const Canvas = {
       x: Math.round(cx + Math.random() * 60 - 30),
       y: Math.round(cy + Math.random() * 60 - 30),
       w: 210, h: 90,
-      text: '', ref: ref || '', color: 'yellow',
+      text: kind === 'heading' ? 'Heading' : '', ref: ref || '',
+      color: 'yellow', module_id: '', data: '',
     });
     this.render(); this.save();
   },
 
   async save() {
     if (this._saveTimer) clearTimeout(this._saveTimer);
+    // Snapshot the state now: switching boards before the timer fires used to
+    // write one board's nodes into another board.
+    const board = this.board;
+    const nodes = this.nodes.map(n => ({ ...n }));
+    const edges = this.edges.map(e => ({ ...e }));
     this._saveTimer = setTimeout(async () => {
+      if (this.board !== board) return;   // a different board is now open
       this._saveTimer = null;
-      const body = {
-        action: 'save', board: this.board,
-        nodes: this.nodes.map(n => ({ id: n.id, kind: n.kind, x: n.x, y: n.y,
-          w: n.w, h: n.h, text: n.text, ref: n.ref, color: n.color })),
-        edges: this.edges.map(e => ({ from: e.from, to: e.to })),
-      };
-      await post('canvas/save', body);
+      const r = await post('canvas/save', {
+        action: 'save', board,
+        nodes: nodes.map(n => ({ id: n.id, kind: n.kind, x: n.x, y: n.y,
+          w: n.w, h: n.h, text: n.text, ref: n.ref, color: n.color,
+          module_id: n.module_id || '', data: n.data || '' })),
+        edges: edges.map(e => ({ from: e.from, to: e.to })),
+      });
+      if (!r || r.ok === false) toast((r && r.error) || 'Could not save the board.', 'err');
     }, 700);
   },
 
@@ -187,6 +210,7 @@ const Canvas = {
     this.nodes.forEach(n => {
       const div = document.createElement('div');
       div.className = 'cv-node cv-' + (n.color || 'yellow')
+        + (n.kind === 'heading' ? ' cv-heading' : '')
         + (this.selected === n ? ' selected' : '')
         + (this.linkFrom === n ? ' linking' : '');
       div.style.left = n.x + 'px';
@@ -207,17 +231,19 @@ const Canvas = {
       ta.addEventListener('pointerdown', (e) => e.stopPropagation());
       div.querySelector('.cv-x').onclick = (e) => {
         e.stopPropagation();
-        this.nodes = this.nodes.filter(x => x !== n);
-        this.edges = this.edges.filter(x => x.from !== n.id && x.to !== n.id);
-        this.selected = null;
-        this.render(); this.save();
+        this.deleteCard(n);
       };
       const openBtn = div.querySelector('.cv-open');
       if (openBtn) openBtn.onclick = () => {
         const ref = n.ref; if (!ref) return;
+        // A migrated verse card remembers its translation; open there when it
+        // is still installed, otherwise fall back to the first pane.
+        const mid = n.module_id && modById(n.module_id) ? n.module_id : '';
         App.show('workspace');
-        const pane = (S.layout && S.layout.panes && S.layout.panes[0]);
+        const panes = (S.layout && S.layout.panes) || [];
+        const pane = (mid && panes.find(p => p.module_id === mid)) || panes[0];
         if (pane) Reader.go(pane, ref);
+        else if (mid) Workspace.openModule(mid, { ref });
       };
       this._drag(div, n);
       nodesHost.appendChild(div);

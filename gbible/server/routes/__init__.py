@@ -1,7 +1,7 @@
 """Feature-grouped API endpoint registrations."""
 
 from . import common
-from . import core, study, documents, reference, search, store, workspace, personal, sync, canvas, devotion, backup, logs, github
+from . import core, study, documents, reference, search, store, workspace, personal, sync, canvas, devotion, backup, logs, github, webresearch, update
 
 route = common.route
 ROUTES = common.ROUTES

@@ -33,9 +33,14 @@ def _maps_places(parts, q):
             radius = float(q.get("radius_km") or 50)
         except (TypeError, ValueError):
             near = None
-    return _ok(places=maps.places(q.get("q") or "", near=near,
+    try:
+        offset = max(0, int(q.get("offset") or 0))
+    except (TypeError, ValueError):
+        offset = 0
+    return _ok(**maps.places_page(q.get("q") or "", near=near,
                                   radius_km=radius,
-                                  limit=int(q.get("limit") or 400)))
+                                  limit=int(q.get("limit") or 400),
+                                  offset=offset))
 
 
 @endpoint("maps/calibrate")
@@ -110,7 +115,7 @@ def _media_images(parts, q):
             source=q.get("source", ""), licence=q.get("license", ""),
             limit=int(q.get("limit") or 24)))
     except apireg.ApiError as e:
-        return _ok(query=q.get("q", ""), results=[], count=0,
+        return _ok(ok=False, query=q.get("q", ""), results=[], count=0,
                    error=str(e), hint=getattr(e, "hint", ""))
 
 
@@ -123,7 +128,7 @@ def _media_audio(parts, q):
             source=q.get("source", ""), licence=q.get("license", ""),
             limit=int(q.get("limit") or 24), kind="audio"))
     except apireg.ApiError as e:
-        return _ok(query=q.get("q", ""), results=[], count=0,
+        return _ok(ok=False, query=q.get("q", ""), results=[], count=0,
                    error=str(e), hint=getattr(e, "hint", ""))
 
 

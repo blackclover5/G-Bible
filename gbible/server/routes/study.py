@@ -53,8 +53,12 @@ def _ntuseot_find(parts, q):
     ot = q.get("ot", "")
     if not nt or not ot:
         return {"ok": False, "error": "choose a New Testament and an Old Testament resource"}
+    try:
+        offset = max(0, int(q.get("offset") or 0))
+    except (TypeError, ValueError):
+        offset = 0
     return ntuseot.find(nt, ot, min_hits=int(q.get("min_hits") or 2),
-                        limit=int(q.get("limit") or 300))
+                        limit=int(q.get("limit") or 300), offset=offset)
 
 
 @endpoint("ntuseot/verse")
@@ -433,12 +437,13 @@ def _bible_chapter(parts, q):
     """Verses of one chapter of one module, in order, for copying/export."""
     mid = q.get("id") or ""
     book = q.get("book") or ""
-    try:
-        chapter = int(q.get("chapter") or 0)
-    except (TypeError, ValueError):
-        chapter = 0
+    chapter = _bounded_int(q.get("chapter"), 0, low=1, high=150)
     if not mid or not book or not chapter:
         return {"ok": False, "error": "need id, book, chapter"}
+    if library.get_installed(mid) is None:
+        return {"ok": False, "error": "not installed"}
+    if book not in canon.BOOK_BY_OSIS:
+        return {"ok": False, "error": f"unknown book {book!r}"}
     rows = db.connect().execute(
         "SELECT verse, ref_label, text FROM unit "
         "WHERE module_id=? AND book=? AND chapter=? "
@@ -495,7 +500,7 @@ def _morph_decode(parts, q):
 def _morph_wordforms(parts, q):
     """Every morphology code carried by one word (lemma or surface) in a module.
 
-    Feeds the Logos-style "word then @" morphology picker: type a lemma or
+    Feeds the "word then @" morphology picker: type a lemma or
     surface form, press @, and pick the grammatical form you want to search.
     """
     try:
@@ -532,8 +537,10 @@ def _morph_saved(parts, q):
         row = conn.execute("SELECT id,name,query_json,created_at,updated_at FROM saved_morph_query WHERE name=?", (name,)).fetchone()
         return _ok(saved=dict(row))
     if action == "delete":
-        conn.execute("DELETE FROM saved_morph_query WHERE id=?", (q.get("id", ""),))
+        rid = q.get("id", "")
+        conn.execute("DELETE FROM saved_morph_query WHERE id=?", (rid,))
         conn.commit()
+        sync.tombstone(rid, "morph-query")
         return _ok()
     rows = conn.execute(
         "SELECT id,name,query_json,created_at,updated_at FROM saved_morph_query "
@@ -732,7 +739,7 @@ def _guide_delete(parts, q):
 
 
 # ------------------------------------------------------------------ word study
-# Bible Word Study: everything known about one word, like Logos' BWS guide.
+# Bible Word Study: everything known about one word, from installed resources.
 @endpoint("word-study")
 def _word_study(parts, q):
     return _ok(**study.bible_word_study(
@@ -742,7 +749,7 @@ def _word_study(parts, q):
 
 
 # ------------------------------------------------------------------ exegesis
-# Exegetical Guide: detailed exegesis of a passage, like Logos' EG.
+# Exegetical Guide: detailed exegesis of a passage from installed resources.
 @endpoint("exegetical-guide")
 def _exegetical_guide(parts, q):
     return _ok(**study.exegetical_guide(
@@ -818,7 +825,8 @@ def _courses(parts, q):
         lesson_title=q.get("lesson_title", ""),
         content=q.get("content", ""),
         video_url=q.get("video_url", ""),
-        audio_url=q.get("audio_url", "")))
+        audio_url=q.get("audio_url", ""),
+        completed=q.get("completed", "1")))
 
 
 # ------------------------------------------------------------------ Draw on Screen
@@ -857,7 +865,7 @@ def _info_tool(parts, q):
 @endpoint("bibliography")
 def _bibliography(parts, q):
     return _ok(**study.bibliography(
-        module_ids=_obj(q.get("module_ids"), []) or [],
+        module_ids=_id_list(q.get("module_ids")),
         style=q.get("style", "sbl")))
 
 
@@ -867,8 +875,9 @@ def _bibliography(parts, q):
 def _books_search(parts, q):
     return _ok(**study.books_search(
         q=q.get("q", ""),
-        module_ids=_obj(q.get("module_ids"), []) or [],
-        limit=q.get("limit", 20)))
+        module_ids=_id_list(q.get("module_ids")),
+        limit=int(q.get("limit") or 20) if str(q.get("limit") or "20").lstrip("-").isdigit() else 20,
+        kind=q.get("type", "")))
 
 
 # ------------------------------------------------------------------ Search Synopsis
@@ -877,7 +886,7 @@ def _books_search(parts, q):
 def _search_synopsis(parts, q):
     return _ok(**study.search_synopsis(
         q=q.get("q", ""),
-        module_ids=_obj(q.get("module_ids"), []) or []))
+        module_ids=_id_list(q.get("module_ids"))))
 
 
 # ------------------------------------------------------------------ factbook search
@@ -886,7 +895,7 @@ def _search_synopsis(parts, q):
 def _factbook_search(parts, q):
     return _ok(**study.factbook_search(
         q=q.get("q", ""),
-        module_ids=_obj(q.get("module_ids"), []) or [],
+        module_ids=_id_list(q.get("module_ids")),
         limit=int(q.get("limit") or 30)))
 
 
@@ -933,7 +942,7 @@ def _visual_copy(parts, q):
 def _confessional_documents(parts, q):
     return _ok(**study.confessional_documents(
         doc_type=q.get("doc_type", ""),
-        limit=q.get("limit", 20)))
+        limit=_bounded_int(q.get("limit"), 20, low=1, high=200)))
 
 
 # ------------------------------------------------------------------ Catholic Daily Readings / Topical Index
@@ -950,7 +959,7 @@ def _catholic_daily_readings(parts, q):
 @endpoint("popular-quotes")
 def _popular_quotes(parts, q):
     return _ok(**study.popular_quotes(
-        limit=q.get("limit", 20),
-        module_ids=_obj(q.get("module_ids"), []) or []))
+        limit=_bounded_int(q.get("limit"), 20, low=1, high=200),
+        module_ids=_id_list(q.get("module_ids"))))
 
 

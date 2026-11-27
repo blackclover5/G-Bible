@@ -329,7 +329,7 @@ def register(folder: str, name: str = "", license_: str = "",
     if not license_.strip():
         return {"ok": False, "error":
                 "state the licence for this recording (for example "
-                "Public Domain, CC0, or CC-BY-4.0)"}
+                "CC0 or CC-BY-4.0; a bare Public Domain claim needs a year)"}
     # Put the declared licence through the same gate the Store uses.  Without
     # this, anything could be typed in -- "all rights reserved" included -- and
     # the Attribution view would then list it alongside genuinely free
@@ -509,7 +509,9 @@ def read(module_id: str, cursor: dict | None = None) -> dict:
         }
         items.append(it)
     c = Content(module_id, m.name, "audio", cursor=cursor or {}, items=items)
-    cues, cue_note = load_cues(module_id, m.folder or "")
+    # `folder` is the origin marker "local" for a registered recording; the
+    # real directory is resolved by load_cues via files_dir().
+    cues, cue_note = load_cues(module_id)
     c.extra = {"license": m.license or "",
                "folder": files_dir(module_id, m),
                "cues": cues,

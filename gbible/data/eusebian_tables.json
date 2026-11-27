@@ -1,0 +1,6982 @@
+{
+ "source": "CrossWire SWORD module Eusebian_num 1.1 (Eusebian Numbers)",
+ "title": "Eusebian canon tables",
+ "attribution": "Transcribed from the public-domain SWORD module Eusebian_num, version 1.1 (2013-01-30), whose conf file states 'DistributionLicense=Public Domain'. The canon tables themselves were composed by Eusebius of Caesarea about AD 340; this file contains only their section numbers, canon assignments, verse ranges and cross-references, with no modern commentary.",
+ "note": "Tables I-X, with the associated sections in the other Gospels. A section's own number is kept in its id (gospel.section); the table field is the canon it belongs to.",
+ "license": "Public Domain",
+ "year": "340",
+ "rights": "Public domain. The ancient tables carry no copyright; the modern transcription is released as Public Domain by its publisher, CrossWire. No known restrictions.",
+ "module": "Eusebian_num",
+ "module_version": "1.1",
+ "module_date": "2013-01-30",
+ "module_license": "DistributionLicense=Public Domain",
+ "entry_count": 1161,
+ "entries": [
+  {
+   "id": "1.1",
+   "table": "III",
+   "osisRef": "Matt.1.1-16",
+   "assocates": "3.14 4.1 4.3 4.5"
+  },
+  {
+   "id": "1.2",
+   "table": "X",
+   "osisRef": "Matt.1.17",
+   "assocates": ""
+  },
+  {
+   "id": "1.3",
+   "table": "V",
+   "osisRef": "Matt.1.18",
+   "assocates": "3.2"
+  },
+  {
+   "id": "1.4",
+   "table": "X",
+   "osisRef": "Matt.1.19-2.4",
+   "assocates": ""
+  },
+  {
+   "id": "1.5",
+   "table": "VII",
+   "osisRef": "Matt.2.5-6",
+   "assocates": "4.83"
+  },
+  {
+   "id": "1.6",
+   "table": "X",
+   "osisRef": "Matt.2.7-23",
+   "assocates": ""
+  },
+  {
+   "id": "1.7",
+   "table": "III",
+   "osisRef": "Matt.3.1-2",
+   "assocates": "3.6 4.2 4.25"
+  },
+  {
+   "id": "1.8",
+   "table": "I",
+   "osisRef": "Matt.3.3",
+   "assocates": "2.2 3.7 4.10"
+  },
+  {
+   "id": "1.9",
+   "table": "VI",
+   "osisRef": "Matt.3.4-6",
+   "assocates": "2.3"
+  },
+  {
+   "id": "1.10",
+   "table": "V",
+   "osisRef": "Matt.3.7-10",
+   "assocates": "3.8"
+  },
+  {
+   "id": "1.11",
+   "table": "I",
+   "osisRef": "Matt.3.11",
+   "assocates": "2.4 3.10 4.12 4.14 4.28 4.6"
+  },
+  {
+   "id": "1.12",
+   "table": "V",
+   "osisRef": "Matt.3.12",
+   "assocates": "3.11"
+  },
+  {
+   "id": "1.13",
+   "table": "X",
+   "osisRef": "Matt.3.13-15",
+   "assocates": ""
+  },
+  {
+   "id": "1.14",
+   "table": "I",
+   "osisRef": "Matt.3.16-17",
+   "assocates": "2.5 3.13 4.15"
+  },
+  {
+   "id": "1.15",
+   "table": "II",
+   "osisRef": "Matt.4.1",
+   "assocates": "2.6 3.15"
+  },
+  {
+   "id": "1.16",
+   "table": "V",
+   "osisRef": "Matt.4.2-10",
+   "assocates": "3.16"
+  },
+  {
+   "id": "1.17",
+   "table": "VI",
+   "osisRef": "Matt.4.11",
+   "assocates": "2.7"
+  },
+  {
+   "id": "1.18",
+   "table": "IV",
+   "osisRef": "Matt.4.12",
+   "assocates": "2.8 4.26"
+  },
+  {
+   "id": "1.19",
+   "table": "VII",
+   "osisRef": "Matt.4.13-16",
+   "assocates": "4.19 4.32 4.34"
+  },
+  {
+   "id": "1.20",
+   "table": "VI",
+   "osisRef": "Matt.4.17-18",
+   "assocates": "2.9"
+  },
+  {
+   "id": "1.21",
+   "table": "II",
+   "osisRef": "Matt.4.19-20",
+   "assocates": "2.10 3.32"
+  },
+  {
+   "id": "1.22",
+   "table": "VI",
+   "osisRef": "Matt.4.21-22",
+   "assocates": "2.11"
+  },
+  {
+   "id": "1.23",
+   "table": "I",
+   "osisRef": "Matt.4.23-25",
+   "assocates": "2.27 3.17 3.34 3.45 4.46"
+  },
+  {
+   "id": "1.24",
+   "table": "X",
+   "osisRef": "Matt.5.1",
+   "assocates": ""
+  },
+  {
+   "id": "1.25",
+   "table": "V",
+   "osisRef": "Matt.5.2-3",
+   "assocates": "3.46"
+  },
+  {
+   "id": "1.26",
+   "table": "X",
+   "osisRef": "Matt.5.5",
+   "assocates": ""
+  },
+  {
+   "id": "1.27",
+   "table": "V",
+   "osisRef": "Matt.5.4",
+   "assocates": "3.48"
+  },
+  {
+   "id": "1.28",
+   "table": "V",
+   "osisRef": "Matt.5.6",
+   "assocates": "3.47"
+  },
+  {
+   "id": "1.29",
+   "table": "X",
+   "osisRef": "Matt.5.7-10",
+   "assocates": ""
+  },
+  {
+   "id": "1.30",
+   "table": "V",
+   "osisRef": "Matt.5.11-12",
+   "assocates": "3.49"
+  },
+  {
+   "id": "1.31",
+   "table": "II",
+   "osisRef": "Matt.5.13",
+   "assocates": "2.102 3.185"
+  },
+  {
+   "id": "1.32",
+   "table": "II",
+   "osisRef": "Matt.5.14-16",
+   "assocates": "2.39 3.133 3.79"
+  },
+  {
+   "id": "1.33",
+   "table": "X",
+   "osisRef": "Matt.5.17",
+   "assocates": ""
+  },
+  {
+   "id": "1.34",
+   "table": "V",
+   "osisRef": "Matt.5.18",
+   "assocates": "3.194"
+  },
+  {
+   "id": "1.35",
+   "table": "X",
+   "osisRef": "Matt.5.19-24",
+   "assocates": ""
+  },
+  {
+   "id": "1.36",
+   "table": "V",
+   "osisRef": "Matt.5.25-26",
+   "assocates": "3.162"
+  },
+  {
+   "id": "1.37",
+   "table": "X",
+   "osisRef": "Matt.5.27-39a",
+   "assocates": ""
+  },
+  {
+   "id": "1.38",
+   "table": "V",
+   "osisRef": "Matt.5.39b-40",
+   "assocates": "3.53"
+  },
+  {
+   "id": "1.39",
+   "table": "X",
+   "osisRef": "Matt.5.41-43",
+   "assocates": ""
+  },
+  {
+   "id": "1.40",
+   "table": "V",
+   "osisRef": "Matt.5.44-45",
+   "assocates": "3.52"
+  },
+  {
+   "id": "1.41",
+   "table": "V",
+   "osisRef": "Matt.5.46-48",
+   "assocates": "3.55"
+  },
+  {
+   "id": "1.42",
+   "table": "X",
+   "osisRef": "Matt.6.1-6",
+   "assocates": ""
+  },
+  {
+   "id": "1.43",
+   "table": "V",
+   "osisRef": "Matt.6.7-13",
+   "assocates": "3.123"
+  },
+  {
+   "id": "1.44",
+   "table": "VI",
+   "osisRef": "Matt.6.14-15",
+   "assocates": "2.126"
+  },
+  {
+   "id": "1.45",
+   "table": "X",
+   "osisRef": "Matt.6.16-19",
+   "assocates": ""
+  },
+  {
+   "id": "1.46",
+   "table": "V",
+   "osisRef": "Matt.6.20-21",
+   "assocates": "3.153"
+  },
+  {
+   "id": "1.47",
+   "table": "V",
+   "osisRef": "Matt.6.22-23",
+   "assocates": "3.134"
+  },
+  {
+   "id": "1.48",
+   "table": "V",
+   "osisRef": "Matt.6.24",
+   "assocates": "3.191"
+  },
+  {
+   "id": "1.49",
+   "table": "V",
+   "osisRef": "Matt.6.25-34",
+   "assocates": "3.150"
+  },
+  {
+   "id": "1.50",
+   "table": "II",
+   "osisRef": "Matt.7.1-2",
+   "assocates": "2.41 3.56"
+  },
+  {
+   "id": "1.51",
+   "table": "V",
+   "osisRef": "Matt.7.3-5",
+   "assocates": "3.59"
+  },
+  {
+   "id": "1.52",
+   "table": "X",
+   "osisRef": "Matt.7.6",
+   "assocates": ""
+  },
+  {
+   "id": "1.53",
+   "table": "V",
+   "osisRef": "Matt.7.7-11",
+   "assocates": "3.125"
+  },
+  {
+   "id": "1.54",
+   "table": "V",
+   "osisRef": "Matt.7.12",
+   "assocates": "3.54"
+  },
+  {
+   "id": "1.55",
+   "table": "V",
+   "osisRef": "Matt.7.13-14",
+   "assocates": "3.170"
+  },
+  {
+   "id": "1.56",
+   "table": "X",
+   "osisRef": "Matt.7.15-16a",
+   "assocates": ""
+  },
+  {
+   "id": "1.57",
+   "table": "V",
+   "osisRef": "Matt.7.16b",
+   "assocates": "3.61"
+  },
+  {
+   "id": "1.58",
+   "table": "V",
+   "osisRef": "Matt.7.17-20",
+   "assocates": "3.60"
+  },
+  {
+   "id": "1.59",
+   "table": "III",
+   "osisRef": "Matt.7.21",
+   "assocates": "3.63 4.116"
+  },
+  {
+   "id": "1.60",
+   "table": "V",
+   "osisRef": "Matt.7.22-23",
+   "assocates": "3.171"
+  },
+  {
+   "id": "1.61",
+   "table": "V",
+   "osisRef": "Matt.7.24-27",
+   "assocates": "3.64"
+  },
+  {
+   "id": "1.62",
+   "table": "II",
+   "osisRef": "Matt.7.28-29",
+   "assocates": "2.13 3.24 3.4"
+  },
+  {
+   "id": "1.63",
+   "table": "II",
+   "osisRef": "Matt.8.1-4",
+   "assocates": "2.18 3.33"
+  },
+  {
+   "id": "1.64",
+   "table": "III",
+   "osisRef": "Matt.8.5-10",
+   "assocates": "3.65 4.37"
+  },
+  {
+   "id": "1.65",
+   "table": "V",
+   "osisRef": "Matt.8.11-12",
+   "assocates": "3.172"
+  },
+  {
+   "id": "1.66",
+   "table": "V",
+   "osisRef": "Matt.8.13",
+   "assocates": "3.66"
+  },
+  {
+   "id": "1.67",
+   "table": "II",
+   "osisRef": "Matt.8.14-18",
+   "assocates": "2.15 3.26"
+  },
+  {
+   "id": "1.68",
+   "table": "V",
+   "osisRef": "Matt.8.19-22",
+   "assocates": "3.105"
+  },
+  {
+   "id": "1.69",
+   "table": "II",
+   "osisRef": "Matt.8.23-34",
+   "assocates": "2.47 3.83"
+  },
+  {
+   "id": "1.70",
+   "table": "I",
+   "osisRef": "Matt.9.1-8",
+   "assocates": "2.20 3.37 4.38"
+  },
+  {
+   "id": "1.71",
+   "table": "II",
+   "osisRef": "Matt.9.9",
+   "assocates": "2.21 3.38"
+  },
+  {
+   "id": "1.72",
+   "table": "II",
+   "osisRef": "Matt.9.10-11",
+   "assocates": "2.22 3.186 3.39"
+  },
+  {
+   "id": "1.73",
+   "table": "II",
+   "osisRef": "Matt.9.12-17",
+   "assocates": "2.23 3.40"
+  },
+  {
+   "id": "1.74",
+   "table": "II",
+   "osisRef": "Matt.9.18-26",
+   "assocates": "2.49 3.85"
+  },
+  {
+   "id": "1.75",
+   "table": "X",
+   "osisRef": "Matt.9.27-34",
+   "assocates": ""
+  },
+  {
+   "id": "1.76",
+   "table": "II",
+   "osisRef": "Matt.9.35",
+   "assocates": "2.52 3.169"
+  },
+  {
+   "id": "1.77",
+   "table": "VI",
+   "osisRef": "Matt.9.36",
+   "assocates": "2.63"
+  },
+  {
+   "id": "1.78",
+   "table": "V",
+   "osisRef": "Matt.9.37-38",
+   "assocates": "3.108"
+  },
+  {
+   "id": "1.79",
+   "table": "II",
+   "osisRef": "Matt.10.1",
+   "assocates": "2.29 3.86"
+  },
+  {
+   "id": "1.80",
+   "table": "II",
+   "osisRef": "Matt.10.2-4",
+   "assocates": "2.30 3.44"
+  },
+  {
+   "id": "1.81",
+   "table": "X",
+   "osisRef": "Matt.10.5-6",
+   "assocates": ""
+  },
+  {
+   "id": "1.82",
+   "table": "II",
+   "osisRef": "Matt.10.7-10",
+   "assocates": "2.53 3.110 3.87"
+  },
+  {
+   "id": "1.83",
+   "table": "II",
+   "osisRef": "Matt.10.11",
+   "assocates": "2.54 3.112 3.87"
+  },
+  {
+   "id": "1.84",
+   "table": "V",
+   "osisRef": "Matt.10.12-13",
+   "assocates": "3.111"
+  },
+  {
+   "id": "1.85",
+   "table": "II",
+   "osisRef": "Matt.10.14-15",
+   "assocates": "2.55 3.114 3.88"
+  },
+  {
+   "id": "1.86",
+   "table": "V",
+   "osisRef": "Matt.10.16",
+   "assocates": "3.109"
+  },
+  {
+   "id": "1.87",
+   "table": "I",
+   "osisRef": "Matt.10.17-18",
+   "assocates": "2.139 3.250 4.141 4.146"
+  },
+  {
+   "id": "1.88",
+   "table": "II",
+   "osisRef": "Matt.10.19-22",
+   "assocates": "2.141 3.148 3.251"
+  },
+  {
+   "id": "1.89",
+   "table": "X",
+   "osisRef": "Matt.10.23",
+   "assocates": ""
+  },
+  {
+   "id": "1.90",
+   "table": "III",
+   "osisRef": "Matt.10.24-25a",
+   "assocates": "3.58 4.118 4.139"
+  },
+  {
+   "id": "1.91",
+   "table": "X",
+   "osisRef": "Matt.10.25b-26a",
+   "assocates": ""
+  },
+  {
+   "id": "1.92",
+   "table": "II",
+   "osisRef": "Matt.10.26b",
+   "assocates": "2.40 3.80"
+  },
+  {
+   "id": "1.93",
+   "table": "V",
+   "osisRef": "Matt.10.27-32",
+   "assocates": "3.145"
+  },
+  {
+   "id": "1.94",
+   "table": "II",
+   "osisRef": "Matt.10.33",
+   "assocates": "2.86 3.146 3.97"
+  },
+  {
+   "id": "1.95",
+   "table": "V",
+   "osisRef": "Matt.10.34-36",
+   "assocates": "3.160"
+  },
+  {
+   "id": "1.96",
+   "table": "V",
+   "osisRef": "Matt.10.37-38",
+   "assocates": "3.182 3.184"
+  },
+  {
+   "id": "1.97",
+   "table": "III",
+   "osisRef": "Matt.10.39",
+   "assocates": "3.211 4.105"
+  },
+  {
+   "id": "1.98",
+   "table": "I",
+   "osisRef": "Matt.10.40",
+   "assocates": "2.96 3.116 4.111 4.120 4.129 4.131 4.144 4.40"
+  },
+  {
+   "id": "1.99",
+   "table": "X",
+   "osisRef": "Matt.10.41",
+   "assocates": ""
+  },
+  {
+   "id": "1.100",
+   "table": "VI",
+   "osisRef": "Matt.10.42",
+   "assocates": "2.98"
+  },
+  {
+   "id": "1.101",
+   "table": "X",
+   "osisRef": "Matt.11.1",
+   "assocates": ""
+  },
+  {
+   "id": "1.102",
+   "table": "V",
+   "osisRef": "Matt.11.2-9",
+   "assocates": "3.69"
+  },
+  {
+   "id": "1.103",
+   "table": "II",
+   "osisRef": "Matt.11.10",
+   "assocates": "2.1 3.70"
+  },
+  {
+   "id": "1.104",
+   "table": "V",
+   "osisRef": "Matt.11.11",
+   "assocates": "3.71"
+  },
+  {
+   "id": "1.105",
+   "table": "V",
+   "osisRef": "Matt.11.12-13",
+   "assocates": "3.193"
+  },
+  {
+   "id": "1.106",
+   "table": "X",
+   "osisRef": "Matt.11.14-15",
+   "assocates": ""
+  },
+  {
+   "id": "1.107",
+   "table": "V",
+   "osisRef": "Matt.11.16-19",
+   "assocates": "3.73"
+  },
+  {
+   "id": "1.108",
+   "table": "V",
+   "osisRef": "Matt.11.20-23b",
+   "assocates": "3.115"
+  },
+  {
+   "id": "1.109",
+   "table": "X",
+   "osisRef": "Matt.11.23c-24",
+   "assocates": ""
+  },
+  {
+   "id": "1.110",
+   "table": "V",
+   "osisRef": "Matt.11.25-26",
+   "assocates": "3.118"
+  },
+  {
+   "id": "1.111",
+   "table": "III",
+   "osisRef": "Matt.11.27a",
+   "assocates": "3.119 4.114 4.148 4.30"
+  },
+  {
+   "id": "1.112",
+   "table": "III",
+   "osisRef": "Matt.11.27b",
+   "assocates": "3.119 4.142 4.154 4.44 4.61 4.76 4.8 4.87 4.90"
+  },
+  {
+   "id": "1.113",
+   "table": "X",
+   "osisRef": "Matt.11.28-30",
+   "assocates": ""
+  },
+  {
+   "id": "1.114",
+   "table": "II",
+   "osisRef": "Matt.12.1-4",
+   "assocates": "2.24 3.41"
+  },
+  {
+   "id": "1.115",
+   "table": "X",
+   "osisRef": "Matt.12.5-8",
+   "assocates": ""
+  },
+  {
+   "id": "1.116",
+   "table": "II",
+   "osisRef": "Matt.12.9-13",
+   "assocates": "2.25 3.165 3.177 3.42"
+  },
+  {
+   "id": "1.117",
+   "table": "IV",
+   "osisRef": "Matt.12.14",
+   "assocates": "2.26 4.93 4.95"
+  },
+  {
+   "id": "1.118",
+   "table": "X",
+   "osisRef": "Matt.12.15-21",
+   "assocates": ""
+  },
+  {
+   "id": "1.119",
+   "table": "V",
+   "osisRef": "Matt.12.22",
+   "assocates": "3.126"
+  },
+  {
+   "id": "1.120",
+   "table": "VII",
+   "osisRef": "Matt.12.23",
+   "assocates": "4.82"
+  },
+  {
+   "id": "1.121",
+   "table": "II",
+   "osisRef": "Matt.12.24",
+   "assocates": "2.32 3.127"
+  },
+  {
+   "id": "1.122",
+   "table": "II",
+   "osisRef": "Matt.12.25-30",
+   "assocates": "2.33 3.129"
+  },
+  {
+   "id": "1.123",
+   "table": "II",
+   "osisRef": "Matt.12.31-32",
+   "assocates": "2.34 3.147"
+  },
+  {
+   "id": "1.124",
+   "table": "X",
+   "osisRef": "Matt.12.33-34",
+   "assocates": ""
+  },
+  {
+   "id": "1.125",
+   "table": "V",
+   "osisRef": "Matt.12.35",
+   "assocates": "3.62"
+  },
+  {
+   "id": "1.126",
+   "table": "X",
+   "osisRef": "Matt.12.36-37",
+   "assocates": ""
+  },
+  {
+   "id": "1.127",
+   "table": "V",
+   "osisRef": "Matt.12.38",
+   "assocates": "3.128"
+  },
+  {
+   "id": "1.128",
+   "table": "V",
+   "osisRef": "Matt.12.39-42",
+   "assocates": "3.132"
+  },
+  {
+   "id": "1.129",
+   "table": "V",
+   "osisRef": "Matt.12.43-45",
+   "assocates": "3.130"
+  },
+  {
+   "id": "1.130",
+   "table": "II",
+   "osisRef": "Matt.12.46-50",
+   "assocates": "2.35 3.82"
+  },
+  {
+   "id": "1.131",
+   "table": "II",
+   "osisRef": "Matt.13.1-11",
+   "assocates": "2.36 3.76"
+  },
+  {
+   "id": "1.132",
+   "table": "V",
+   "osisRef": "Matt.13.12",
+   "assocates": "3.81"
+  },
+  {
+   "id": "1.133",
+   "table": "I",
+   "osisRef": "Matt.13.13-15",
+   "assocates": "2.37 3.77 4.109"
+  },
+  {
+   "id": "1.134",
+   "table": "V",
+   "osisRef": "Matt.13.16-17",
+   "assocates": "3.120"
+  },
+  {
+   "id": "1.135",
+   "table": "II",
+   "osisRef": "Matt.13.18-23",
+   "assocates": "2.38 3.78"
+  },
+  {
+   "id": "1.136",
+   "table": "X",
+   "osisRef": "Matt.13.24-30",
+   "assocates": ""
+  },
+  {
+   "id": "1.137",
+   "table": "II",
+   "osisRef": "Matt.13.31-32",
+   "assocates": "2.44 3.167"
+  },
+  {
+   "id": "1.138",
+   "table": "V",
+   "osisRef": "Matt.13.33",
+   "assocates": "3.168"
+  },
+  {
+   "id": "1.139",
+   "table": "VI",
+   "osisRef": "Matt.13.34-35",
+   "assocates": "2.45"
+  },
+  {
+   "id": "1.140",
+   "table": "X",
+   "osisRef": "Matt.13.36-53",
+   "assocates": ""
+  },
+  {
+   "id": "1.141",
+   "table": "I",
+   "osisRef": "Matt.13.54-56",
+   "assocates": "2.50 3.19 4.59"
+  },
+  {
+   "id": "1.142",
+   "table": "I",
+   "osisRef": "Matt.13.57-58",
+   "assocates": "2.51 3.21 4.35"
+  },
+  {
+   "id": "1.143",
+   "table": "II",
+   "osisRef": "Matt.14.1-2",
+   "assocates": "2.57 3.90"
+  },
+  {
+   "id": "1.144",
+   "table": "II",
+   "osisRef": "",
+   "assocates": "2.59 3.12"
+  },
+  {
+   "id": "1.145",
+   "table": "VI",
+   "osisRef": "Matt.14.6-12",
+   "assocates": "2.60"
+  },
+  {
+   "id": "1.146",
+   "table": "III",
+   "osisRef": "Matt.14.13-14",
+   "assocates": "3.92 4.47"
+  },
+  {
+   "id": "1.147",
+   "table": "I",
+   "osisRef": "Matt.14.15-21",
+   "assocates": "2.64 3.93 4.49"
+  },
+  {
+   "id": "1.148",
+   "table": "VI",
+   "osisRef": "Matt.14.22",
+   "assocates": "2.65"
+  },
+  {
+   "id": "1.149",
+   "table": "II",
+   "osisRef": "Matt.14.23a",
+   "assocates": "2.66 3.35 3.43"
+  },
+  {
+   "id": "1.150",
+   "table": "IV",
+   "osisRef": "Matt.14.23b-27",
+   "assocates": "2.67 4.51"
+  },
+  {
+   "id": "1.151",
+   "table": "X",
+   "osisRef": "Matt.14.28-31",
+   "assocates": ""
+  },
+  {
+   "id": "1.152",
+   "table": "VI",
+   "osisRef": "Matt.14.32-34",
+   "assocates": "2.68"
+  },
+  {
+   "id": "1.153",
+   "table": "II",
+   "osisRef": "Matt.14.35-36",
+   "assocates": "2.69 3.36"
+  },
+  {
+   "id": "1.154",
+   "table": "VI",
+   "osisRef": "Matt.15.1-11",
+   "assocates": "2.71"
+  },
+  {
+   "id": "1.155",
+   "table": "X",
+   "osisRef": "Matt.15.12-13",
+   "assocates": ""
+  },
+  {
+   "id": "1.156",
+   "table": "V",
+   "osisRef": "Matt.15.14",
+   "assocates": "3.57"
+  },
+  {
+   "id": "1.157",
+   "table": "VI",
+   "osisRef": "Matt.15.15-23",
+   "assocates": "2.72"
+  },
+  {
+   "id": "1.158",
+   "table": "V",
+   "osisRef": "Matt.15.24",
+   "assocates": "3.226"
+  },
+  {
+   "id": "1.159",
+   "table": "VI",
+   "osisRef": "Matt.15.25-28",
+   "assocates": "2.73"
+  },
+  {
+   "id": "1.160",
+   "table": "VI",
+   "osisRef": "Matt.15.29-39",
+   "assocates": "2.76"
+  },
+  {
+   "id": "1.161",
+   "table": "IV",
+   "osisRef": "Matt.16.1",
+   "assocates": "2.77 4.23 4.53"
+  },
+  {
+   "id": "1.162",
+   "table": "V",
+   "osisRef": "Matt.16.2-3",
+   "assocates": "3.161"
+  },
+  {
+   "id": "1.163",
+   "table": "VI",
+   "osisRef": "Matt.16.4",
+   "assocates": "2.78"
+  },
+  {
+   "id": "1.164",
+   "table": "II",
+   "osisRef": "Matt.16.5-6",
+   "assocates": "2.79 3.144"
+  },
+  {
+   "id": "1.165",
+   "table": "VI",
+   "osisRef": "Matt.16.7-12",
+   "assocates": "2.80"
+  },
+  {
+   "id": "1.166",
+   "table": "I",
+   "osisRef": "Matt.16.13-16",
+   "assocates": "2.82 3.94 4.17 4.74"
+  },
+  {
+   "id": "1.167",
+   "table": "X",
+   "osisRef": "Matt.16.17-19",
+   "assocates": ""
+  },
+  {
+   "id": "1.168",
+   "table": "II",
+   "osisRef": "Matt.16.20-21",
+   "assocates": "2.83 3.206 3.95"
+  },
+  {
+   "id": "1.169",
+   "table": "VI",
+   "osisRef": "Matt.16.22-23",
+   "assocates": "2.84"
+  },
+  {
+   "id": "1.170",
+   "table": "II",
+   "osisRef": "Matt.16.24-26",
+   "assocates": "2.85 3.96"
+  },
+  {
+   "id": "1.171",
+   "table": "X",
+   "osisRef": "Matt.16.27",
+   "assocates": ""
+  },
+  {
+   "id": "1.172",
+   "table": "II",
+   "osisRef": "Matt.16.28-17.9",
+   "assocates": "2.87 3.98"
+  },
+  {
+   "id": "1.173",
+   "table": "VI",
+   "osisRef": "Matt.17.10-13",
+   "assocates": "2.89"
+  },
+  {
+   "id": "1.174",
+   "table": "II",
+   "osisRef": "Matt.17.14-18",
+   "assocates": "2.91 3.99"
+  },
+  {
+   "id": "1.175",
+   "table": "V",
+   "osisRef": "Matt.17.19-21",
+   "assocates": "3.200"
+  },
+  {
+   "id": "1.176",
+   "table": "II",
+   "osisRef": "Matt.17.22-23",
+   "assocates": "2.93 3.101"
+  },
+  {
+   "id": "1.177",
+   "table": "X",
+   "osisRef": "Matt.17.24-27",
+   "assocates": ""
+  },
+  {
+   "id": "1.178",
+   "table": "II",
+   "osisRef": "Matt.18.1-5",
+   "assocates": "2.95 3.102 3.217"
+  },
+  {
+   "id": "1.179",
+   "table": "II",
+   "osisRef": "Matt.18.6-7",
+   "assocates": "2.99 3.197"
+  },
+  {
+   "id": "1.180",
+   "table": "VI",
+   "osisRef": "Matt.18.8-9",
+   "assocates": "2.100"
+  },
+  {
+   "id": "1.181",
+   "table": "X",
+   "osisRef": "Matt.18.10-11",
+   "assocates": ""
+  },
+  {
+   "id": "1.182",
+   "table": "V",
+   "osisRef": "Matt.18.12-14",
+   "assocates": "3.187 3.189"
+  },
+  {
+   "id": "1.183",
+   "table": "V",
+   "osisRef": "Matt.18.15",
+   "assocates": "3.198"
+  },
+  {
+   "id": "1.184",
+   "table": "X",
+   "osisRef": "Matt.18.16-17",
+   "assocates": ""
+  },
+  {
+   "id": "1.185",
+   "table": "VII",
+   "osisRef": "Matt.18.18",
+   "assocates": "4.215"
+  },
+  {
+   "id": "1.186",
+   "table": "X",
+   "osisRef": "Matt.18.19-20",
+   "assocates": ""
+  },
+  {
+   "id": "1.187",
+   "table": "V",
+   "osisRef": "Matt.18.21-22",
+   "assocates": "3.199"
+  },
+  {
+   "id": "1.188",
+   "table": "X",
+   "osisRef": "Matt.18.23-35",
+   "assocates": ""
+  },
+  {
+   "id": "1.189",
+   "table": "VI",
+   "osisRef": "Matt.19.1-8",
+   "assocates": "2.103"
+  },
+  {
+   "id": "1.190",
+   "table": "II",
+   "osisRef": "Matt.19.9",
+   "assocates": "2.105 3.195"
+  },
+  {
+   "id": "1.191",
+   "table": "X",
+   "osisRef": "Matt.19.10-12",
+   "assocates": ""
+  },
+  {
+   "id": "1.192",
+   "table": "II",
+   "osisRef": "Matt.19.13-15",
+   "assocates": "2.106 3.216"
+  },
+  {
+   "id": "1.193",
+   "table": "II",
+   "osisRef": "Matt.19.16-20",
+   "assocates": "2.107 3.121 3.218"
+  },
+  {
+   "id": "1.194",
+   "table": "II",
+   "osisRef": "Matt.19.21",
+   "assocates": "2.108 3.152 3.219"
+  },
+  {
+   "id": "1.195",
+   "table": "II",
+   "osisRef": "Matt.19.22-27",
+   "assocates": "2.109 3.220"
+  },
+  {
+   "id": "1.196",
+   "table": "X",
+   "osisRef": "Matt.19.28a",
+   "assocates": ""
+  },
+  {
+   "id": "1.197",
+   "table": "V",
+   "osisRef": "Matt.19.28b",
+   "assocates": "3.272"
+  },
+  {
+   "id": "1.198",
+   "table": "II",
+   "osisRef": "Matt.19.29",
+   "assocates": "2.110 3.221"
+  },
+  {
+   "id": "1.199",
+   "table": "II",
+   "osisRef": "Matt.19.30",
+   "assocates": "2.111 3.173"
+  },
+  {
+   "id": "1.200",
+   "table": "X",
+   "osisRef": "Matt.20.1-16",
+   "assocates": ""
+  },
+  {
+   "id": "1.201",
+   "table": "II",
+   "osisRef": "Matt.20.17-19",
+   "assocates": "2.112 3.222"
+  },
+  {
+   "id": "1.202",
+   "table": "VI",
+   "osisRef": "Matt.20.20-23",
+   "assocates": "2.113"
+  },
+  {
+   "id": "1.203",
+   "table": "II",
+   "osisRef": "Matt.20.24-27",
+   "assocates": "2.114 3.270"
+  },
+  {
+   "id": "1.204",
+   "table": "IV",
+   "osisRef": "Matt.20.28",
+   "assocates": "2.115 4.135 4.91"
+  },
+  {
+   "id": "1.205",
+   "table": "II",
+   "osisRef": "Matt.20.29-34",
+   "assocates": "2.116 3.224"
+  },
+  {
+   "id": "1.206",
+   "table": "II",
+   "osisRef": "Matt.21.1-3",
+   "assocates": "2.117 3.232"
+  },
+  {
+   "id": "1.207",
+   "table": "VII",
+   "osisRef": "Matt.21.4-5",
+   "assocates": "4.101"
+  },
+  {
+   "id": "1.208",
+   "table": "II",
+   "osisRef": "Matt.21.6-8",
+   "assocates": "2.118 3.233"
+  },
+  {
+   "id": "1.209",
+   "table": "I",
+   "osisRef": "Matt.21.9",
+   "assocates": "2.119 3.234 4.100"
+  },
+  {
+   "id": "1.210",
+   "table": "X",
+   "osisRef": "Matt.21.10-11",
+   "assocates": ""
+  },
+  {
+   "id": "1.211",
+   "table": "I",
+   "osisRef": "Matt.21.12-13",
+   "assocates": "2.121 3.238 4.21"
+  },
+  {
+   "id": "1.212",
+   "table": "X",
+   "osisRef": "Matt.21.14",
+   "assocates": ""
+  },
+  {
+   "id": "1.213",
+   "table": "V",
+   "osisRef": "Matt.21.15-16",
+   "assocates": "3.235"
+  },
+  {
+   "id": "1.214",
+   "table": "VI",
+   "osisRef": "Matt.21.17-20",
+   "assocates": "2.120"
+  },
+  {
+   "id": "1.215",
+   "table": "VI",
+   "osisRef": "Matt.21.21",
+   "assocates": "2.124"
+  },
+  {
+   "id": "1.216",
+   "table": "IV",
+   "osisRef": "Matt.21.22",
+   "assocates": "2.125 4.128 4.133 4.137 4.150"
+  },
+  {
+   "id": "1.217",
+   "table": "II",
+   "osisRef": "Matt.21.23-27",
+   "assocates": "2.127 3.240"
+  },
+  {
+   "id": "1.218",
+   "table": "X",
+   "osisRef": "Matt.21.28-32",
+   "assocates": ""
+  },
+  {
+   "id": "1.219",
+   "table": "II",
+   "osisRef": "Matt.21.33-44",
+   "assocates": "2.128 3.241"
+  },
+  {
+   "id": "1.220",
+   "table": "I",
+   "osisRef": "Matt.21.45-46",
+   "assocates": "2.122 2.129 3.239 3.242 3.261 4.77 4.85 4.88"
+  },
+  {
+   "id": "1.221",
+   "table": "V",
+   "osisRef": "Matt.22.1-10",
+   "assocates": "3.181"
+  },
+  {
+   "id": "1.222",
+   "table": "X",
+   "osisRef": "Matt.22.11-14",
+   "assocates": ""
+  },
+  {
+   "id": "1.223",
+   "table": "II",
+   "osisRef": "Matt.22.15-33",
+   "assocates": "2.130 3.243"
+  },
+  {
+   "id": "1.224",
+   "table": "VI",
+   "osisRef": "Matt.22.34-40",
+   "assocates": "2.131"
+  },
+  {
+   "id": "1.225",
+   "table": "II",
+   "osisRef": "Matt.22.41-45",
+   "assocates": "2.134 3.245"
+  },
+  {
+   "id": "1.226",
+   "table": "II",
+   "osisRef": "Matt.22.46",
+   "assocates": "2.133 3.244"
+  },
+  {
+   "id": "1.227",
+   "table": "X",
+   "osisRef": "Matt.23.1-3",
+   "assocates": ""
+  },
+  {
+   "id": "1.228",
+   "table": "V",
+   "osisRef": "Matt.23.4",
+   "assocates": "3.139"
+  },
+  {
+   "id": "1.229",
+   "table": "II",
+   "osisRef": "Matt.23.5-7",
+   "assocates": "2.135 3.137 3.246"
+  },
+  {
+   "id": "1.230",
+   "table": "X",
+   "osisRef": "Matt.23.8-11",
+   "assocates": ""
+  },
+  {
+   "id": "1.231",
+   "table": "V",
+   "osisRef": "Matt.23.12",
+   "assocates": "3.179 3.215"
+  },
+  {
+   "id": "1.232",
+   "table": "V",
+   "osisRef": "Matt.23.13-14",
+   "assocates": "3.142"
+  },
+  {
+   "id": "1.233",
+   "table": "X",
+   "osisRef": "Matt.23.15-22",
+   "assocates": ""
+  },
+  {
+   "id": "1.234",
+   "table": "V",
+   "osisRef": "Matt.23.23",
+   "assocates": "3.136"
+  },
+  {
+   "id": "1.235",
+   "table": "X",
+   "osisRef": "Matt.23.24",
+   "assocates": ""
+  },
+  {
+   "id": "1.236",
+   "table": "V",
+   "osisRef": "Matt.23.25-26",
+   "assocates": "3.135"
+  },
+  {
+   "id": "1.237",
+   "table": "V",
+   "osisRef": "Matt.23.27-28",
+   "assocates": "3.138"
+  },
+  {
+   "id": "1.238",
+   "table": "V",
+   "osisRef": "Matt.23.29-32",
+   "assocates": "3.140"
+  },
+  {
+   "id": "1.239",
+   "table": "X",
+   "osisRef": "Matt.23.33",
+   "assocates": ""
+  },
+  {
+   "id": "1.240",
+   "table": "V",
+   "osisRef": "Matt.23.34-36",
+   "assocates": "3.141"
+  },
+  {
+   "id": "1.241",
+   "table": "V",
+   "osisRef": "Matt.23.37-39",
+   "assocates": "3.175"
+  },
+  {
+   "id": "1.242",
+   "table": "II",
+   "osisRef": "Matt.24.1-2",
+   "assocates": "2.137 3.237 3.248"
+  },
+  {
+   "id": "1.243",
+   "table": "II",
+   "osisRef": "Matt.24.3-8",
+   "assocates": "2.138 3.249"
+  },
+  {
+   "id": "1.244",
+   "table": "I",
+   "osisRef": "Matt.24.9",
+   "assocates": "2.139 3.250 4.141 4.146"
+  },
+  {
+   "id": "1.245",
+   "table": "X",
+   "osisRef": "Matt.24.10-13",
+   "assocates": ""
+  },
+  {
+   "id": "1.246",
+   "table": "VI",
+   "osisRef": "Matt.24.14",
+   "assocates": "2.140"
+  },
+  {
+   "id": "1.247",
+   "table": "VI",
+   "osisRef": "Matt.24.15-16",
+   "assocates": "2.142"
+  },
+  {
+   "id": "1.248",
+   "table": "II",
+   "osisRef": "Matt.24.17-18",
+   "assocates": "2.143 3.209 3.253"
+  },
+  {
+   "id": "1.249",
+   "table": "II",
+   "osisRef": "Matt.24.19",
+   "assocates": "2.144 3.254"
+  },
+  {
+   "id": "1.250",
+   "table": "VI",
+   "osisRef": "Matt.24.20",
+   "assocates": "2.145"
+  },
+  {
+   "id": "1.251",
+   "table": "II",
+   "osisRef": "Matt.24.21",
+   "assocates": "2.146 3.255"
+  },
+  {
+   "id": "1.252",
+   "table": "VI",
+   "osisRef": "Matt.24.22",
+   "assocates": "2.147"
+  },
+  {
+   "id": "1.253",
+   "table": "II",
+   "osisRef": "Matt.24.23",
+   "assocates": "2.148 3.204"
+  },
+  {
+   "id": "1.254",
+   "table": "VI",
+   "osisRef": "Matt.24.24",
+   "assocates": "2.149"
+  },
+  {
+   "id": "1.255",
+   "table": "V",
+   "osisRef": "Matt.24.25-26",
+   "assocates": "3.202"
+  },
+  {
+   "id": "1.256",
+   "table": "V",
+   "osisRef": "Matt.24.27",
+   "assocates": "3.205"
+  },
+  {
+   "id": "1.257",
+   "table": "V",
+   "osisRef": "Matt.24.28",
+   "assocates": "3.213"
+  },
+  {
+   "id": "1.258",
+   "table": "II",
+   "osisRef": "Matt.24.29-30a",
+   "assocates": "2.150 3.257"
+  },
+  {
+   "id": "1.259",
+   "table": "II",
+   "osisRef": "Matt.24.30b-35",
+   "assocates": "2.151 3.258"
+  },
+  {
+   "id": "1.260",
+   "table": "VI",
+   "osisRef": "Matt.24.36",
+   "assocates": "2.152"
+  },
+  {
+   "id": "1.261",
+   "table": "V",
+   "osisRef": "Matt.24.37-39",
+   "assocates": "3.207"
+  },
+  {
+   "id": "1.262",
+   "table": "V",
+   "osisRef": "Matt.24.40-41",
+   "assocates": "3.212"
+  },
+  {
+   "id": "1.263",
+   "table": "VI",
+   "osisRef": "Matt.24.42",
+   "assocates": "2.153"
+  },
+  {
+   "id": "1.264",
+   "table": "II",
+   "osisRef": "Matt.24.43-44",
+   "assocates": "2.155 3.156"
+  },
+  {
+   "id": "1.265",
+   "table": "V",
+   "osisRef": "Matt.24.45",
+   "assocates": "3.157"
+  },
+  {
+   "id": "1.266",
+   "table": "V",
+   "osisRef": "Matt.24.46-47",
+   "assocates": "3.155 3.157"
+  },
+  {
+   "id": "1.267",
+   "table": "V",
+   "osisRef": "Matt.24.48-51",
+   "assocates": "3.158"
+  },
+  {
+   "id": "1.268",
+   "table": "X",
+   "osisRef": "Matt.25.1-13",
+   "assocates": ""
+  },
+  {
+   "id": "1.269",
+   "table": "II",
+   "osisRef": "Matt.25.14",
+   "assocates": "2.154 3.228"
+  },
+  {
+   "id": "1.270",
+   "table": "V",
+   "osisRef": "Matt.25.15-28",
+   "assocates": "3.229"
+  },
+  {
+   "id": "1.271",
+   "table": "II",
+   "osisRef": "Matt.25.29",
+   "assocates": "2.42 3.230"
+  },
+  {
+   "id": "1.272",
+   "table": "V",
+   "osisRef": "Matt.25.30",
+   "assocates": "3.231"
+  },
+  {
+   "id": "1.273",
+   "table": "X",
+   "osisRef": "Matt.25.31-26.1",
+   "assocates": ""
+  },
+  {
+   "id": "1.274",
+   "table": "I",
+   "osisRef": "Matt.26.2",
+   "assocates": "2.156 3.260 4.20 4.48 4.96"
+  },
+  {
+   "id": "1.275",
+   "table": "VI",
+   "osisRef": "Matt.26.3-5",
+   "assocates": "2.157"
+  },
+  {
+   "id": "1.276",
+   "table": "I",
+   "osisRef": "Matt.26.6-11",
+   "assocates": "2.158 3.74 4.98"
+  },
+  {
+   "id": "1.277",
+   "table": "IV",
+   "osisRef": "Matt.26.12-13",
+   "assocates": "2.159 4.98"
+  },
+  {
+   "id": "1.278",
+   "table": "II",
+   "osisRef": "Matt.26.14-19",
+   "assocates": "2.160 3.263"
+  },
+  {
+   "id": "1.279",
+   "table": "IV",
+   "osisRef": "Matt.26.20-21",
+   "assocates": "2.161 4.121 4.72"
+  },
+  {
+   "id": "1.280",
+   "table": "I",
+   "osisRef": "Matt.26.22",
+   "assocates": "2.162 3.269 4.122"
+  },
+  {
+   "id": "1.281",
+   "table": "II",
+   "osisRef": "Matt.26.23-24a",
+   "assocates": "2.163 3.268"
+  },
+  {
+   "id": "1.282",
+   "table": "VI",
+   "osisRef": "Matt.26.24b",
+   "assocates": "2.164"
+  },
+  {
+   "id": "1.283",
+   "table": "X",
+   "osisRef": "Matt.26.25",
+   "assocates": ""
+  },
+  {
+   "id": "1.284",
+   "table": "I",
+   "osisRef": "Matt.26.26",
+   "assocates": "2.165 3.266 4.55 4.63 4.65 4.67"
+  },
+  {
+   "id": "1.285",
+   "table": "II",
+   "osisRef": "Matt.26.27-29",
+   "assocates": "2.166 3.265 3.267"
+  },
+  {
+   "id": "1.286",
+   "table": "VI",
+   "osisRef": "Matt.26.30",
+   "assocates": "2.167"
+  },
+  {
+   "id": "1.287",
+   "table": "IV",
+   "osisRef": "Matt.26.31a",
+   "assocates": "2.168 4.152"
+  },
+  {
+   "id": "1.288",
+   "table": "VI",
+   "osisRef": "Matt.26.31b-32",
+   "assocates": "2.169"
+  },
+  {
+   "id": "1.289",
+   "table": "I",
+   "osisRef": "Matt.26.33-34",
+   "assocates": "2.170 3.275 4.126"
+  },
+  {
+   "id": "1.290",
+   "table": "VI",
+   "osisRef": "Matt.26.35",
+   "assocates": "2.171"
+  },
+  {
+   "id": "1.291",
+   "table": "I",
+   "osisRef": "Matt.26.36a",
+   "assocates": "2.172 3.279 4.156"
+  },
+  {
+   "id": "1.292",
+   "table": "VI",
+   "osisRef": "Matt.26.36b-37",
+   "assocates": "2.173"
+  },
+  {
+   "id": "1.293",
+   "table": "IV",
+   "osisRef": "Matt.26.38",
+   "assocates": "2.174 4.107"
+  },
+  {
+   "id": "1.294",
+   "table": "I",
+   "osisRef": "Matt.26.39a",
+   "assocates": "2.175 3.281 4.161"
+  },
+  {
+   "id": "1.295",
+   "table": "I",
+   "osisRef": "Matt.26.39c",
+   "assocates": "2.176 3.282 4.42 4.57"
+  },
+  {
+   "id": "1.296",
+   "table": "II",
+   "osisRef": "Matt.26.40-41a",
+   "assocates": "2.177 3.280 3.284"
+  },
+  {
+   "id": "1.297",
+   "table": "IV",
+   "osisRef": "Matt.26.41b",
+   "assocates": "2.178 4.70"
+  },
+  {
+   "id": "1.298",
+   "table": "VI",
+   "osisRef": "Matt.26.42-44",
+   "assocates": "2.179"
+  },
+  {
+   "id": "1.299",
+   "table": "IV",
+   "osisRef": "Matt.26.45-46",
+   "assocates": "2.180 4.103"
+  },
+  {
+   "id": "1.300",
+   "table": "I",
+   "osisRef": "Matt.26.47",
+   "assocates": "2.181 3.285 4.158 4.79"
+  },
+  {
+   "id": "1.301",
+   "table": "II",
+   "osisRef": "Matt.26.48-50",
+   "assocates": "2.182 3.286"
+  },
+  {
+   "id": "1.302",
+   "table": "I",
+   "osisRef": "Matt.26.51-52a",
+   "assocates": "2.183 3.287 4.160"
+  },
+  {
+   "id": "1.303",
+   "table": "X",
+   "osisRef": "Matt.26.52b-54",
+   "assocates": ""
+  },
+  {
+   "id": "1.304",
+   "table": "I",
+   "osisRef": "Matt.26.55",
+   "assocates": "2.184 3.289 4.170"
+  },
+  {
+   "id": "1.305",
+   "table": "VI",
+   "osisRef": "Matt.26.56",
+   "assocates": "2.185"
+  },
+  {
+   "id": "1.306",
+   "table": "I",
+   "osisRef": "Matt.26.57",
+   "assocates": "2.187 3.290 4.162 4.174"
+  },
+  {
+   "id": "1.307",
+   "table": "IV",
+   "osisRef": "Matt.26.58",
+   "assocates": "2.188 4.164"
+  },
+  {
+   "id": "1.308",
+   "table": "II",
+   "osisRef": "Matt.26.59-60a",
+   "assocates": "2.189 3.305"
+  },
+  {
+   "id": "1.309",
+   "table": "VI",
+   "osisRef": "Matt.26.60b-64a",
+   "assocates": "2.190"
+  },
+  {
+   "id": "1.310",
+   "table": "I",
+   "osisRef": "Matt.26.64b",
+   "assocates": "2.191 3.297 4.69"
+  },
+  {
+   "id": "1.311",
+   "table": "VI",
+   "osisRef": "Matt.26.65a",
+   "assocates": "2.192"
+  },
+  {
+   "id": "1.312",
+   "table": "II",
+   "osisRef": "Matt.26.65b-66",
+   "assocates": "2.193 3.299"
+  },
+  {
+   "id": "1.313",
+   "table": "I",
+   "osisRef": "Matt.26.67-68",
+   "assocates": "2.194 3.294 4.172"
+  },
+  {
+   "id": "1.314",
+   "table": "I",
+   "osisRef": "Matt.26.69-70",
+   "assocates": "2.195 3.291 4.166 4.168"
+  },
+  {
+   "id": "1.315",
+   "table": "I",
+   "osisRef": "Matt.26.71-74",
+   "assocates": "2.196 3.292 4.175"
+  },
+  {
+   "id": "1.316",
+   "table": "II",
+   "osisRef": "Matt.26.75",
+   "assocates": "2.197 3.293"
+  },
+  {
+   "id": "1.317",
+   "table": "II",
+   "osisRef": "Matt.27.1",
+   "assocates": "2.198 3.295"
+  },
+  {
+   "id": "1.318",
+   "table": "I",
+   "osisRef": "Matt.27.2",
+   "assocates": "2.199 3.300 4.176"
+  },
+  {
+   "id": "1.319",
+   "table": "X",
+   "osisRef": "Matt.27.3-10",
+   "assocates": ""
+  },
+  {
+   "id": "1.320",
+   "table": "I",
+   "osisRef": "Matt.27.11",
+   "assocates": "2.200 3.302 4.178 4.180"
+  },
+  {
+   "id": "1.321",
+   "table": "IV",
+   "osisRef": "Matt.27.12-14",
+   "assocates": "2.201 4.192"
+  },
+  {
+   "id": "1.322",
+   "table": "II",
+   "osisRef": "Matt.27.15",
+   "assocates": "2.202 3.309"
+  },
+  {
+   "id": "1.323",
+   "table": "IV",
+   "osisRef": "Matt.27.16-18",
+   "assocates": "2.203 4.183"
+  },
+  {
+   "id": "1.324",
+   "table": "X",
+   "osisRef": "Matt.27.19",
+   "assocates": ""
+  },
+  {
+   "id": "1.325",
+   "table": "I",
+   "osisRef": "Matt.27.20-21",
+   "assocates": "2.204 3.310 4.184"
+  },
+  {
+   "id": "1.326",
+   "table": "I",
+   "osisRef": "Matt.27.22-23",
+   "assocates": "2.205 3.311 3.313 4.188 4.194"
+  },
+  {
+   "id": "1.327",
+   "table": "X",
+   "osisRef": "Matt.27.24-25",
+   "assocates": ""
+  },
+  {
+   "id": "1.328",
+   "table": "I",
+   "osisRef": "Matt.27.26",
+   "assocates": "2.206 3.314 4.196"
+  },
+  {
+   "id": "1.329",
+   "table": "IV",
+   "osisRef": "Matt.27.27-29",
+   "assocates": "2.207 4.185 4.187"
+  },
+  {
+   "id": "1.330",
+   "table": "VI",
+   "osisRef": "Matt.27.30-31",
+   "assocates": "2.208"
+  },
+  {
+   "id": "1.331",
+   "table": "I",
+   "osisRef": "Matt.27.32",
+   "assocates": "2.209 3.315 4.197"
+  },
+  {
+   "id": "1.332",
+   "table": "I",
+   "osisRef": "Matt.27.33",
+   "assocates": "2.210 3.318 4.197"
+  },
+  {
+   "id": "1.333",
+   "table": "IV",
+   "osisRef": "Matt.27.34",
+   "assocates": "2.211 4.203"
+  },
+  {
+   "id": "1.334",
+   "table": "I",
+   "osisRef": "Matt.27.35-36",
+   "assocates": "2.212 3.321 4.201"
+  },
+  {
+   "id": "1.335",
+   "table": "I",
+   "osisRef": "Matt.27.37",
+   "assocates": "2.214 3.324 4.199"
+  },
+  {
+   "id": "1.336",
+   "table": "I",
+   "osisRef": "Matt.27.38",
+   "assocates": "2.215 3.317 3.319 4.198"
+  },
+  {
+   "id": "1.337",
+   "table": "VI",
+   "osisRef": "Matt.27.39-40",
+   "assocates": "2.217"
+  },
+  {
+   "id": "1.338",
+   "table": "II",
+   "osisRef": "Matt.27.41-43",
+   "assocates": "2.218 3.322"
+  },
+  {
+   "id": "1.339",
+   "table": "II",
+   "osisRef": "Matt.27.44",
+   "assocates": "2.219 3.325"
+  },
+  {
+   "id": "1.340",
+   "table": "II",
+   "osisRef": "Matt.27.45",
+   "assocates": "2.220 3.327"
+  },
+  {
+   "id": "1.341",
+   "table": "VI",
+   "osisRef": "Matt.27.46-47",
+   "assocates": "2.221"
+  },
+  {
+   "id": "1.342",
+   "table": "II",
+   "osisRef": "Matt.27.48-49",
+   "assocates": "2.222 3.323"
+  },
+  {
+   "id": "1.343",
+   "table": "I",
+   "osisRef": "Matt.27.50",
+   "assocates": "2.223 3.329 4.204"
+  },
+  {
+   "id": "1.344",
+   "table": "II",
+   "osisRef": "Matt.27.51a",
+   "assocates": "2.224 3.328"
+  },
+  {
+   "id": "1.345",
+   "table": "X",
+   "osisRef": "Matt.27.51b-53",
+   "assocates": ""
+  },
+  {
+   "id": "1.346",
+   "table": "II",
+   "osisRef": "Matt.27.54",
+   "assocates": "2.225 3.330"
+  },
+  {
+   "id": "1.347",
+   "table": "VI",
+   "osisRef": "Matt.27.55-56",
+   "assocates": "2.226"
+  },
+  {
+   "id": "1.348",
+   "table": "I",
+   "osisRef": "Matt.27.57-58",
+   "assocates": "2.227 3.332 4.206"
+  },
+  {
+   "id": "1.349",
+   "table": "I",
+   "osisRef": "Matt.27.59-60",
+   "assocates": "2.228 3.333 4.208"
+  },
+  {
+   "id": "1.350",
+   "table": "VI",
+   "osisRef": "Matt.27.61",
+   "assocates": "2.229"
+  },
+  {
+   "id": "1.351",
+   "table": "X",
+   "osisRef": "Matt.27.62-66",
+   "assocates": ""
+  },
+  {
+   "id": "1.352",
+   "table": "I",
+   "osisRef": "Matt.28.1-4",
+   "assocates": "2.231 3.336 4.209 4.211"
+  },
+  {
+   "id": "1.353",
+   "table": "II",
+   "osisRef": "Matt.28.5-7",
+   "assocates": "2.232 3.337"
+  },
+  {
+   "id": "1.354",
+   "table": "II",
+   "osisRef": "Matt.28.8",
+   "assocates": "2.233 3.338"
+  },
+  {
+   "id": "1.355",
+   "table": "X",
+   "osisRef": "Matt.28.9-20",
+   "assocates": ""
+  },
+  {
+   "id": "2.1",
+   "table": "II",
+   "osisRef": "Mark.1.1-2",
+   "assocates": "1.103 3.70"
+  },
+  {
+   "id": "2.2",
+   "table": "I",
+   "osisRef": "Mark.1.3",
+   "assocates": "1.8 3.7 4.10"
+  },
+  {
+   "id": "2.3",
+   "table": "VI",
+   "osisRef": "Mark.1.4-7a",
+   "assocates": "1.9"
+  },
+  {
+   "id": "2.4",
+   "table": "I",
+   "osisRef": "Mark.1.7b-8",
+   "assocates": "1.11 3.10 4.12 4.14 4.28 4.6"
+  },
+  {
+   "id": "2.5",
+   "table": "I",
+   "osisRef": "Mark.1.9-11",
+   "assocates": "1.14 3.13 4.15"
+  },
+  {
+   "id": "2.6",
+   "table": "II",
+   "osisRef": "Mark.1.12-13b",
+   "assocates": "1.15 3.15"
+  },
+  {
+   "id": "2.7",
+   "table": "VI",
+   "osisRef": "Mark.1.13c",
+   "assocates": "1.17"
+  },
+  {
+   "id": "2.8",
+   "table": "IV",
+   "osisRef": "Mark.1.14a",
+   "assocates": "1.18 4.26"
+  },
+  {
+   "id": "2.9",
+   "table": "VI",
+   "osisRef": "Mark.1.14b-16",
+   "assocates": "1.20"
+  },
+  {
+   "id": "2.10",
+   "table": "II",
+   "osisRef": "Mark.1.17-18",
+   "assocates": "1.21 3.32"
+  },
+  {
+   "id": "2.11",
+   "table": "VI",
+   "osisRef": "Mark.1.19-20",
+   "assocates": "1.22"
+  },
+  {
+   "id": "2.12",
+   "table": "VIII",
+   "osisRef": "Mark.1.21",
+   "assocates": "3.23"
+  },
+  {
+   "id": "2.13",
+   "table": "II",
+   "osisRef": "Mark.1.22",
+   "assocates": "1.62 3.24 3.4"
+  },
+  {
+   "id": "2.14",
+   "table": "VIII",
+   "osisRef": "Mark.1.23-28",
+   "assocates": "3.25"
+  },
+  {
+   "id": "2.15",
+   "table": "II",
+   "osisRef": "Mark.1.29-34a",
+   "assocates": "1.67 3.26"
+  },
+  {
+   "id": "2.16",
+   "table": "VIII",
+   "osisRef": "Mark.1.34b",
+   "assocates": "3.27"
+  },
+  {
+   "id": "2.17",
+   "table": "VIII",
+   "osisRef": "Mark.1.35-39",
+   "assocates": "3.28"
+  },
+  {
+   "id": "2.18",
+   "table": "II",
+   "osisRef": "Mark.1.40-44",
+   "assocates": "1.63 3.33"
+  },
+  {
+   "id": "2.19",
+   "table": "X",
+   "osisRef": "Mark.1.45",
+   "assocates": ""
+  },
+  {
+   "id": "2.20",
+   "table": "I",
+   "osisRef": "Mark.2.1-12",
+   "assocates": "1.70 3.37 4.38"
+  },
+  {
+   "id": "2.21",
+   "table": "II",
+   "osisRef": "Mark.2.13-14",
+   "assocates": "1.71 3.38"
+  },
+  {
+   "id": "2.22",
+   "table": "II",
+   "osisRef": "Mark.2.15-16",
+   "assocates": "1.72 3.186 3.39"
+  },
+  {
+   "id": "2.23",
+   "table": "II",
+   "osisRef": "Mark.2.17-22",
+   "assocates": "1.73 3.40"
+  },
+  {
+   "id": "2.24",
+   "table": "II",
+   "osisRef": "Mark.2.23-26",
+   "assocates": "1.114 3.41"
+  },
+  {
+   "id": "2.25",
+   "table": "II",
+   "osisRef": "Mark.2.27-3.5",
+   "assocates": "1.116 3.165 3.177 3.42"
+  },
+  {
+   "id": "2.26",
+   "table": "IV",
+   "osisRef": "Mark.3.6-7a",
+   "assocates": "1.117 4.93 4.95"
+  },
+  {
+   "id": "2.27",
+   "table": "I",
+   "osisRef": "Mark.3.7b-11a",
+   "assocates": "1.23 3.17 3.34 3.45 4.46"
+  },
+  {
+   "id": "2.28",
+   "table": "VIII",
+   "osisRef": "Mark.3.11b-12",
+   "assocates": "3.27"
+  },
+  {
+   "id": "2.29",
+   "table": "II",
+   "osisRef": "Mark.3.13-16a",
+   "assocates": "1.79 3.86"
+  },
+  {
+   "id": "2.30",
+   "table": "II",
+   "osisRef": "Mark.3.16b-19",
+   "assocates": "1.80 3.44"
+  },
+  {
+   "id": "2.31",
+   "table": "X",
+   "osisRef": "Mark.3.20-21",
+   "assocates": ""
+  },
+  {
+   "id": "2.32",
+   "table": "II",
+   "osisRef": "Mark.3.22",
+   "assocates": "1.121 3.127"
+  },
+  {
+   "id": "2.33",
+   "table": "II",
+   "osisRef": "Mark.3.23-27",
+   "assocates": "1.122 3.129"
+  },
+  {
+   "id": "2.34",
+   "table": "II",
+   "osisRef": "Mark.3.28-30",
+   "assocates": "1.123 3.147"
+  },
+  {
+   "id": "2.35",
+   "table": "II",
+   "osisRef": "Mark.3.31-35",
+   "assocates": "1.130 3.82"
+  },
+  {
+   "id": "2.36",
+   "table": "II",
+   "osisRef": "Mark.4.1-11b",
+   "assocates": "1.131 3.76"
+  },
+  {
+   "id": "2.37",
+   "table": "I",
+   "osisRef": "Mark.4.11c-13",
+   "assocates": "1.133 3.77 4.109"
+  },
+  {
+   "id": "2.38",
+   "table": "II",
+   "osisRef": "Mark.4.14-20",
+   "assocates": "1.135 3.78"
+  },
+  {
+   "id": "2.39",
+   "table": "II",
+   "osisRef": "Mark.4.21",
+   "assocates": "1.32 3.133 3.79"
+  },
+  {
+   "id": "2.40",
+   "table": "II",
+   "osisRef": "Mark.4.22-23",
+   "assocates": "1.92 3.80"
+  },
+  {
+   "id": "2.41",
+   "table": "II",
+   "osisRef": "Mark.4.24",
+   "assocates": "1.50 3.56"
+  },
+  {
+   "id": "2.42",
+   "table": "II",
+   "osisRef": "Mark.4.25",
+   "assocates": "1.271 3.230"
+  },
+  {
+   "id": "2.43",
+   "table": "X",
+   "osisRef": "Mark.4.26-29",
+   "assocates": ""
+  },
+  {
+   "id": "2.44",
+   "table": "II",
+   "osisRef": "Mark.4.30-32",
+   "assocates": "1.137 3.167"
+  },
+  {
+   "id": "2.45",
+   "table": "VI",
+   "osisRef": "Mark.4.33-34a",
+   "assocates": "1.139"
+  },
+  {
+   "id": "2.46",
+   "table": "X",
+   "osisRef": "Mark.4.34b",
+   "assocates": ""
+  },
+  {
+   "id": "2.47",
+   "table": "II",
+   "osisRef": "Mark.4.35-5.17",
+   "assocates": "1.69 3.83"
+  },
+  {
+   "id": "2.48",
+   "table": "VIII",
+   "osisRef": "Mark.5.18-20",
+   "assocates": "3.84"
+  },
+  {
+   "id": "2.49",
+   "table": "II",
+   "osisRef": "Mark.5.21-43",
+   "assocates": "1.74 3.85"
+  },
+  {
+   "id": "2.50",
+   "table": "I",
+   "osisRef": "Mark.6.1-3",
+   "assocates": "1.141 3.19 4.59"
+  },
+  {
+   "id": "2.51",
+   "table": "I",
+   "osisRef": "Mark.6.4-6a",
+   "assocates": "1.142 3.21 4.35"
+  },
+  {
+   "id": "2.52",
+   "table": "II",
+   "osisRef": "Mark.6.6b",
+   "assocates": "1.76 3.169"
+  },
+  {
+   "id": "2.53",
+   "table": "II",
+   "osisRef": "Mark.6.7-9",
+   "assocates": "1.82 3.110 3.87"
+  },
+  {
+   "id": "2.54",
+   "table": "II",
+   "osisRef": "Mark.6.10",
+   "assocates": "1.83 3.112 3.87"
+  },
+  {
+   "id": "2.55",
+   "table": "II",
+   "osisRef": "Mark.6.11",
+   "assocates": "1.85 3.114 3.88"
+  },
+  {
+   "id": "2.56",
+   "table": "VIII",
+   "osisRef": "Mark.6.12-13",
+   "assocates": "3.89"
+  },
+  {
+   "id": "2.57",
+   "table": "II",
+   "osisRef": "Mark.6.14",
+   "assocates": "1.143 3.90"
+  },
+  {
+   "id": "2.58",
+   "table": "X",
+   "osisRef": "Mark.6.15-16",
+   "assocates": ""
+  },
+  {
+   "id": "2.59",
+   "table": "II",
+   "osisRef": "Mark.6.17",
+   "assocates": "1.144 3.12"
+  },
+  {
+   "id": "2.60",
+   "table": "VI",
+   "osisRef": "Mark.6.18-29",
+   "assocates": "1.145"
+  },
+  {
+   "id": "2.61",
+   "table": "VIII",
+   "osisRef": "Mark.6.30",
+   "assocates": "3.91"
+  },
+  {
+   "id": "2.62",
+   "table": "X",
+   "osisRef": "Mark.6.31",
+   "assocates": ""
+  },
+  {
+   "id": "2.63",
+   "table": "VI",
+   "osisRef": "Mark.6.32-34",
+   "assocates": "1.77"
+  },
+  {
+   "id": "2.64",
+   "table": "I",
+   "osisRef": "Mark.6.35-44",
+   "assocates": "1.147 3.93 4.49"
+  },
+  {
+   "id": "2.65",
+   "table": "VI",
+   "osisRef": "Mark.6.45",
+   "assocates": "1.148"
+  },
+  {
+   "id": "2.66",
+   "table": "II",
+   "osisRef": "Mark.6.46",
+   "assocates": "1.149 3.35 3.43"
+  },
+  {
+   "id": "2.67",
+   "table": "IV",
+   "osisRef": "Mark.6.47-50",
+   "assocates": "1.150 4.51"
+  },
+  {
+   "id": "2.68",
+   "table": "VI",
+   "osisRef": "Mark.6.51-53",
+   "assocates": "1.152"
+  },
+  {
+   "id": "2.69",
+   "table": "II",
+   "osisRef": "Mark.6.54-56",
+   "assocates": "1.153 3.36"
+  },
+  {
+   "id": "2.70",
+   "table": "X",
+   "osisRef": "Mark.7.1-4",
+   "assocates": ""
+  },
+  {
+   "id": "2.71",
+   "table": "VI",
+   "osisRef": "Mark.7.5-16",
+   "assocates": "1.154"
+  },
+  {
+   "id": "2.72",
+   "table": "VI",
+   "osisRef": "Mark.7.17-26a",
+   "assocates": "1.157"
+  },
+  {
+   "id": "2.73",
+   "table": "VI",
+   "osisRef": "Mark.7.26b-30",
+   "assocates": "1.159"
+  },
+  {
+   "id": "2.74",
+   "table": "X",
+   "osisRef": "Mark.7.31-36a",
+   "assocates": ""
+  },
+  {
+   "id": "2.75",
+   "table": "VIII",
+   "osisRef": "Mark.7.36b-37a",
+   "assocates": "3.100"
+  },
+  {
+   "id": "2.76",
+   "table": "VI",
+   "osisRef": "Mark.7.37b-8.10",
+   "assocates": "1.160"
+  },
+  {
+   "id": "2.77",
+   "table": "IV",
+   "osisRef": "Mark.8.11",
+   "assocates": "1.161 4.23 4.53"
+  },
+  {
+   "id": "2.78",
+   "table": "VI",
+   "osisRef": "Mark.8.12-14",
+   "assocates": "1.163"
+  },
+  {
+   "id": "2.79",
+   "table": "II",
+   "osisRef": "Mark.8.15",
+   "assocates": "1.164 3.144"
+  },
+  {
+   "id": "2.80",
+   "table": "VI",
+   "osisRef": "Mark.8.16-21",
+   "assocates": "1.165"
+  },
+  {
+   "id": "2.81",
+   "table": "X",
+   "osisRef": "Mark.8.22-26",
+   "assocates": ""
+  },
+  {
+   "id": "2.82",
+   "table": "I",
+   "osisRef": "Mark.8.27-29a",
+   "assocates": "1.166 3.94 4.17 4.74"
+  },
+  {
+   "id": "2.83",
+   "table": "II",
+   "osisRef": "Mark.8.29b-32a",
+   "assocates": "1.168 3.206 3.95"
+  },
+  {
+   "id": "2.84",
+   "table": "VI",
+   "osisRef": "Mark.8.32b-33",
+   "assocates": "1.169"
+  },
+  {
+   "id": "2.85",
+   "table": "II",
+   "osisRef": "Mark.8.34-37",
+   "assocates": "1.170 3.96"
+  },
+  {
+   "id": "2.86",
+   "table": "II",
+   "osisRef": "Mark.8.38",
+   "assocates": "1.94 3.146 3.97"
+  },
+  {
+   "id": "2.87",
+   "table": "II",
+   "osisRef": "Mark.9.1-9",
+   "assocates": "1.172 3.98"
+  },
+  {
+   "id": "2.88",
+   "table": "X",
+   "osisRef": "Mark.9.10",
+   "assocates": ""
+  },
+  {
+   "id": "2.89",
+   "table": "VI",
+   "osisRef": "Mark.9.11-13",
+   "assocates": "1.173"
+  },
+  {
+   "id": "2.90",
+   "table": "X",
+   "osisRef": "Mark.9.14-16",
+   "assocates": ""
+  },
+  {
+   "id": "2.91",
+   "table": "II",
+   "osisRef": "Mark.9.17-27",
+   "assocates": "1.174 3.99"
+  },
+  {
+   "id": "2.92",
+   "table": "X",
+   "osisRef": "Mark.9.28-29",
+   "assocates": ""
+  },
+  {
+   "id": "2.93",
+   "table": "II",
+   "osisRef": "Mark.9.30-32",
+   "assocates": "1.176 3.101"
+  },
+  {
+   "id": "2.94",
+   "table": "X",
+   "osisRef": "Mark.9.33",
+   "assocates": ""
+  },
+  {
+   "id": "2.95",
+   "table": "II",
+   "osisRef": "Mark.9.34-37a",
+   "assocates": "1.178 3.102 3.217"
+  },
+  {
+   "id": "2.96",
+   "table": "I",
+   "osisRef": "Mark.9.37b",
+   "assocates": "1.98 3.116 4.111 4.120 4.129 4.131 4.144 4.40"
+  },
+  {
+   "id": "2.97",
+   "table": "VIII",
+   "osisRef": "Mark.9.38-40",
+   "assocates": "3.103"
+  },
+  {
+   "id": "2.98",
+   "table": "VI",
+   "osisRef": "Mark.9.41",
+   "assocates": "1.100"
+  },
+  {
+   "id": "2.99",
+   "table": "II",
+   "osisRef": "Mark.9.42",
+   "assocates": "1.179 3.197"
+  },
+  {
+   "id": "2.100",
+   "table": "VI",
+   "osisRef": "Mark.9.43-47",
+   "assocates": "1.180"
+  },
+  {
+   "id": "2.101",
+   "table": "X",
+   "osisRef": "Mark.9.48-49",
+   "assocates": ""
+  },
+  {
+   "id": "2.102",
+   "table": "II",
+   "osisRef": "Mark.9.50",
+   "assocates": "1.31 3.185"
+  },
+  {
+   "id": "2.103",
+   "table": "VI",
+   "osisRef": "Mark.10.1-9",
+   "assocates": "1.189"
+  },
+  {
+   "id": "2.104",
+   "table": "X",
+   "osisRef": "Mark.10.10",
+   "assocates": ""
+  },
+  {
+   "id": "2.105",
+   "table": "II",
+   "osisRef": "Mark.10.11-12",
+   "assocates": "1.190 3.195"
+  },
+  {
+   "id": "2.106",
+   "table": "II",
+   "osisRef": "Mark.10.13-16",
+   "assocates": "1.192 3.216"
+  },
+  {
+   "id": "2.107",
+   "table": "II",
+   "osisRef": "Mark.10.17-21a",
+   "assocates": "1.193 3.121 3.218"
+  },
+  {
+   "id": "2.108",
+   "table": "II",
+   "osisRef": "Mark.10.21b",
+   "assocates": "1.194 3.152 3.219"
+  },
+  {
+   "id": "2.109",
+   "table": "II",
+   "osisRef": "Mark.10.22-28",
+   "assocates": "1.195 3.220"
+  },
+  {
+   "id": "2.110",
+   "table": "II",
+   "osisRef": "Mark.10.29-30",
+   "assocates": "1.198 3.221"
+  },
+  {
+   "id": "2.111",
+   "table": "II",
+   "osisRef": "Mark.10.31",
+   "assocates": "1.199 3.173"
+  },
+  {
+   "id": "2.112",
+   "table": "II",
+   "osisRef": "Mark.10.32-34",
+   "assocates": "1.201 3.222"
+  },
+  {
+   "id": "2.113",
+   "table": "VI",
+   "osisRef": "Mark.10.35-40",
+   "assocates": "1.202"
+  },
+  {
+   "id": "2.114",
+   "table": "II",
+   "osisRef": "Mark.10.41-44",
+   "assocates": "1.203 3.270"
+  },
+  {
+   "id": "2.115",
+   "table": "IV",
+   "osisRef": "Mark.10.45",
+   "assocates": "1.204 4.135 4.91"
+  },
+  {
+   "id": "2.116",
+   "table": "II",
+   "osisRef": "Mark.10.46-52",
+   "assocates": "1.205 3.224"
+  },
+  {
+   "id": "2.117",
+   "table": "II",
+   "osisRef": "Mark.11.1-3",
+   "assocates": "1.206 3.232"
+  },
+  {
+   "id": "2.118",
+   "table": "II",
+   "osisRef": "Mark.11.4-8",
+   "assocates": "1.208 3.233"
+  },
+  {
+   "id": "2.119",
+   "table": "I",
+   "osisRef": "Mark.11.9-10",
+   "assocates": "1.209 3.234 4.100"
+  },
+  {
+   "id": "2.120",
+   "table": "VI",
+   "osisRef": "Mark.11.11-15a",
+   "assocates": "1.214"
+  },
+  {
+   "id": "2.121",
+   "table": "I",
+   "osisRef": "Mark.11.15b-17",
+   "assocates": "1.211 3.238 4.21"
+  },
+  {
+   "id": "2.122",
+   "table": "I",
+   "osisRef": "Mark.11.18",
+   "assocates": "1.220 3.239 4.77"
+  },
+  {
+   "id": "2.123",
+   "table": "X",
+   "osisRef": "Mark.11.19-21",
+   "assocates": ""
+  },
+  {
+   "id": "2.124",
+   "table": "VI",
+   "osisRef": "Mark.11.22-23",
+   "assocates": "1.215"
+  },
+  {
+   "id": "2.125",
+   "table": "IV",
+   "osisRef": "Mark.11.24",
+   "assocates": "1.216 4.128 4.133 4.137 4.150"
+  },
+  {
+   "id": "2.126",
+   "table": "VI",
+   "osisRef": "Mark.11.25-26",
+   "assocates": "1.44"
+  },
+  {
+   "id": "2.127",
+   "table": "II",
+   "osisRef": "Mark.11.27-33",
+   "assocates": "1.217 3.240"
+  },
+  {
+   "id": "2.128",
+   "table": "II",
+   "osisRef": "Mark.12.1-11",
+   "assocates": "1.219 3.241"
+  },
+  {
+   "id": "2.129",
+   "table": "I",
+   "osisRef": "Mark.12.12",
+   "assocates": "1.220 3.242 3.261 4.85 4.88"
+  },
+  {
+   "id": "2.130",
+   "table": "II",
+   "osisRef": "Mark.12.13-27",
+   "assocates": "1.223 3.243"
+  },
+  {
+   "id": "2.131",
+   "table": "VI",
+   "osisRef": "Mark.12.28-31",
+   "assocates": "1.224"
+  },
+  {
+   "id": "2.132",
+   "table": "X",
+   "osisRef": "Mark.12.32-34a",
+   "assocates": ""
+  },
+  {
+   "id": "2.133",
+   "table": "II",
+   "osisRef": "Mark.12.34b",
+   "assocates": "1.226 3.244"
+  },
+  {
+   "id": "2.134",
+   "table": "II",
+   "osisRef": "Mark.12.35-37",
+   "assocates": "1.225 3.245"
+  },
+  {
+   "id": "2.135",
+   "table": "II",
+   "osisRef": "Mark.12.38-39",
+   "assocates": "1.229 3.137 3.246"
+  },
+  {
+   "id": "2.136",
+   "table": "VIII",
+   "osisRef": "Mark.12.40-44",
+   "assocates": "3.247"
+  },
+  {
+   "id": "2.137",
+   "table": "II",
+   "osisRef": "Mark.13.1-2",
+   "assocates": "1.242 3.237 3.248"
+  },
+  {
+   "id": "2.138",
+   "table": "II",
+   "osisRef": "Mark.13.3-8",
+   "assocates": "1.243 3.249"
+  },
+  {
+   "id": "2.139",
+   "table": "I",
+   "osisRef": "Mark.13.9",
+   "assocates": "1.244 1.87 3.250 4.141 4.146"
+  },
+  {
+   "id": "2.140",
+   "table": "VI",
+   "osisRef": "Mark.13.10",
+   "assocates": "1.246"
+  },
+  {
+   "id": "2.141",
+   "table": "II",
+   "osisRef": "Mark.13.11-13",
+   "assocates": "1.88 3.148 3.251"
+  },
+  {
+   "id": "2.142",
+   "table": "VI",
+   "osisRef": "Mark.13.14a",
+   "assocates": "1.247"
+  },
+  {
+   "id": "2.143",
+   "table": "II",
+   "osisRef": "Mark.13.14b-16",
+   "assocates": "1.248 3.209 3.253"
+  },
+  {
+   "id": "2.144",
+   "table": "II",
+   "osisRef": "Mark.13.17",
+   "assocates": "1.249 3.254"
+  },
+  {
+   "id": "2.145",
+   "table": "VI",
+   "osisRef": "Mark.13.18",
+   "assocates": "1.250"
+  },
+  {
+   "id": "2.146",
+   "table": "II",
+   "osisRef": "Mark.13.19",
+   "assocates": "1.251 3.255"
+  },
+  {
+   "id": "2.147",
+   "table": "VI",
+   "osisRef": "Mark.13.20",
+   "assocates": "1.252"
+  },
+  {
+   "id": "2.148",
+   "table": "II",
+   "osisRef": "Mark.13.21",
+   "assocates": "1.253 3.204"
+  },
+  {
+   "id": "2.149",
+   "table": "VI",
+   "osisRef": "Mark.13.22-23",
+   "assocates": "1.254"
+  },
+  {
+   "id": "2.150",
+   "table": "II",
+   "osisRef": "Mark.13.24-25",
+   "assocates": "1.258 3.257"
+  },
+  {
+   "id": "2.151",
+   "table": "II",
+   "osisRef": "Mark.13.26-31",
+   "assocates": "1.259 3.258"
+  },
+  {
+   "id": "2.152",
+   "table": "VI",
+   "osisRef": "Mark.13.32",
+   "assocates": "1.260"
+  },
+  {
+   "id": "2.153",
+   "table": "VI",
+   "osisRef": "Mark.13.33",
+   "assocates": "1.263"
+  },
+  {
+   "id": "2.154",
+   "table": "II",
+   "osisRef": "Mark.13.34",
+   "assocates": "1.269 3.228"
+  },
+  {
+   "id": "2.155",
+   "table": "II",
+   "osisRef": "Mark.13.35-37",
+   "assocates": "1.264 3.156"
+  },
+  {
+   "id": "2.156",
+   "table": "I",
+   "osisRef": "Mark.14.1a",
+   "assocates": "1.274 3.260 4.20 4.48 4.96"
+  },
+  {
+   "id": "2.157",
+   "table": "VI",
+   "osisRef": "Mark.14.1b-2",
+   "assocates": "1.275"
+  },
+  {
+   "id": "2.158",
+   "table": "I",
+   "osisRef": "Mark.14.3-7",
+   "assocates": "1.276 3.74 4.98"
+  },
+  {
+   "id": "2.159",
+   "table": "IV",
+   "osisRef": "Mark.14.8-9",
+   "assocates": "1.277 4.98"
+  },
+  {
+   "id": "2.160",
+   "table": "II",
+   "osisRef": "Mark.14.10-16",
+   "assocates": "1.278 3.263"
+  },
+  {
+   "id": "2.161",
+   "table": "IV",
+   "osisRef": "Mark.14.17-18",
+   "assocates": "1.279 4.121 4.72"
+  },
+  {
+   "id": "2.162",
+   "table": "I",
+   "osisRef": "Mark.14.19",
+   "assocates": "1.280 3.269 4.122"
+  },
+  {
+   "id": "2.163",
+   "table": "II",
+   "osisRef": "Mark.14.20-21a",
+   "assocates": "1.281 3.268"
+  },
+  {
+   "id": "2.164",
+   "table": "VI",
+   "osisRef": "Mark.14.21b",
+   "assocates": "1.282"
+  },
+  {
+   "id": "2.165",
+   "table": "I",
+   "osisRef": "Mark.14.22",
+   "assocates": "1.284 3.266 4.55 4.63 4.65 4.67"
+  },
+  {
+   "id": "2.166",
+   "table": "II",
+   "osisRef": "Mark.14.23-25",
+   "assocates": "1.285 3.265 3.267"
+  },
+  {
+   "id": "2.167",
+   "table": "VI",
+   "osisRef": "Mark.14.26-27a",
+   "assocates": "1.286"
+  },
+  {
+   "id": "2.168",
+   "table": "IV",
+   "osisRef": "Mark.14.27b",
+   "assocates": "1.287 4.152"
+  },
+  {
+   "id": "2.169",
+   "table": "VI",
+   "osisRef": "Mark.14.27c-28",
+   "assocates": "1.288"
+  },
+  {
+   "id": "2.170",
+   "table": "I",
+   "osisRef": "Mark.14.29-30",
+   "assocates": "1.289 3.275 4.126"
+  },
+  {
+   "id": "2.171",
+   "table": "VI",
+   "osisRef": "Mark.14.31",
+   "assocates": "1.290"
+  },
+  {
+   "id": "2.172",
+   "table": "I",
+   "osisRef": "Mark.14.32a",
+   "assocates": "1.291 3.279 4.156"
+  },
+  {
+   "id": "2.173",
+   "table": "VI",
+   "osisRef": "Mark.14.32b-33",
+   "assocates": "1.292"
+  },
+  {
+   "id": "2.174",
+   "table": "IV",
+   "osisRef": "Mark.14.34",
+   "assocates": "1.293 4.107"
+  },
+  {
+   "id": "2.175",
+   "table": "I",
+   "osisRef": "Mark.14.35-36b",
+   "assocates": "1.294 3.281 4.161"
+  },
+  {
+   "id": "2.176",
+   "table": "I",
+   "osisRef": "Mark.14.36c",
+   "assocates": "1.295 3.282 4.42 4.57"
+  },
+  {
+   "id": "2.177",
+   "table": "II",
+   "osisRef": "Mark.14.37-38a",
+   "assocates": "1.296 3.280 3.284"
+  },
+  {
+   "id": "2.178",
+   "table": "IV",
+   "osisRef": "Mark.14.38b",
+   "assocates": "1.297 4.70"
+  },
+  {
+   "id": "2.179",
+   "table": "VI",
+   "osisRef": "Mark.14.39-40",
+   "assocates": "1.298"
+  },
+  {
+   "id": "2.180",
+   "table": "IV",
+   "osisRef": "Mark.14.41-42",
+   "assocates": "1.299 4.103"
+  },
+  {
+   "id": "2.181",
+   "table": "I",
+   "osisRef": "Mark.14.43",
+   "assocates": "1.300 3.285 4.158 4.79"
+  },
+  {
+   "id": "2.182",
+   "table": "II",
+   "osisRef": "Mark.14.44-46",
+   "assocates": "1.301 3.286"
+  },
+  {
+   "id": "2.183",
+   "table": "I",
+   "osisRef": "Mark.14.47",
+   "assocates": "1.302 3.287 4.160"
+  },
+  {
+   "id": "2.184",
+   "table": "I",
+   "osisRef": "Mark.14.48-49a",
+   "assocates": "1.304 3.289 4.170"
+  },
+  {
+   "id": "2.185",
+   "table": "VI",
+   "osisRef": "Mark.14.49b-50",
+   "assocates": "1.305"
+  },
+  {
+   "id": "2.186",
+   "table": "X",
+   "osisRef": "Mark.14.51-52",
+   "assocates": ""
+  },
+  {
+   "id": "2.187",
+   "table": "I",
+   "osisRef": "Mark.14.53",
+   "assocates": "1.306 3.290 4.162 4.174"
+  },
+  {
+   "id": "2.188",
+   "table": "IV",
+   "osisRef": "Mark.14.54",
+   "assocates": "1.307 4.164"
+  },
+  {
+   "id": "2.189",
+   "table": "II",
+   "osisRef": "Mark.14.55-56",
+   "assocates": "1.308 3.305"
+  },
+  {
+   "id": "2.190",
+   "table": "VI",
+   "osisRef": "Mark.14.57-61",
+   "assocates": "1.309"
+  },
+  {
+   "id": "2.191",
+   "table": "I",
+   "osisRef": "Mark.14.62",
+   "assocates": "1.310 3.297 4.69"
+  },
+  {
+   "id": "2.192",
+   "table": "VI",
+   "osisRef": "Mark.14.63a",
+   "assocates": "1.311"
+  },
+  {
+   "id": "2.193",
+   "table": "II",
+   "osisRef": "Mark.14.63b-64",
+   "assocates": "1.312 3.299"
+  },
+  {
+   "id": "2.194",
+   "table": "I",
+   "osisRef": "Mark.14.65",
+   "assocates": "1.313 3.294 4.172"
+  },
+  {
+   "id": "2.195",
+   "table": "I",
+   "osisRef": "Mark.14.66-68a",
+   "assocates": "1.314 3.291 4.166 4.168"
+  },
+  {
+   "id": "2.196",
+   "table": "I",
+   "osisRef": "Mark.14.68b-72a",
+   "assocates": "1.315 3.292 4.175"
+  },
+  {
+   "id": "2.197",
+   "table": "II",
+   "osisRef": "Mark.14.72b",
+   "assocates": "1.316 3.293"
+  },
+  {
+   "id": "2.198",
+   "table": "II",
+   "osisRef": "Mark.15.1a",
+   "assocates": "1.317 3.295"
+  },
+  {
+   "id": "2.199",
+   "table": "I",
+   "osisRef": "Mark.15.1b",
+   "assocates": "1.318 3.300 4.176"
+  },
+  {
+   "id": "2.200",
+   "table": "I",
+   "osisRef": "Mark.15.2",
+   "assocates": "1.320 3.302 4.178 4.180"
+  },
+  {
+   "id": "2.201",
+   "table": "IV",
+   "osisRef": "Mark.15.3-5",
+   "assocates": "1.321 4.192"
+  },
+  {
+   "id": "2.202",
+   "table": "II",
+   "osisRef": "Mark.15.6",
+   "assocates": "1.322 3.309"
+  },
+  {
+   "id": "2.203",
+   "table": "IV",
+   "osisRef": "Mark.15.7-10",
+   "assocates": "1.323 4.183"
+  },
+  {
+   "id": "2.204",
+   "table": "I",
+   "osisRef": "Mark.15.11",
+   "assocates": "1.325 3.310 4.184"
+  },
+  {
+   "id": "2.205",
+   "table": "I",
+   "osisRef": "Mark.15.12-14",
+   "assocates": "1.326 3.311 3.313 4.188 4.194"
+  },
+  {
+   "id": "2.206",
+   "table": "I",
+   "osisRef": "Mark.15.15",
+   "assocates": "1.328 3.314 4.196"
+  },
+  {
+   "id": "2.207",
+   "table": "IV",
+   "osisRef": "Mark.15.16-19",
+   "assocates": "1.329 4.185 4.187"
+  },
+  {
+   "id": "2.208",
+   "table": "VI",
+   "osisRef": "Mark.15.20",
+   "assocates": "1.330"
+  },
+  {
+   "id": "2.209",
+   "table": "I",
+   "osisRef": "Mark.15.21",
+   "assocates": "1.331 3.315 4.197"
+  },
+  {
+   "id": "2.210",
+   "table": "I",
+   "osisRef": "Mark.15.22",
+   "assocates": "1.332 3.318 4.197"
+  },
+  {
+   "id": "2.211",
+   "table": "IV",
+   "osisRef": "Mark.15.23",
+   "assocates": "1.333 4.203"
+  },
+  {
+   "id": "2.212",
+   "table": "I",
+   "osisRef": "Mark.15.24",
+   "assocates": "1.334 3.321 4.201"
+  },
+  {
+   "id": "2.213",
+   "table": "X",
+   "osisRef": "Mark.15.25",
+   "assocates": ""
+  },
+  {
+   "id": "2.214",
+   "table": "I",
+   "osisRef": "Mark.15.26",
+   "assocates": "1.335 3.324 4.199"
+  },
+  {
+   "id": "2.215",
+   "table": "I",
+   "osisRef": "Mark.15.27",
+   "assocates": "1.336 3.317 3.319 4.198"
+  },
+  {
+   "id": "2.216",
+   "table": "VIII",
+   "osisRef": "Mark.15.28",
+   "assocates": "3.277"
+  },
+  {
+   "id": "2.217",
+   "table": "VI",
+   "osisRef": "Mark.15.29-30",
+   "assocates": "1.337"
+  },
+  {
+   "id": "2.218",
+   "table": "II",
+   "osisRef": "Mark.15.31-32a",
+   "assocates": "1.338 3.322"
+  },
+  {
+   "id": "2.219",
+   "table": "II",
+   "osisRef": "Mark.15.32b",
+   "assocates": "1.339 3.325"
+  },
+  {
+   "id": "2.220",
+   "table": "II",
+   "osisRef": "Mark.15.33",
+   "assocates": "1.340 3.327"
+  },
+  {
+   "id": "2.221",
+   "table": "VI",
+   "osisRef": "Mark.15.34-35",
+   "assocates": "1.341"
+  },
+  {
+   "id": "2.222",
+   "table": "II",
+   "osisRef": "Mark.15.36",
+   "assocates": "1.342 3.323"
+  },
+  {
+   "id": "2.223",
+   "table": "I",
+   "osisRef": "Mark.15.37",
+   "assocates": "1.343 3.329 4.204"
+  },
+  {
+   "id": "2.224",
+   "table": "II",
+   "osisRef": "Mark.15.38",
+   "assocates": "1.344 3.328"
+  },
+  {
+   "id": "2.225",
+   "table": "II",
+   "osisRef": "Mark.15.39",
+   "assocates": "1.346 3.330"
+  },
+  {
+   "id": "2.226",
+   "table": "VI",
+   "osisRef": "Mark.15.40-41",
+   "assocates": "1.347"
+  },
+  {
+   "id": "2.227",
+   "table": "I",
+   "osisRef": "Mark.15.42-45",
+   "assocates": "1.348 3.332 4.206"
+  },
+  {
+   "id": "2.228",
+   "table": "I",
+   "osisRef": "Mark.15.46",
+   "assocates": "1.349 3.333 4.208"
+  },
+  {
+   "id": "2.229",
+   "table": "VI",
+   "osisRef": "Mark.15.47",
+   "assocates": "1.350"
+  },
+  {
+   "id": "2.230",
+   "table": "VIII",
+   "osisRef": "Mark.16.1",
+   "assocates": "3.335"
+  },
+  {
+   "id": "2.231",
+   "table": "I",
+   "osisRef": "Mark.16.2-5",
+   "assocates": "1.352 3.336 4.209 4.211"
+  },
+  {
+   "id": "2.232",
+   "table": "II",
+   "osisRef": "Mark.16.6-7",
+   "assocates": "1.353 3.337"
+  },
+  {
+   "id": "2.233",
+   "table": "II",
+   "osisRef": "Mark.16.8",
+   "assocates": "1.354 3.338"
+  },
+  {
+   "id": "3.1",
+   "table": "X",
+   "osisRef": "Luke.1.1-34",
+   "assocates": ""
+  },
+  {
+   "id": "3.2",
+   "table": "V",
+   "osisRef": "Luke.1.35",
+   "assocates": "1.3"
+  },
+  {
+   "id": "3.3",
+   "table": "X",
+   "osisRef": "Luke.1.36-2.46",
+   "assocates": ""
+  },
+  {
+   "id": "3.4",
+   "table": "II",
+   "osisRef": "Luke.2.47-48a",
+   "assocates": "1.62 2.13"
+  },
+  {
+   "id": "3.5",
+   "table": "X",
+   "osisRef": "Luke.2.48b-52",
+   "assocates": ""
+  },
+  {
+   "id": "3.6",
+   "table": "III",
+   "osisRef": "Luke.3.1-2",
+   "assocates": "1.7 4.2 4.25"
+  },
+  {
+   "id": "3.7",
+   "table": "I",
+   "osisRef": "Luke.3.3-6",
+   "assocates": "1.8 2.2 4.10"
+  },
+  {
+   "id": "3.8",
+   "table": "V",
+   "osisRef": "Luke.3.7-9",
+   "assocates": "1.10"
+  },
+  {
+   "id": "3.9",
+   "table": "X",
+   "osisRef": "Luke.3.10-16a",
+   "assocates": ""
+  },
+  {
+   "id": "3.10",
+   "table": "I",
+   "osisRef": "Luke.3.16b-E",
+   "assocates": "1.11 2.4 4.12 4.14 4.28 4.6"
+  },
+  {
+   "id": "3.11",
+   "table": "V",
+   "osisRef": "Luke.3.17-18",
+   "assocates": "1.12"
+  },
+  {
+   "id": "3.12",
+   "table": "II",
+   "osisRef": "Luke.3.19-20",
+   "assocates": "1.144 2.59"
+  },
+  {
+   "id": "3.13",
+   "table": "I",
+   "osisRef": "Luke.3.21-22",
+   "assocates": "1.14 2.5 4.15"
+  },
+  {
+   "id": "3.14",
+   "table": "III",
+   "osisRef": "Luke.3.23-38",
+   "assocates": "1.1 4.1 4.3 4.5"
+  },
+  {
+   "id": "3.15",
+   "table": "II",
+   "osisRef": "Luke.4.1-2a",
+   "assocates": "1.15 2.6"
+  },
+  {
+   "id": "3.16",
+   "table": "V",
+   "osisRef": "Luke.4.2b-13",
+   "assocates": "1.16"
+  },
+  {
+   "id": "3.17",
+   "table": "I",
+   "osisRef": "Luke.4.14-15",
+   "assocates": "1.23 2.27 4.46"
+  },
+  {
+   "id": "3.18",
+   "table": "X",
+   "osisRef": "Luke.4.16-21",
+   "assocates": ""
+  },
+  {
+   "id": "3.19",
+   "table": "I",
+   "osisRef": "Luke.4.22",
+   "assocates": "1.141 2.50 4.59"
+  },
+  {
+   "id": "3.20",
+   "table": "X",
+   "osisRef": "Luke.4.23",
+   "assocates": ""
+  },
+  {
+   "id": "3.21",
+   "table": "I",
+   "osisRef": "Luke.4.24",
+   "assocates": "1.142 2.51 4.35"
+  },
+  {
+   "id": "3.22",
+   "table": "X",
+   "osisRef": "Luke.4.25-30",
+   "assocates": ""
+  },
+  {
+   "id": "3.23",
+   "table": "VIII",
+   "osisRef": "Luke.4.31",
+   "assocates": "2.12"
+  },
+  {
+   "id": "3.24",
+   "table": "II",
+   "osisRef": "Luke.4.32",
+   "assocates": "1.62 2.13"
+  },
+  {
+   "id": "3.25",
+   "table": "VIII",
+   "osisRef": "Luke.4.33-37",
+   "assocates": "2.14"
+  },
+  {
+   "id": "3.26",
+   "table": "II",
+   "osisRef": "Luke.4.38-40",
+   "assocates": "1.67 2.15"
+  },
+  {
+   "id": "3.27",
+   "table": "VIII",
+   "osisRef": "Luke.4.41",
+   "assocates": "2.16 2.28"
+  },
+  {
+   "id": "3.28",
+   "table": "VIII",
+   "osisRef": "Luke.4.42-44",
+   "assocates": "2.17"
+  },
+  {
+   "id": "3.29",
+   "table": "X",
+   "osisRef": "Luke.5.1-3",
+   "assocates": ""
+  },
+  {
+   "id": "3.30",
+   "table": "IX",
+   "osisRef": "Luke.5.4-7",
+   "assocates": "4.219 4.222"
+  },
+  {
+   "id": "3.31",
+   "table": "X",
+   "osisRef": "Luke.5.8-10a",
+   "assocates": ""
+  },
+  {
+   "id": "3.32",
+   "table": "II",
+   "osisRef": "Luke.5.10b-11",
+   "assocates": "1.21 2.10"
+  },
+  {
+   "id": "3.33",
+   "table": "II",
+   "osisRef": "Luke.5.12-14",
+   "assocates": "1.63 2.18"
+  },
+  {
+   "id": "3.34",
+   "table": "I",
+   "osisRef": "Luke.5.15",
+   "assocates": "1.23 2.27 4.46"
+  },
+  {
+   "id": "3.35",
+   "table": "II",
+   "osisRef": "Luke.5.16",
+   "assocates": "1.149 2.66"
+  },
+  {
+   "id": "3.36",
+   "table": "II",
+   "osisRef": "Luke.5.17",
+   "assocates": "1.153 2.69"
+  },
+  {
+   "id": "3.37",
+   "table": "I",
+   "osisRef": "Luke.5.18-26",
+   "assocates": "1.70 2.20 4.38"
+  },
+  {
+   "id": "3.38",
+   "table": "II",
+   "osisRef": "Luke.5.27-28",
+   "assocates": "1.71 2.21"
+  },
+  {
+   "id": "3.39",
+   "table": "II",
+   "osisRef": "Luke.5.29-30",
+   "assocates": "1.72 2.22"
+  },
+  {
+   "id": "3.40",
+   "table": "II",
+   "osisRef": "Luke.5.31-39",
+   "assocates": "1.73 2.23"
+  },
+  {
+   "id": "3.41",
+   "table": "II",
+   "osisRef": "Luke.6.1-5",
+   "assocates": "1.114 2.24"
+  },
+  {
+   "id": "3.42",
+   "table": "II",
+   "osisRef": "Luke.6.6-11",
+   "assocates": "1.116 2.25"
+  },
+  {
+   "id": "3.43",
+   "table": "II",
+   "osisRef": "Luke.6.12",
+   "assocates": "1.149 2.66"
+  },
+  {
+   "id": "3.44",
+   "table": "II",
+   "osisRef": "Luke.6.13-16",
+   "assocates": "1.80 2.30"
+  },
+  {
+   "id": "3.45",
+   "table": "I",
+   "osisRef": "Luke.6.17-19",
+   "assocates": "1.23 2.27 4.46"
+  },
+  {
+   "id": "3.46",
+   "table": "V",
+   "osisRef": "Luke.6.20",
+   "assocates": "1.25"
+  },
+  {
+   "id": "3.47",
+   "table": "V",
+   "osisRef": "Luke.6.21a",
+   "assocates": "1.28"
+  },
+  {
+   "id": "3.48",
+   "table": "V",
+   "osisRef": "Luke.6.21b",
+   "assocates": "1.27"
+  },
+  {
+   "id": "3.49",
+   "table": "V",
+   "osisRef": "Luke.6.22-23",
+   "assocates": "1.30"
+  },
+  {
+   "id": "3.50",
+   "table": "X",
+   "osisRef": "Luke.6.24-25",
+   "assocates": ""
+  },
+  {
+   "id": "3.51",
+   "table": "X",
+   "osisRef": "Luke.6.26",
+   "assocates": ""
+  },
+  {
+   "id": "3.52",
+   "table": "V",
+   "osisRef": "Luke.6.27-28",
+   "assocates": "1.40"
+  },
+  {
+   "id": "3.53",
+   "table": "V",
+   "osisRef": "Luke.6.29-30",
+   "assocates": "1.38"
+  },
+  {
+   "id": "3.54",
+   "table": "V",
+   "osisRef": "Luke.6.31",
+   "assocates": "1.54"
+  },
+  {
+   "id": "3.55",
+   "table": "V",
+   "osisRef": "Luke.6.32-35",
+   "assocates": "1.41"
+  },
+  {
+   "id": "3.56",
+   "table": "II",
+   "osisRef": "Luke.6.36-38",
+   "assocates": "1.50 2.41"
+  },
+  {
+   "id": "3.57",
+   "table": "V",
+   "osisRef": "Luke.6.39",
+   "assocates": "1.156"
+  },
+  {
+   "id": "3.58",
+   "table": "III",
+   "osisRef": "Luke.6.40",
+   "assocates": "1.90 4.118 4.139"
+  },
+  {
+   "id": "3.59",
+   "table": "V",
+   "osisRef": "Luke.6.41-42",
+   "assocates": "1.51"
+  },
+  {
+   "id": "3.60",
+   "table": "V",
+   "osisRef": "Luke.6.43-44a",
+   "assocates": "1.58"
+  },
+  {
+   "id": "3.61",
+   "table": "V",
+   "osisRef": "Luke.6.44b",
+   "assocates": "1.57"
+  },
+  {
+   "id": "3.62",
+   "table": "V",
+   "osisRef": "Luke.6.45",
+   "assocates": "1.125"
+  },
+  {
+   "id": "3.63",
+   "table": "III",
+   "osisRef": "Luke.6.46",
+   "assocates": "1.59 4.116"
+  },
+  {
+   "id": "3.64",
+   "table": "V",
+   "osisRef": "Luke.6.47-49",
+   "assocates": "1.61"
+  },
+  {
+   "id": "3.65",
+   "table": "III",
+   "osisRef": "Luke.7.1-9",
+   "assocates": "1.64 4.37"
+  },
+  {
+   "id": "3.66",
+   "table": "V",
+   "osisRef": "Luke.7.10",
+   "assocates": "1.66"
+  },
+  {
+   "id": "3.67",
+   "table": "X",
+   "osisRef": "Luke.7.11-16",
+   "assocates": ""
+  },
+  {
+   "id": "3.68",
+   "table": "X",
+   "osisRef": "Luke.7.17",
+   "assocates": ""
+  },
+  {
+   "id": "3.69",
+   "table": "V",
+   "osisRef": "Luke.7.18-26",
+   "assocates": "1.102"
+  },
+  {
+   "id": "3.70",
+   "table": "II",
+   "osisRef": "Luke.7.27",
+   "assocates": "1.103 2.1"
+  },
+  {
+   "id": "3.71",
+   "table": "V",
+   "osisRef": "Luke.7.28",
+   "assocates": "1.104"
+  },
+  {
+   "id": "3.72",
+   "table": "X",
+   "osisRef": "Luke.7.29-30",
+   "assocates": ""
+  },
+  {
+   "id": "3.73",
+   "table": "V",
+   "osisRef": "Luke.7.31-35",
+   "assocates": "1.107"
+  },
+  {
+   "id": "3.74",
+   "table": "I",
+   "osisRef": "Luke.7.36-50",
+   "assocates": "1.276 2.158 4.98"
+  },
+  {
+   "id": "3.75",
+   "table": "X",
+   "osisRef": "Luke.8.1-3",
+   "assocates": ""
+  },
+  {
+   "id": "3.76",
+   "table": "II",
+   "osisRef": "Luke.8.4-10a",
+   "assocates": "1.131 2.36"
+  },
+  {
+   "id": "3.77",
+   "table": "I",
+   "osisRef": "Luke.8.10b",
+   "assocates": "1.133 2.37 4.109"
+  },
+  {
+   "id": "3.78",
+   "table": "II",
+   "osisRef": "Luke.8.11-15",
+   "assocates": "1.135 2.38"
+  },
+  {
+   "id": "3.79",
+   "table": "II",
+   "osisRef": "Luke.8.16",
+   "assocates": "1.32 2.39"
+  },
+  {
+   "id": "3.80",
+   "table": "II",
+   "osisRef": "Luke.8.17",
+   "assocates": "1.92 2.40"
+  },
+  {
+   "id": "3.81",
+   "table": "V",
+   "osisRef": "Luke.8.18",
+   "assocates": "1.132"
+  },
+  {
+   "id": "3.82",
+   "table": "II",
+   "osisRef": "Luke.8.19-21",
+   "assocates": "1.130 2.35"
+  },
+  {
+   "id": "3.83",
+   "table": "II",
+   "osisRef": "Luke.8.22-37a",
+   "assocates": "1.69 2.47"
+  },
+  {
+   "id": "3.84",
+   "table": "VIII",
+   "osisRef": "Luke.8.37b-39",
+   "assocates": "2.48"
+  },
+  {
+   "id": "3.85",
+   "table": "II",
+   "osisRef": "Luke.8.40-56",
+   "assocates": "1.74 2.49"
+  },
+  {
+   "id": "3.86",
+   "table": "II",
+   "osisRef": "Luke.9.1-2",
+   "assocates": "1.79 2.29"
+  },
+  {
+   "id": "3.87",
+   "table": "II",
+   "osisRef": "Luke.9.3-4",
+   "assocates": "1.82 1.83 2.53 2.54"
+  },
+  {
+   "id": "3.88",
+   "table": "II",
+   "osisRef": "Luke.9.5",
+   "assocates": "1.85 2.55"
+  },
+  {
+   "id": "3.89",
+   "table": "VIII",
+   "osisRef": "Luke.9.6",
+   "assocates": "2.56"
+  },
+  {
+   "id": "3.90",
+   "table": "II",
+   "osisRef": "Luke.9.7-9",
+   "assocates": "1.143 2.57"
+  },
+  {
+   "id": "3.91",
+   "table": "VIII",
+   "osisRef": "Luke.9.10a",
+   "assocates": "2.61"
+  },
+  {
+   "id": "3.92",
+   "table": "III",
+   "osisRef": "Luke.9.10b-11",
+   "assocates": "1.146 4.47"
+  },
+  {
+   "id": "3.93",
+   "table": "I",
+   "osisRef": "Luke.9.12-17",
+   "assocates": "1.147 2.64 4.49"
+  },
+  {
+   "id": "3.94",
+   "table": "I",
+   "osisRef": "Luke.9.18-20",
+   "assocates": "1.166 2.82 4.17 4.74"
+  },
+  {
+   "id": "3.95",
+   "table": "II",
+   "osisRef": "Luke.9.21-22",
+   "assocates": "1.168 2.83"
+  },
+  {
+   "id": "3.96",
+   "table": "II",
+   "osisRef": "Luke.9.23-25",
+   "assocates": "1.170 2.85"
+  },
+  {
+   "id": "3.97",
+   "table": "II",
+   "osisRef": "Luke.9.26",
+   "assocates": "1.94 2.86"
+  },
+  {
+   "id": "3.98",
+   "table": "II",
+   "osisRef": "Luke.9.27-36",
+   "assocates": "1.172 2.87"
+  },
+  {
+   "id": "3.99",
+   "table": "II",
+   "osisRef": "Luke.9.37-42",
+   "assocates": "1.174 2.91"
+  },
+  {
+   "id": "3.100",
+   "table": "VIII",
+   "osisRef": "Luke.9.43a",
+   "assocates": "2.75"
+  },
+  {
+   "id": "3.101",
+   "table": "II",
+   "osisRef": "Luke.9.43b-45",
+   "assocates": "1.176 2.93"
+  },
+  {
+   "id": "3.102",
+   "table": "II",
+   "osisRef": "Luke.9.46-48",
+   "assocates": "1.178 2.95"
+  },
+  {
+   "id": "3.103",
+   "table": "VIII",
+   "osisRef": "Luke.9.49-50",
+   "assocates": "2.97"
+  },
+  {
+   "id": "3.104",
+   "table": "X",
+   "osisRef": "Luke.9.51-56",
+   "assocates": ""
+  },
+  {
+   "id": "3.105",
+   "table": "V",
+   "osisRef": "Luke.9.57-60",
+   "assocates": "1.68"
+  },
+  {
+   "id": "3.106",
+   "table": "X",
+   "osisRef": "Luke.9.61-62",
+   "assocates": ""
+  },
+  {
+   "id": "3.107",
+   "table": "X",
+   "osisRef": "Luke.10.1",
+   "assocates": ""
+  },
+  {
+   "id": "3.108",
+   "table": "V",
+   "osisRef": "Luke.10.2",
+   "assocates": "1.78"
+  },
+  {
+   "id": "3.109",
+   "table": "V",
+   "osisRef": "Luke.10.3",
+   "assocates": "1.86"
+  },
+  {
+   "id": "3.110",
+   "table": "II",
+   "osisRef": "Luke.10.4",
+   "assocates": "1.82 2.53"
+  },
+  {
+   "id": "3.111",
+   "table": "V",
+   "osisRef": "Luke.10.5-6",
+   "assocates": "1.84"
+  },
+  {
+   "id": "3.112",
+   "table": "II",
+   "osisRef": "Luke.10.7a",
+   "assocates": "1.83 2.54"
+  },
+  {
+   "id": "3.113",
+   "table": "X",
+   "osisRef": "Luke.10.7b-9",
+   "assocates": ""
+  },
+  {
+   "id": "3.114",
+   "table": "II",
+   "osisRef": "Luke.10.10-12",
+   "assocates": "1.85 2.55"
+  },
+  {
+   "id": "3.115",
+   "table": "V",
+   "osisRef": "Luke.10.13-15",
+   "assocates": "1.108"
+  },
+  {
+   "id": "3.116",
+   "table": "I",
+   "osisRef": "Luke.10.16",
+   "assocates": "1.98 2.96 4.111 4.120 4.129 4.131 4.144 4.40"
+  },
+  {
+   "id": "3.117",
+   "table": "X",
+   "osisRef": "Luke.10.17-20",
+   "assocates": ""
+  },
+  {
+   "id": "3.118",
+   "table": "V",
+   "osisRef": "Luke.10.21",
+   "assocates": "1.110"
+  },
+  {
+   "id": "3.119",
+   "table": "III",
+   "osisRef": "Luke.10.22",
+   "assocates": "1.111 1.112 4.114 4.142 4.148 4.154 4.30 4.44 4.61 4.76 4.8 4.87 4.90"
+  },
+  {
+   "id": "3.120",
+   "table": "V",
+   "osisRef": "Luke.10.23-24",
+   "assocates": "1.134"
+  },
+  {
+   "id": "3.121",
+   "table": "II",
+   "osisRef": "Luke.10.25-28",
+   "assocates": "1.193 2.107"
+  },
+  {
+   "id": "3.122",
+   "table": "X",
+   "osisRef": "Luke.10.29-42",
+   "assocates": ""
+  },
+  {
+   "id": "3.123",
+   "table": "V",
+   "osisRef": "Luke.11.1-4",
+   "assocates": "1.43"
+  },
+  {
+   "id": "3.124",
+   "table": "X",
+   "osisRef": "Luke.11.5-8",
+   "assocates": ""
+  },
+  {
+   "id": "3.125",
+   "table": "V",
+   "osisRef": "Luke.11.9-13",
+   "assocates": "1.53"
+  },
+  {
+   "id": "3.126",
+   "table": "V",
+   "osisRef": "Luke.11.14",
+   "assocates": "1.119"
+  },
+  {
+   "id": "3.127",
+   "table": "II",
+   "osisRef": "Luke.11.15",
+   "assocates": "1.121 2.32"
+  },
+  {
+   "id": "3.128",
+   "table": "V",
+   "osisRef": "Luke.11.16",
+   "assocates": "1.127"
+  },
+  {
+   "id": "3.129",
+   "table": "II",
+   "osisRef": "Luke.11.17-23",
+   "assocates": "1.122 2.33"
+  },
+  {
+   "id": "3.130",
+   "table": "V",
+   "osisRef": "Luke.11.24-26",
+   "assocates": "1.129"
+  },
+  {
+   "id": "3.131",
+   "table": "X",
+   "osisRef": "Luke.11.27-28",
+   "assocates": ""
+  },
+  {
+   "id": "3.132",
+   "table": "V",
+   "osisRef": "Luke.11.29-32",
+   "assocates": "1.128"
+  },
+  {
+   "id": "3.133",
+   "table": "II",
+   "osisRef": "Luke.11.33",
+   "assocates": "1.32 2.39"
+  },
+  {
+   "id": "3.134",
+   "table": "V",
+   "osisRef": "Luke.11.34-36",
+   "assocates": "1.47"
+  },
+  {
+   "id": "3.135",
+   "table": "V",
+   "osisRef": "Luke.11.37-41",
+   "assocates": "1.236"
+  },
+  {
+   "id": "3.136",
+   "table": "V",
+   "osisRef": "Luke.11.42",
+   "assocates": "1.234"
+  },
+  {
+   "id": "3.137",
+   "table": "II",
+   "osisRef": "Luke.11.43",
+   "assocates": "1.229 2.135"
+  },
+  {
+   "id": "3.138",
+   "table": "V",
+   "osisRef": "Luke.11.44",
+   "assocates": "1.237"
+  },
+  {
+   "id": "3.139",
+   "table": "V",
+   "osisRef": "Luke.11.45-46",
+   "assocates": "1.228"
+  },
+  {
+   "id": "3.140",
+   "table": "V",
+   "osisRef": "Luke.11.47-48",
+   "assocates": "1.238"
+  },
+  {
+   "id": "3.141",
+   "table": "V",
+   "osisRef": "Luke.11.49-51",
+   "assocates": "1.240"
+  },
+  {
+   "id": "3.142",
+   "table": "V",
+   "osisRef": "Luke.11.52",
+   "assocates": "1.232"
+  },
+  {
+   "id": "3.143",
+   "table": "X",
+   "osisRef": "Luke.11.53-12.1b",
+   "assocates": ""
+  },
+  {
+   "id": "3.144",
+   "table": "II",
+   "osisRef": "Luke.12.1c",
+   "assocates": "1.164 2.79"
+  },
+  {
+   "id": "3.145",
+   "table": "V",
+   "osisRef": "Luke.12.2-8",
+   "assocates": "1.93"
+  },
+  {
+   "id": "3.146",
+   "table": "II",
+   "osisRef": "Luke.12.9",
+   "assocates": "1.94 2.86"
+  },
+  {
+   "id": "3.147",
+   "table": "II",
+   "osisRef": "Luke.12.10",
+   "assocates": "1.123 2.34"
+  },
+  {
+   "id": "3.148",
+   "table": "II",
+   "osisRef": "Luke.12.11-12",
+   "assocates": "1.88 2.141"
+  },
+  {
+   "id": "3.149",
+   "table": "X",
+   "osisRef": "Luke.12.13-21",
+   "assocates": ""
+  },
+  {
+   "id": "3.150",
+   "table": "V",
+   "osisRef": "Luke.12.22-31",
+   "assocates": "1.49"
+  },
+  {
+   "id": "3.151",
+   "table": "X",
+   "osisRef": "Luke.12.32",
+   "assocates": ""
+  },
+  {
+   "id": "3.152",
+   "table": "II",
+   "osisRef": "Luke.12.33a",
+   "assocates": "1.194 2.108"
+  },
+  {
+   "id": "3.153",
+   "table": "V",
+   "osisRef": "Luke.12.33b-34",
+   "assocates": "1.46"
+  },
+  {
+   "id": "3.154",
+   "table": "X",
+   "osisRef": "Luke.12.35-36",
+   "assocates": ""
+  },
+  {
+   "id": "3.155",
+   "table": "V",
+   "osisRef": "Luke.12.37-38",
+   "assocates": "1.266"
+  },
+  {
+   "id": "3.156",
+   "table": "II",
+   "osisRef": "Luke.12.39-40",
+   "assocates": "1.264 2.155"
+  },
+  {
+   "id": "3.157",
+   "table": "V",
+   "osisRef": "Luke.12.41-44",
+   "assocates": "1.265 1.266"
+  },
+  {
+   "id": "3.158",
+   "table": "V",
+   "osisRef": "Luke.12.45-46",
+   "assocates": "1.267"
+  },
+  {
+   "id": "3.159",
+   "table": "X",
+   "osisRef": "Luke.12.47-48",
+   "assocates": ""
+  },
+  {
+   "id": "3.160",
+   "table": "V",
+   "osisRef": "Luke.12.49-53",
+   "assocates": "1.95"
+  },
+  {
+   "id": "3.161",
+   "table": "V",
+   "osisRef": "Luke.12.54-57",
+   "assocates": "1.162"
+  },
+  {
+   "id": "3.162",
+   "table": "V",
+   "osisRef": "Luke.12.58-59",
+   "assocates": "1.36"
+  },
+  {
+   "id": "3.163",
+   "table": "X",
+   "osisRef": "Luke.13.1-5",
+   "assocates": ""
+  },
+  {
+   "id": "3.164",
+   "table": "X",
+   "osisRef": "Luke.13.6-13",
+   "assocates": ""
+  },
+  {
+   "id": "3.165",
+   "table": "II",
+   "osisRef": "Luke.13.14-16",
+   "assocates": "1.116 2.25"
+  },
+  {
+   "id": "3.166",
+   "table": "X",
+   "osisRef": "Luke.13.17",
+   "assocates": ""
+  },
+  {
+   "id": "3.167",
+   "table": "II",
+   "osisRef": "Luke.13.18-19",
+   "assocates": "1.137 2.44"
+  },
+  {
+   "id": "3.168",
+   "table": "V",
+   "osisRef": "Luke.13.20-21",
+   "assocates": "1.138"
+  },
+  {
+   "id": "3.169",
+   "table": "II",
+   "osisRef": "Luke.13.22",
+   "assocates": "1.76 2.52"
+  },
+  {
+   "id": "3.170",
+   "table": "V",
+   "osisRef": "Luke.13.23-24",
+   "assocates": "1.55"
+  },
+  {
+   "id": "3.171",
+   "table": "V",
+   "osisRef": "Luke.13.25-28a",
+   "assocates": "1.60"
+  },
+  {
+   "id": "3.172",
+   "table": "V",
+   "osisRef": "Luke.13.28b-29",
+   "assocates": "1.65"
+  },
+  {
+   "id": "3.173",
+   "table": "II",
+   "osisRef": "Luke.13.30",
+   "assocates": "1.199 2.111"
+  },
+  {
+   "id": "3.174",
+   "table": "X",
+   "osisRef": "Luke.13.31-33",
+   "assocates": ""
+  },
+  {
+   "id": "3.175",
+   "table": "V",
+   "osisRef": "Luke.13.34-35",
+   "assocates": "1.241"
+  },
+  {
+   "id": "3.176",
+   "table": "X",
+   "osisRef": "Luke.14.1-4",
+   "assocates": ""
+  },
+  {
+   "id": "3.177",
+   "table": "II",
+   "osisRef": "Luke.14.5-6",
+   "assocates": "1.116 2.25"
+  },
+  {
+   "id": "3.178",
+   "table": "X",
+   "osisRef": "Luke.14.7-10",
+   "assocates": ""
+  },
+  {
+   "id": "3.179",
+   "table": "V",
+   "osisRef": "Luke.14.11",
+   "assocates": "1.231"
+  },
+  {
+   "id": "3.180",
+   "table": "X",
+   "osisRef": "Luke.14.12-15",
+   "assocates": ""
+  },
+  {
+   "id": "3.181",
+   "table": "V",
+   "osisRef": "Luke.14.16-24",
+   "assocates": "1.221"
+  },
+  {
+   "id": "3.182",
+   "table": "V",
+   "osisRef": "Luke.14.25-27",
+   "assocates": "1.96"
+  },
+  {
+   "id": "3.183",
+   "table": "X",
+   "osisRef": "Luke.14.28-32",
+   "assocates": ""
+  },
+  {
+   "id": "3.184",
+   "table": "V",
+   "osisRef": "Luke.14.33",
+   "assocates": "1.96"
+  },
+  {
+   "id": "3.185",
+   "table": "II",
+   "osisRef": "Luke.14.34-35",
+   "assocates": "1.31 2.102"
+  },
+  {
+   "id": "3.186",
+   "table": "II",
+   "osisRef": "Luke.15.1-2",
+   "assocates": "1.72 2.22"
+  },
+  {
+   "id": "3.187",
+   "table": "V",
+   "osisRef": "Luke.15.3-7",
+   "assocates": "1.182"
+  },
+  {
+   "id": "3.188",
+   "table": "X",
+   "osisRef": "Luke.15.8-9",
+   "assocates": ""
+  },
+  {
+   "id": "3.189",
+   "table": "V",
+   "osisRef": "Luke.15.10",
+   "assocates": "1.182"
+  },
+  {
+   "id": "3.190",
+   "table": "X",
+   "osisRef": "Luke.15.11-16.12",
+   "assocates": ""
+  },
+  {
+   "id": "3.191",
+   "table": "V",
+   "osisRef": "Luke.16.13",
+   "assocates": "1.48"
+  },
+  {
+   "id": "3.192",
+   "table": "X",
+   "osisRef": "Luke.16.14-15",
+   "assocates": ""
+  },
+  {
+   "id": "3.193",
+   "table": "V",
+   "osisRef": "Luke.16.16",
+   "assocates": "1.105"
+  },
+  {
+   "id": "3.194",
+   "table": "V",
+   "osisRef": "Luke.16.17",
+   "assocates": "1.34"
+  },
+  {
+   "id": "3.195",
+   "table": "II",
+   "osisRef": "Luke.16.18",
+   "assocates": "1.190 2.105"
+  },
+  {
+   "id": "3.196",
+   "table": "X",
+   "osisRef": "Luke.16.19-31",
+   "assocates": ""
+  },
+  {
+   "id": "3.197",
+   "table": "II",
+   "osisRef": "Luke.17.1-2",
+   "assocates": "1.179 2.99"
+  },
+  {
+   "id": "3.198",
+   "table": "V",
+   "osisRef": "Luke.17.3a",
+   "assocates": "1.183"
+  },
+  {
+   "id": "3.199",
+   "table": "V",
+   "osisRef": "Luke.17.3c-4",
+   "assocates": "1.187"
+  },
+  {
+   "id": "3.200",
+   "table": "V",
+   "osisRef": "Luke.17.5-6",
+   "assocates": "1.175"
+  },
+  {
+   "id": "3.201",
+   "table": "X",
+   "osisRef": "Luke.17.7-19",
+   "assocates": ""
+  },
+  {
+   "id": "3.202",
+   "table": "V",
+   "osisRef": "Luke.17.20-21",
+   "assocates": "1.255"
+  },
+  {
+   "id": "3.203",
+   "table": "X",
+   "osisRef": "Luke.17.22",
+   "assocates": ""
+  },
+  {
+   "id": "3.204",
+   "table": "II",
+   "osisRef": "Luke.17.23",
+   "assocates": "1.253 2.148"
+  },
+  {
+   "id": "3.205",
+   "table": "V",
+   "osisRef": "Luke.17.24",
+   "assocates": "1.256"
+  },
+  {
+   "id": "3.206",
+   "table": "II",
+   "osisRef": "Luke.17.25",
+   "assocates": "1.168 2.83"
+  },
+  {
+   "id": "3.207",
+   "table": "V",
+   "osisRef": "",
+   "assocates": "1.261"
+  },
+  {
+   "id": "3.208",
+   "table": "X",
+   "osisRef": "Luke.17.28-30",
+   "assocates": ""
+  },
+  {
+   "id": "3.209",
+   "table": "II",
+   "osisRef": "Luke.17.31",
+   "assocates": "1.248 2.143"
+  },
+  {
+   "id": "3.210",
+   "table": "X",
+   "osisRef": "Luke.17.32",
+   "assocates": ""
+  },
+  {
+   "id": "3.211",
+   "table": "III",
+   "osisRef": "Luke.17.33",
+   "assocates": "1.97 4.105"
+  },
+  {
+   "id": "3.212",
+   "table": "V",
+   "osisRef": "Luke.17.34-36",
+   "assocates": "1.262"
+  },
+  {
+   "id": "3.213",
+   "table": "V",
+   "osisRef": "Luke.17.37",
+   "assocates": "1.257"
+  },
+  {
+   "id": "3.214",
+   "table": "X",
+   "osisRef": "Luke.18.1-14a",
+   "assocates": ""
+  },
+  {
+   "id": "3.215",
+   "table": "V",
+   "osisRef": "Luke.18.14b",
+   "assocates": "1.231"
+  },
+  {
+   "id": "3.216",
+   "table": "II",
+   "osisRef": "Luke.18.15-16",
+   "assocates": "1.192 2.106"
+  },
+  {
+   "id": "3.217",
+   "table": "II",
+   "osisRef": "Luke.18.17",
+   "assocates": "1.178 2.95"
+  },
+  {
+   "id": "3.218",
+   "table": "II",
+   "osisRef": "Luke.18.18-21",
+   "assocates": "1.193 2.107"
+  },
+  {
+   "id": "3.219",
+   "table": "II",
+   "osisRef": "Luke.18.22",
+   "assocates": "1.194 2.108"
+  },
+  {
+   "id": "3.220",
+   "table": "II",
+   "osisRef": "Luke.18.23-28",
+   "assocates": "1.195 2.109"
+  },
+  {
+   "id": "3.221",
+   "table": "II",
+   "osisRef": "Luke.18.29-30",
+   "assocates": "1.198 2.110"
+  },
+  {
+   "id": "3.222",
+   "table": "II",
+   "osisRef": "Luke.18.31-33",
+   "assocates": "1.201 2.112"
+  },
+  {
+   "id": "3.223",
+   "table": "X",
+   "osisRef": "Luke.18.34",
+   "assocates": ""
+  },
+  {
+   "id": "3.224",
+   "table": "II",
+   "osisRef": "Luke.18.35-43",
+   "assocates": "1.205 2.116"
+  },
+  {
+   "id": "3.225",
+   "table": "X",
+   "osisRef": "Luke.19.1-9",
+   "assocates": ""
+  },
+  {
+   "id": "3.226",
+   "table": "V",
+   "osisRef": "Luke.19.10",
+   "assocates": "1.158"
+  },
+  {
+   "id": "3.227",
+   "table": "X",
+   "osisRef": "Luke.19.11",
+   "assocates": ""
+  },
+  {
+   "id": "3.228",
+   "table": "II",
+   "osisRef": "Luke.19.12",
+   "assocates": "1.269 2.154"
+  },
+  {
+   "id": "3.229",
+   "table": "V",
+   "osisRef": "Luke.19.13-25",
+   "assocates": "1.270"
+  },
+  {
+   "id": "3.230",
+   "table": "II",
+   "osisRef": "Luke.19.26",
+   "assocates": "1.271 2.42"
+  },
+  {
+   "id": "3.231",
+   "table": "V",
+   "osisRef": "Luke.19.27",
+   "assocates": "1.272"
+  },
+  {
+   "id": "3.232",
+   "table": "II",
+   "osisRef": "Luke.19.28-31",
+   "assocates": "1.206 2.117"
+  },
+  {
+   "id": "3.233",
+   "table": "II",
+   "osisRef": "Luke.19.32-36",
+   "assocates": "1.208 2.118"
+  },
+  {
+   "id": "3.234",
+   "table": "I",
+   "osisRef": "Luke.19.37-38",
+   "assocates": "1.209 2.119 4.100"
+  },
+  {
+   "id": "3.235",
+   "table": "V",
+   "osisRef": "Luke.19.39-40",
+   "assocates": "1.213"
+  },
+  {
+   "id": "3.236",
+   "table": "X",
+   "osisRef": "Luke.19.41-44a",
+   "assocates": ""
+  },
+  {
+   "id": "3.237",
+   "table": "II",
+   "osisRef": "Luke.19.44b",
+   "assocates": "1.242 2.137"
+  },
+  {
+   "id": "3.238",
+   "table": "I",
+   "osisRef": "Luke.19.45-46",
+   "assocates": "1.211 2.121 4.21"
+  },
+  {
+   "id": "3.239",
+   "table": "I",
+   "osisRef": "Luke.19.47-48",
+   "assocates": "1.220 2.122 4.77"
+  },
+  {
+   "id": "3.240",
+   "table": "II",
+   "osisRef": "Luke.20.1-8",
+   "assocates": "1.217 2.127"
+  },
+  {
+   "id": "3.241",
+   "table": "II",
+   "osisRef": "Luke.20.9-18",
+   "assocates": "1.219 2.128"
+  },
+  {
+   "id": "3.242",
+   "table": "I",
+   "osisRef": "Luke.20.19",
+   "assocates": "1.220 2.129 4.85"
+  },
+  {
+   "id": "3.243",
+   "table": "II",
+   "osisRef": "Luke.20.20-39",
+   "assocates": "1.223 2.130"
+  },
+  {
+   "id": "3.244",
+   "table": "II",
+   "osisRef": "Luke.20.40",
+   "assocates": "1.226 2.133"
+  },
+  {
+   "id": "3.245",
+   "table": "II",
+   "osisRef": "Luke.20.41-44",
+   "assocates": "1.225 2.134"
+  },
+  {
+   "id": "3.246",
+   "table": "II",
+   "osisRef": "Luke.20.45-46",
+   "assocates": "1.229 2.135"
+  },
+  {
+   "id": "3.247",
+   "table": "VIII",
+   "osisRef": "Luke.20.47-21.4",
+   "assocates": "2.136"
+  },
+  {
+   "id": "3.248",
+   "table": "II",
+   "osisRef": "Luke.21.5-6",
+   "assocates": "1.242 2.137"
+  },
+  {
+   "id": "3.249",
+   "table": "II",
+   "osisRef": "Luke.21.7-11",
+   "assocates": "1.243 2.138"
+  },
+  {
+   "id": "3.250",
+   "table": "I",
+   "osisRef": "Luke.21.12-13",
+   "assocates": "1.244 1.87 2.139 4.141 4.146"
+  },
+  {
+   "id": "3.251",
+   "table": "II",
+   "osisRef": "Luke.21.14-19",
+   "assocates": "1.88 2.141"
+  },
+  {
+   "id": "3.252",
+   "table": "X",
+   "osisRef": "Luke.21.20",
+   "assocates": ""
+  },
+  {
+   "id": "3.253",
+   "table": "II",
+   "osisRef": "Luke.21.21-22",
+   "assocates": "1.248 2.143"
+  },
+  {
+   "id": "3.254",
+   "table": "II",
+   "osisRef": "Luke.21.23a",
+   "assocates": "1.249 2.144"
+  },
+  {
+   "id": "3.255",
+   "table": "II",
+   "osisRef": "Luke.21.23b",
+   "assocates": "1.251 2.146"
+  },
+  {
+   "id": "3.256",
+   "table": "X",
+   "osisRef": "Luke.21.24",
+   "assocates": ""
+  },
+  {
+   "id": "3.257",
+   "table": "II",
+   "osisRef": "Luke.21.25-26",
+   "assocates": "1.258 2.150"
+  },
+  {
+   "id": "3.258",
+   "table": "II",
+   "osisRef": "Luke.21.27-33",
+   "assocates": "1.259 2.151"
+  },
+  {
+   "id": "3.259",
+   "table": "X",
+   "osisRef": "Luke.21.34-38",
+   "assocates": ""
+  },
+  {
+   "id": "3.260",
+   "table": "I",
+   "osisRef": "Luke.22.1",
+   "assocates": "1.274 2.156 4.20 4.48 4.96"
+  },
+  {
+   "id": "3.261",
+   "table": "I",
+   "osisRef": "Luke.22.2",
+   "assocates": "1.220 2.129 4.88"
+  },
+  {
+   "id": "3.262",
+   "table": "IX",
+   "osisRef": "Luke.22.3",
+   "assocates": "4.113 4.124"
+  },
+  {
+   "id": "3.263",
+   "table": "II",
+   "osisRef": "Luke.22.4-13",
+   "assocates": "1.278 2.160"
+  },
+  {
+   "id": "3.264",
+   "table": "X",
+   "osisRef": "Luke.22.14-15",
+   "assocates": ""
+  },
+  {
+   "id": "3.265",
+   "table": "II",
+   "osisRef": "Luke.22.16-18",
+   "assocates": "1.285 2.166"
+  },
+  {
+   "id": "3.266",
+   "table": "I",
+   "osisRef": "Luke.22.19",
+   "assocates": "1.284 2.165 4.55 4.63 4.65 4.67"
+  },
+  {
+   "id": "3.267",
+   "table": "II",
+   "osisRef": "Luke.22.20",
+   "assocates": "1.285 2.166"
+  },
+  {
+   "id": "3.268",
+   "table": "II",
+   "osisRef": "Luke.22.21-22",
+   "assocates": "1.281 2.163"
+  },
+  {
+   "id": "3.269",
+   "table": "I",
+   "osisRef": "Luke.22.23",
+   "assocates": "1.280 2.162 4.122"
+  },
+  {
+   "id": "3.270",
+   "table": "II",
+   "osisRef": "Luke.22.24-26",
+   "assocates": "1.203 2.114"
+  },
+  {
+   "id": "3.271",
+   "table": "X",
+   "osisRef": "Luke.22.27-30a",
+   "assocates": ""
+  },
+  {
+   "id": "3.272",
+   "table": "V",
+   "osisRef": "Luke.22.30b",
+   "assocates": "1.197"
+  },
+  {
+   "id": "3.273",
+   "table": "X",
+   "osisRef": "Luke.22.31-32a",
+   "assocates": ""
+  },
+  {
+   "id": "3.274",
+   "table": "IX",
+   "osisRef": "Luke.22.32b",
+   "assocates": "4.227 4.229 4.231"
+  },
+  {
+   "id": "3.275",
+   "table": "I",
+   "osisRef": "Luke.22.33-34",
+   "assocates": "1.289 2.170 4.126"
+  },
+  {
+   "id": "3.276",
+   "table": "X",
+   "osisRef": "Luke.22.35-36",
+   "assocates": ""
+  },
+  {
+   "id": "3.277",
+   "table": "VIII",
+   "osisRef": "Luke.22.37",
+   "assocates": "2.216"
+  },
+  {
+   "id": "3.278",
+   "table": "X",
+   "osisRef": "Luke.22.38",
+   "assocates": ""
+  },
+  {
+   "id": "3.279",
+   "table": "I",
+   "osisRef": "Luke.22.39",
+   "assocates": "1.291 2.172 4.156"
+  },
+  {
+   "id": "3.280",
+   "table": "II",
+   "osisRef": "Luke.22.40",
+   "assocates": "1.296 2.177"
+  },
+  {
+   "id": "3.281",
+   "table": "I",
+   "osisRef": "Luke.22.41",
+   "assocates": "1.294 2.175 4.161"
+  },
+  {
+   "id": "3.282",
+   "table": "I",
+   "osisRef": "Luke.22.42",
+   "assocates": "1.295 2.176 4.42 4.57"
+  },
+  {
+   "id": "3.283",
+   "table": "X",
+   "osisRef": "Luke.22.43-44",
+   "assocates": ""
+  },
+  {
+   "id": "3.284",
+   "table": "II",
+   "osisRef": "Luke.22.45-46",
+   "assocates": "1.296 2.177"
+  },
+  {
+   "id": "3.285",
+   "table": "I",
+   "osisRef": "Luke.22.47a",
+   "assocates": "1.300 2.181 4.158 4.79"
+  },
+  {
+   "id": "3.286",
+   "table": "II",
+   "osisRef": "Luke.22.47b-48",
+   "assocates": "1.301 2.182"
+  },
+  {
+   "id": "3.287",
+   "table": "I",
+   "osisRef": "Luke.22.49-50",
+   "assocates": "1.302 2.183 4.160"
+  },
+  {
+   "id": "3.288",
+   "table": "X",
+   "osisRef": "Luke.22.51",
+   "assocates": ""
+  },
+  {
+   "id": "3.289",
+   "table": "I",
+   "osisRef": "Luke.22.52-53",
+   "assocates": "1.304 2.184 4.170"
+  },
+  {
+   "id": "3.290",
+   "table": "I",
+   "osisRef": "Luke.22.54a",
+   "assocates": "1.306 2.187 4.162 4.174"
+  },
+  {
+   "id": "3.291",
+   "table": "I",
+   "osisRef": "Luke.22.54b-57",
+   "assocates": "1.314 2.195 4.166 4.168"
+  },
+  {
+   "id": "3.292",
+   "table": "I",
+   "osisRef": "Luke.22.58-61a",
+   "assocates": "1.315 2.196 4.175"
+  },
+  {
+   "id": "3.293",
+   "table": "II",
+   "osisRef": "Luke.22.61b-62",
+   "assocates": "1.316 2.197"
+  },
+  {
+   "id": "3.294",
+   "table": "I",
+   "osisRef": "Luke.22.63-65",
+   "assocates": "1.313 2.194 4.172"
+  },
+  {
+   "id": "3.295",
+   "table": "II",
+   "osisRef": "Luke.22.66-67a",
+   "assocates": "1.317 2.198"
+  },
+  {
+   "id": "3.296",
+   "table": "X",
+   "osisRef": "Luke.22.67b-68",
+   "assocates": ""
+  },
+  {
+   "id": "3.297",
+   "table": "I",
+   "osisRef": "Luke.22.69",
+   "assocates": "1.310 2.191 4.69"
+  },
+  {
+   "id": "3.298",
+   "table": "X",
+   "osisRef": "Luke.22.70",
+   "assocates": ""
+  },
+  {
+   "id": "3.299",
+   "table": "II",
+   "osisRef": "Luke.22.71",
+   "assocates": "1.312 2.193"
+  },
+  {
+   "id": "3.300",
+   "table": "I",
+   "osisRef": "Luke.23.1",
+   "assocates": "1.318 2.199 4.176"
+  },
+  {
+   "id": "3.301",
+   "table": "X",
+   "osisRef": "Luke.23.2",
+   "assocates": ""
+  },
+  {
+   "id": "3.302",
+   "table": "I",
+   "osisRef": "Luke.23.3",
+   "assocates": "1.320 2.200 4.178 4.180"
+  },
+  {
+   "id": "3.303",
+   "table": "IX",
+   "osisRef": "Luke.23.4",
+   "assocates": "4.182 4.186 4.190"
+  },
+  {
+   "id": "3.304",
+   "table": "X",
+   "osisRef": "Luke.23.5-9",
+   "assocates": ""
+  },
+  {
+   "id": "3.305",
+   "table": "II",
+   "osisRef": "Luke.23.10",
+   "assocates": "1.308 2.189"
+  },
+  {
+   "id": "3.306",
+   "table": "X",
+   "osisRef": "Luke.23.11-12",
+   "assocates": ""
+  },
+  {
+   "id": "3.307",
+   "table": "IX",
+   "osisRef": "Luke.23.13-14",
+   "assocates": "4.182 4.186 4.190"
+  },
+  {
+   "id": "3.308",
+   "table": "X",
+   "osisRef": "Luke.23.15-16",
+   "assocates": ""
+  },
+  {
+   "id": "3.309",
+   "table": "II",
+   "osisRef": "Luke.23.17",
+   "assocates": "1.322 2.202"
+  },
+  {
+   "id": "3.310",
+   "table": "I",
+   "osisRef": "Luke.23.18-19",
+   "assocates": "1.325 2.204 4.184"
+  },
+  {
+   "id": "3.311",
+   "table": "I",
+   "osisRef": "Luke.23.20-21",
+   "assocates": "1.326 2.205 4.188"
+  },
+  {
+   "id": "3.312",
+   "table": "IX",
+   "osisRef": "Luke.23.22",
+   "assocates": "4.182 4.186 4.190"
+  },
+  {
+   "id": "3.313",
+   "table": "I",
+   "osisRef": "Luke.23.23",
+   "assocates": "1.326 2.205 4.194"
+  },
+  {
+   "id": "3.314",
+   "table": "I",
+   "osisRef": "Luke.23.24-25",
+   "assocates": "1.328 2.206 4.196"
+  },
+  {
+   "id": "3.315",
+   "table": "I",
+   "osisRef": "Luke.23.26",
+   "assocates": "1.331 2.209 4.197"
+  },
+  {
+   "id": "3.316",
+   "table": "X",
+   "osisRef": "Luke.23.27-31",
+   "assocates": ""
+  },
+  {
+   "id": "3.317",
+   "table": "I",
+   "osisRef": "Luke.23.32",
+   "assocates": "1.336 2.215 4.198"
+  },
+  {
+   "id": "3.318",
+   "table": "I",
+   "osisRef": "Luke.23.33a",
+   "assocates": "1.332 2.210 4.197"
+  },
+  {
+   "id": "3.319",
+   "table": "I",
+   "osisRef": "Luke.23.33b",
+   "assocates": "1.336 2.215 4.198"
+  },
+  {
+   "id": "3.320",
+   "table": "X",
+   "osisRef": "Luke.23.34a",
+   "assocates": ""
+  },
+  {
+   "id": "3.321",
+   "table": "I",
+   "osisRef": "Luke.23.34b-35a",
+   "assocates": "1.334 2.212 4.201"
+  },
+  {
+   "id": "3.322",
+   "table": "II",
+   "osisRef": "Luke.23.35b",
+   "assocates": "1.338 2.218"
+  },
+  {
+   "id": "3.323",
+   "table": "II",
+   "osisRef": "Luke.23.36-37",
+   "assocates": "1.342 2.222"
+  },
+  {
+   "id": "3.324",
+   "table": "I",
+   "osisRef": "Luke.23.38",
+   "assocates": "1.335 2.214 4.199"
+  },
+  {
+   "id": "3.325",
+   "table": "II",
+   "osisRef": "Luke.23.39",
+   "assocates": "1.339 2.219"
+  },
+  {
+   "id": "3.326",
+   "table": "X",
+   "osisRef": "Luke.23.40-43",
+   "assocates": ""
+  },
+  {
+   "id": "3.327",
+   "table": "II",
+   "osisRef": "Luke.23.44-45a",
+   "assocates": "1.340 2.220"
+  },
+  {
+   "id": "3.328",
+   "table": "II",
+   "osisRef": "Luke.23.45b",
+   "assocates": "1.344 2.224"
+  },
+  {
+   "id": "3.329",
+   "table": "I",
+   "osisRef": "Luke.23.46",
+   "assocates": "1.343 2.223 4.204"
+  },
+  {
+   "id": "3.330",
+   "table": "II",
+   "osisRef": "Luke.23.47",
+   "assocates": "1.346 2.225"
+  },
+  {
+   "id": "3.331",
+   "table": "X",
+   "osisRef": "Luke.23.48-49",
+   "assocates": ""
+  },
+  {
+   "id": "3.332",
+   "table": "I",
+   "osisRef": "Luke.23.50-52",
+   "assocates": "1.348 2.227 4.206"
+  },
+  {
+   "id": "3.333",
+   "table": "I",
+   "osisRef": "Luke.23.53",
+   "assocates": "1.349 2.228 4.208"
+  },
+  {
+   "id": "3.334",
+   "table": "X",
+   "osisRef": "Luke.23.54-55",
+   "assocates": ""
+  },
+  {
+   "id": "3.335",
+   "table": "VIII",
+   "osisRef": "Luke.23.56",
+   "assocates": "2.230"
+  },
+  {
+   "id": "3.336",
+   "table": "I",
+   "osisRef": "Luke.24.1-4",
+   "assocates": "1.352 2.231 4.209 4.211"
+  },
+  {
+   "id": "3.337",
+   "table": "II",
+   "osisRef": "Luke.24.5-8",
+   "assocates": "1.353 2.232"
+  },
+  {
+   "id": "3.338",
+   "table": "II",
+   "osisRef": "Luke.24.9",
+   "assocates": "1.354 2.233"
+  },
+  {
+   "id": "3.339",
+   "table": "X",
+   "osisRef": "Luke.24.10-35",
+   "assocates": ""
+  },
+  {
+   "id": "3.340",
+   "table": "IX",
+   "osisRef": "Luke.24.36-40",
+   "assocates": "4.213 4.217"
+  },
+  {
+   "id": "3.341",
+   "table": "IX",
+   "osisRef": "Luke.24.41-43",
+   "assocates": "4.221 4.223 4.225"
+  },
+  {
+   "id": "3.342",
+   "table": "X",
+   "osisRef": "Luke.24.44-53",
+   "assocates": ""
+  },
+  {
+   "id": "4.1",
+   "table": "III",
+   "osisRef": "John.1.1-5",
+   "assocates": "1.1 3.14"
+  },
+  {
+   "id": "4.2",
+   "table": "III",
+   "osisRef": "John.1.6-8",
+   "assocates": "1.7 3.6"
+  },
+  {
+   "id": "4.3",
+   "table": "III",
+   "osisRef": "John.1.9-10",
+   "assocates": "1.1 3.14"
+  },
+  {
+   "id": "4.4",
+   "table": "X",
+   "osisRef": "John.1.11-13",
+   "assocates": ""
+  },
+  {
+   "id": "4.5",
+   "table": "III",
+   "osisRef": "John.1.14",
+   "assocates": "1.1 3.14"
+  },
+  {
+   "id": "4.6",
+   "table": "I",
+   "osisRef": "John.1.15",
+   "assocates": "1.11 2.4 3.10"
+  },
+  {
+   "id": "4.7",
+   "table": "X",
+   "osisRef": "John.1.16-17",
+   "assocates": ""
+  },
+  {
+   "id": "4.8",
+   "table": "III",
+   "osisRef": "John.1.18",
+   "assocates": "1.112 3.119"
+  },
+  {
+   "id": "4.9",
+   "table": "X",
+   "osisRef": "John.1.19-22",
+   "assocates": ""
+  },
+  {
+   "id": "4.10",
+   "table": "I",
+   "osisRef": "John.1.23",
+   "assocates": "1.8 2.2 3.7"
+  },
+  {
+   "id": "4.11",
+   "table": "X",
+   "osisRef": "John.1.24-25",
+   "assocates": ""
+  },
+  {
+   "id": "4.12",
+   "table": "I",
+   "osisRef": "John.1.26-27",
+   "assocates": "1.11 2.4 3.10"
+  },
+  {
+   "id": "4.13",
+   "table": "X",
+   "osisRef": "John.1.28-29",
+   "assocates": ""
+  },
+  {
+   "id": "4.14",
+   "table": "I",
+   "osisRef": "John.1.30-31",
+   "assocates": "1.11 2.4 3.10"
+  },
+  {
+   "id": "4.15",
+   "table": "I",
+   "osisRef": "John.1.32-34",
+   "assocates": "1.14 2.5 3.13"
+  },
+  {
+   "id": "4.16",
+   "table": "X",
+   "osisRef": "John.1.35-40",
+   "assocates": ""
+  },
+  {
+   "id": "4.17",
+   "table": "I",
+   "osisRef": "John.1.41-42",
+   "assocates": "1.166 2.82 3.94"
+  },
+  {
+   "id": "4.18",
+   "table": "X",
+   "osisRef": "John.1.43-2.11",
+   "assocates": ""
+  },
+  {
+   "id": "4.19",
+   "table": "VII",
+   "osisRef": "John.2.12",
+   "assocates": "1.19"
+  },
+  {
+   "id": "4.20",
+   "table": "I",
+   "osisRef": "John.2.13",
+   "assocates": "1.274 2.156 3.260"
+  },
+  {
+   "id": "4.21",
+   "table": "I",
+   "osisRef": "John.2.14-16",
+   "assocates": "1.211 2.121 3.238"
+  },
+  {
+   "id": "4.22",
+   "table": "X",
+   "osisRef": "John.2.17",
+   "assocates": ""
+  },
+  {
+   "id": "4.23",
+   "table": "IV",
+   "osisRef": "John.2.18",
+   "assocates": "1.161 2.77"
+  },
+  {
+   "id": "4.24",
+   "table": "X",
+   "osisRef": "John.2.19-3.22",
+   "assocates": ""
+  },
+  {
+   "id": "4.25",
+   "table": "III",
+   "osisRef": "John.3.23",
+   "assocates": "1.7 3.6"
+  },
+  {
+   "id": "4.26",
+   "table": "IV",
+   "osisRef": "John.3.24",
+   "assocates": "1.18 2.8"
+  },
+  {
+   "id": "4.27",
+   "table": "X",
+   "osisRef": "John.3.25-27",
+   "assocates": ""
+  },
+  {
+   "id": "4.28",
+   "table": "I",
+   "osisRef": "John.3.28",
+   "assocates": "1.11 2.4 3.10"
+  },
+  {
+   "id": "4.29",
+   "table": "X",
+   "osisRef": "John.3.29-34",
+   "assocates": ""
+  },
+  {
+   "id": "4.30",
+   "table": "III",
+   "osisRef": "John.3.35",
+   "assocates": "1.111 3.119"
+  },
+  {
+   "id": "4.31",
+   "table": "X",
+   "osisRef": "John.3.36-4.2",
+   "assocates": ""
+  },
+  {
+   "id": "4.32",
+   "table": "VII",
+   "osisRef": "John.4.3",
+   "assocates": "1.19"
+  },
+  {
+   "id": "4.33",
+   "table": "X",
+   "osisRef": "John.4.4-42",
+   "assocates": ""
+  },
+  {
+   "id": "4.34",
+   "table": "VII",
+   "osisRef": "John.4.43",
+   "assocates": "1.19"
+  },
+  {
+   "id": "4.35",
+   "table": "I",
+   "osisRef": "John.4.44",
+   "assocates": "1.142 2.51 3.21"
+  },
+  {
+   "id": "4.36",
+   "table": "X",
+   "osisRef": "John.4.45-46a",
+   "assocates": ""
+  },
+  {
+   "id": "4.37",
+   "table": "III",
+   "osisRef": "John.4.46b-54",
+   "assocates": "1.64 3.65"
+  },
+  {
+   "id": "4.38",
+   "table": "I",
+   "osisRef": "John.5.1-10",
+   "assocates": "1.70 2.20 3.37"
+  },
+  {
+   "id": "4.39",
+   "table": "X",
+   "osisRef": "John.5.11-23a",
+   "assocates": ""
+  },
+  {
+   "id": "4.40",
+   "table": "I",
+   "osisRef": "John.5.23b",
+   "assocates": "1.98 2.96 3.116"
+  },
+  {
+   "id": "4.41",
+   "table": "X",
+   "osisRef": "John.5.24-30a",
+   "assocates": ""
+  },
+  {
+   "id": "4.42",
+   "table": "I",
+   "osisRef": "John.5.30b",
+   "assocates": "1.295 2.176 3.282"
+  },
+  {
+   "id": "4.43",
+   "table": "X",
+   "osisRef": "John.5.31-37a",
+   "assocates": ""
+  },
+  {
+   "id": "4.44",
+   "table": "III",
+   "osisRef": "John.5.37b",
+   "assocates": "1.112 3.119"
+  },
+  {
+   "id": "4.45",
+   "table": "X",
+   "osisRef": "John.5.38-47",
+   "assocates": ""
+  },
+  {
+   "id": "4.46",
+   "table": "I",
+   "osisRef": "John.6.1-2",
+   "assocates": "1.23 2.27 3.17 3.34 3.45"
+  },
+  {
+   "id": "4.47",
+   "table": "III",
+   "osisRef": "John.6.3",
+   "assocates": "1.146 3.92"
+  },
+  {
+   "id": "4.48",
+   "table": "I",
+   "osisRef": "John.6.4",
+   "assocates": "1.274 2.156 3.260"
+  },
+  {
+   "id": "4.49",
+   "table": "I",
+   "osisRef": "John.6.5-13",
+   "assocates": "1.147 2.64 3.93"
+  },
+  {
+   "id": "4.50",
+   "table": "X",
+   "osisRef": "John.6.14-15a",
+   "assocates": ""
+  },
+  {
+   "id": "4.51",
+   "table": "IV",
+   "osisRef": "John.6.15b-21",
+   "assocates": "1.150 2.67"
+  },
+  {
+   "id": "4.52",
+   "table": "X",
+   "osisRef": "John.6.22-29",
+   "assocates": ""
+  },
+  {
+   "id": "4.53",
+   "table": "IV",
+   "osisRef": "John.6.30",
+   "assocates": "1.161 2.77"
+  },
+  {
+   "id": "4.54",
+   "table": "X",
+   "osisRef": "John.6.31-34",
+   "assocates": ""
+  },
+  {
+   "id": "4.55",
+   "table": "I",
+   "osisRef": "John.6.35a",
+   "assocates": "1.284 2.165 3.266"
+  },
+  {
+   "id": "4.56",
+   "table": "X",
+   "osisRef": "John.6.35b-37",
+   "assocates": ""
+  },
+  {
+   "id": "4.57",
+   "table": "I",
+   "osisRef": "John.6.38",
+   "assocates": "1.295 2.176 3.282"
+  },
+  {
+   "id": "4.58",
+   "table": "X",
+   "osisRef": "John.6.39-40",
+   "assocates": ""
+  },
+  {
+   "id": "4.59",
+   "table": "I",
+   "osisRef": "John.6.41-42",
+   "assocates": "1.141 2.50 3.19"
+  },
+  {
+   "id": "4.60",
+   "table": "X",
+   "osisRef": "John.6.43-45",
+   "assocates": ""
+  },
+  {
+   "id": "4.61",
+   "table": "III",
+   "osisRef": "John.6.46",
+   "assocates": "1.112 3.119"
+  },
+  {
+   "id": "4.62",
+   "table": "X",
+   "osisRef": "John.6.47",
+   "assocates": ""
+  },
+  {
+   "id": "4.63",
+   "table": "I",
+   "osisRef": "John.6.48",
+   "assocates": "1.284 2.165 3.266"
+  },
+  {
+   "id": "4.64",
+   "table": "X",
+   "osisRef": "John.6.49-50",
+   "assocates": ""
+  },
+  {
+   "id": "4.65",
+   "table": "I",
+   "osisRef": "John.6.51",
+   "assocates": "1.284 2.165 3.266"
+  },
+  {
+   "id": "4.66",
+   "table": "X",
+   "osisRef": "John.6.52-54",
+   "assocates": ""
+  },
+  {
+   "id": "4.67",
+   "table": "I",
+   "osisRef": "John.6.55",
+   "assocates": "1.284 2.165 3.266"
+  },
+  {
+   "id": "4.68",
+   "table": "X",
+   "osisRef": "John.6.56-61",
+   "assocates": ""
+  },
+  {
+   "id": "4.69",
+   "table": "I",
+   "osisRef": "John.6.62",
+   "assocates": "1.310 2.191 3.297"
+  },
+  {
+   "id": "4.70",
+   "table": "IV",
+   "osisRef": "John.6.63a",
+   "assocates": "1.297 2.178"
+  },
+  {
+   "id": "4.71",
+   "table": "X",
+   "osisRef": "John.6.63b-64a",
+   "assocates": ""
+  },
+  {
+   "id": "4.72",
+   "table": "IV",
+   "osisRef": "John.6.64b",
+   "assocates": "1.279 2.161"
+  },
+  {
+   "id": "4.73",
+   "table": "X",
+   "osisRef": "John.6.65-67",
+   "assocates": ""
+  },
+  {
+   "id": "4.74",
+   "table": "I",
+   "osisRef": "John.6.68-69",
+   "assocates": "1.166 2.82 3.94"
+  },
+  {
+   "id": "4.75",
+   "table": "X",
+   "osisRef": "John.6.70-7.27",
+   "assocates": ""
+  },
+  {
+   "id": "4.76",
+   "table": "III",
+   "osisRef": "John.7.28-29",
+   "assocates": "1.112 3.119"
+  },
+  {
+   "id": "4.77",
+   "table": "I",
+   "osisRef": "John.7.30",
+   "assocates": "1.220 2.122 3.239"
+  },
+  {
+   "id": "4.78",
+   "table": "X",
+   "osisRef": "John.7.31-32a",
+   "assocates": ""
+  },
+  {
+   "id": "4.79",
+   "table": "I",
+   "osisRef": "John.7.32b",
+   "assocates": "1.300 2.181 3.285"
+  },
+  {
+   "id": "4.80",
+   "table": "X",
+   "osisRef": "John.7.33",
+   "assocates": ""
+  },
+  {
+   "id": "4.81",
+   "table": "X",
+   "osisRef": "John.7.34-39",
+   "assocates": ""
+  },
+  {
+   "id": "4.82",
+   "table": "VII",
+   "osisRef": "John.7.40-41a",
+   "assocates": "1.120"
+  },
+  {
+   "id": "4.83",
+   "table": "VII",
+   "osisRef": "John.7.41b-42",
+   "assocates": "1.5"
+  },
+  {
+   "id": "4.84",
+   "table": "X",
+   "osisRef": "John.7.43",
+   "assocates": ""
+  },
+  {
+   "id": "4.85",
+   "table": "I",
+   "osisRef": "John.7.44",
+   "assocates": "1.220 2.129 3.242"
+  },
+  {
+   "id": "4.86",
+   "table": "X",
+   "osisRef": "John.7.45-8.19a",
+   "assocates": ""
+  },
+  {
+   "id": "4.87",
+   "table": "III",
+   "osisRef": "John.8.19b",
+   "assocates": "1.112 3.119"
+  },
+  {
+   "id": "4.88",
+   "table": "I",
+   "osisRef": "John.8.20",
+   "assocates": "1.220 2.129 3.261"
+  },
+  {
+   "id": "4.89",
+   "table": "X",
+   "osisRef": "John.8.21-10.14",
+   "assocates": ""
+  },
+  {
+   "id": "4.90",
+   "table": "III",
+   "osisRef": "John.10.15a",
+   "assocates": "1.112 3.119"
+  },
+  {
+   "id": "4.91",
+   "table": "IV",
+   "osisRef": "John.10.15b",
+   "assocates": "1.204 2.115"
+  },
+  {
+   "id": "4.92",
+   "table": "X",
+   "osisRef": "John.10.16-38",
+   "assocates": ""
+  },
+  {
+   "id": "4.93",
+   "table": "IV",
+   "osisRef": "John.10.39-40",
+   "assocates": "1.117 2.26"
+  },
+  {
+   "id": "4.94",
+   "table": "X",
+   "osisRef": "John.10.41-11.52",
+   "assocates": ""
+  },
+  {
+   "id": "4.95",
+   "table": "IV",
+   "osisRef": "John.11.53-54",
+   "assocates": "1.117 2.26"
+  },
+  {
+   "id": "4.96",
+   "table": "I",
+   "osisRef": "John.11.55a",
+   "assocates": "1.274 2.156 3.260"
+  },
+  {
+   "id": "4.97",
+   "table": "X",
+   "osisRef": "John.11.55b-12.1",
+   "assocates": ""
+  },
+  {
+   "id": "4.99",
+   "table": "X",
+   "osisRef": "John.12.9-11",
+   "assocates": ""
+  },
+  {
+   "id": "4.100",
+   "table": "I",
+   "osisRef": "John.12.12-13",
+   "assocates": "1.209 2.119 3.234"
+  },
+  {
+   "id": "4.101",
+   "table": "VII",
+   "osisRef": "John.12.14-15",
+   "assocates": "1.207"
+  },
+  {
+   "id": "4.102",
+   "table": "X",
+   "osisRef": "John.12.16-22",
+   "assocates": ""
+  },
+  {
+   "id": "4.103",
+   "table": "IV",
+   "osisRef": "John.12.23",
+   "assocates": "1.299 2.180"
+  },
+  {
+   "id": "4.104",
+   "table": "X",
+   "osisRef": "John.12.24",
+   "assocates": ""
+  },
+  {
+   "id": "4.105",
+   "table": "III",
+   "osisRef": "John.12.25",
+   "assocates": "1.97 3.211"
+  },
+  {
+   "id": "4.106",
+   "table": "X",
+   "osisRef": "John.12.26a",
+   "assocates": ""
+  },
+  {
+   "id": "4.107",
+   "table": "IV",
+   "osisRef": "John.12.26b-27a",
+   "assocates": "1.293 2.174"
+  },
+  {
+   "id": "4.108",
+   "table": "X",
+   "osisRef": "John.12.27b-38",
+   "assocates": ""
+  },
+  {
+   "id": "4.109",
+   "table": "I",
+   "osisRef": "John.12.39-40",
+   "assocates": "1.133 2.37 3.77"
+  },
+  {
+   "id": "4.110",
+   "table": "X",
+   "osisRef": "John.12.41-43",
+   "assocates": ""
+  },
+  {
+   "id": "4.111",
+   "table": "I",
+   "osisRef": "John.12.44-45",
+   "assocates": "1.98 2.96 3.116"
+  },
+  {
+   "id": "4.112",
+   "table": "X",
+   "osisRef": "John.12.46-13.1",
+   "assocates": ""
+  },
+  {
+   "id": "4.113",
+   "table": "IX",
+   "osisRef": "John.13.2",
+   "assocates": "3.262"
+  },
+  {
+   "id": "4.114",
+   "table": "III",
+   "osisRef": "John.13.3a",
+   "assocates": "1.111 3.119"
+  },
+  {
+   "id": "4.115",
+   "table": "X",
+   "osisRef": "John.13.3b-12",
+   "assocates": ""
+  },
+  {
+   "id": "4.116",
+   "table": "III",
+   "osisRef": "John.13.13",
+   "assocates": "1.59 3.63"
+  },
+  {
+   "id": "4.117",
+   "table": "X",
+   "osisRef": "John.13.14-15",
+   "assocates": ""
+  },
+  {
+   "id": "4.118",
+   "table": "III",
+   "osisRef": "John.13.16-17",
+   "assocates": "1.90 3.58"
+  },
+  {
+   "id": "4.119",
+   "table": "X",
+   "osisRef": "John.13.18-19",
+   "assocates": ""
+  },
+  {
+   "id": "4.120",
+   "table": "I",
+   "osisRef": "John.13.20",
+   "assocates": "1.98 2.96 3.116"
+  },
+  {
+   "id": "4.121",
+   "table": "IV",
+   "osisRef": "John.13.21",
+   "assocates": "1.279 2.161"
+  },
+  {
+   "id": "4.122",
+   "table": "I",
+   "osisRef": "John.13.22",
+   "assocates": "1.280 2.162 3.269"
+  },
+  {
+   "id": "4.123",
+   "table": "X",
+   "osisRef": "John.13.23-26a",
+   "assocates": ""
+  },
+  {
+   "id": "4.124",
+   "table": "IX",
+   "osisRef": "John.13.26b-27a",
+   "assocates": "3.262"
+  },
+  {
+   "id": "4.125",
+   "table": "X",
+   "osisRef": "John.13.27b-35",
+   "assocates": ""
+  },
+  {
+   "id": "4.126",
+   "table": "I",
+   "osisRef": "John.13.36-38",
+   "assocates": "1.289 2.170 3.275"
+  },
+  {
+   "id": "4.127",
+   "table": "X",
+   "osisRef": "John.14.1-12",
+   "assocates": ""
+  },
+  {
+   "id": "4.128",
+   "table": "IV",
+   "osisRef": "John.14.13-21a",
+   "assocates": "1.216 2.125"
+  },
+  {
+   "id": "4.129",
+   "table": "I",
+   "osisRef": "John.14.21b",
+   "assocates": "1.98 2.96 3.116"
+  },
+  {
+   "id": "4.130",
+   "table": "X",
+   "osisRef": "John.14.22-24a",
+   "assocates": ""
+  },
+  {
+   "id": "4.131",
+   "table": "I",
+   "osisRef": "John.14.24b-25",
+   "assocates": "1.98 2.96 3.116"
+  },
+  {
+   "id": "4.132",
+   "table": "X",
+   "osisRef": "John.14.26-15.6",
+   "assocates": ""
+  },
+  {
+   "id": "4.133",
+   "table": "IV",
+   "osisRef": "John.15.7",
+   "assocates": "1.216 2.125"
+  },
+  {
+   "id": "4.134",
+   "table": "X",
+   "osisRef": "John.15.8-12",
+   "assocates": ""
+  },
+  {
+   "id": "4.135",
+   "table": "IV",
+   "osisRef": "John.15.13",
+   "assocates": "1.204 2.115"
+  },
+  {
+   "id": "4.136",
+   "table": "X",
+   "osisRef": "John.15.14-16a",
+   "assocates": ""
+  },
+  {
+   "id": "4.137",
+   "table": "IV",
+   "osisRef": "John.15.16b",
+   "assocates": "1.216 2.125"
+  },
+  {
+   "id": "4.138",
+   "table": "X",
+   "osisRef": "John.15.17-19",
+   "assocates": ""
+  },
+  {
+   "id": "4.139",
+   "table": "III",
+   "osisRef": "John.15.20a",
+   "assocates": "1.90 3.58"
+  },
+  {
+   "id": "4.140",
+   "table": "X",
+   "osisRef": "John.15.20b",
+   "assocates": ""
+  },
+  {
+   "id": "4.141",
+   "table": "I",
+   "osisRef": "John.15.21a",
+   "assocates": "1.244 1.87 2.139 3.250"
+  },
+  {
+   "id": "4.142",
+   "table": "III",
+   "osisRef": "John.15.21b",
+   "assocates": "1.112 3.119"
+  },
+  {
+   "id": "4.143",
+   "table": "X",
+   "osisRef": "John.15.22",
+   "assocates": ""
+  },
+  {
+   "id": "4.144",
+   "table": "I",
+   "osisRef": "John.15.23",
+   "assocates": "1.98 2.96 3.116"
+  },
+  {
+   "id": "4.145",
+   "table": "X",
+   "osisRef": "John.15.24-16.2a",
+   "assocates": ""
+  },
+  {
+   "id": "4.146",
+   "table": "I",
+   "osisRef": "John.16.2b-4a",
+   "assocates": "1.244 1.87 2.139 3.250"
+  },
+  {
+   "id": "4.147",
+   "table": "X",
+   "osisRef": "John.16.4b-14",
+   "assocates": ""
+  },
+  {
+   "id": "4.148",
+   "table": "III",
+   "osisRef": "John.16.15a",
+   "assocates": "1.111 3.119"
+  },
+  {
+   "id": "4.149",
+   "table": "X",
+   "osisRef": "John.16.15b-23a",
+   "assocates": ""
+  },
+  {
+   "id": "4.150",
+   "table": "IV",
+   "osisRef": "John.16.23b-24",
+   "assocates": "1.216 2.125"
+  },
+  {
+   "id": "4.151",
+   "table": "X",
+   "osisRef": "John.16.25-30",
+   "assocates": ""
+  },
+  {
+   "id": "4.152",
+   "table": "IV",
+   "osisRef": "John.16.31-32",
+   "assocates": "1.287 2.168"
+  },
+  {
+   "id": "4.153",
+   "table": "X",
+   "osisRef": "John.16.33-17.24",
+   "assocates": ""
+  },
+  {
+   "id": "4.154",
+   "table": "III",
+   "osisRef": "John.17.25a",
+   "assocates": "1.112 3.119"
+  },
+  {
+   "id": "4.155",
+   "table": "X",
+   "osisRef": "John.17.25b-26",
+   "assocates": ""
+  },
+  {
+   "id": "4.156",
+   "table": "I",
+   "osisRef": "John.18.1",
+   "assocates": "1.291 2.172 3.279"
+  },
+  {
+   "id": "4.157",
+   "table": "X",
+   "osisRef": "John.18.2",
+   "assocates": ""
+  },
+  {
+   "id": "4.158",
+   "table": "I",
+   "osisRef": "John.18.3",
+   "assocates": "1.300 2.181 3.285"
+  },
+  {
+   "id": "4.159",
+   "table": "X",
+   "osisRef": "John.18.4-9",
+   "assocates": ""
+  },
+  {
+   "id": "4.160",
+   "table": "I",
+   "osisRef": "John.18.10-11a",
+   "assocates": "1.302 2.183 3.287"
+  },
+  {
+   "id": "4.161",
+   "table": "I",
+   "osisRef": "John.18.11c",
+   "assocates": "1.294 2.175 3.281"
+  },
+  {
+   "id": "4.162",
+   "table": "I",
+   "osisRef": "John.18.12",
+   "assocates": "1.306 2.187 3.290"
+  },
+  {
+   "id": "4.163",
+   "table": "X",
+   "osisRef": "John.18.13-14",
+   "assocates": ""
+  },
+  {
+   "id": "4.164",
+   "table": "IV",
+   "osisRef": "John.18.15a",
+   "assocates": "1.307 2.188"
+  },
+  {
+   "id": "4.165",
+   "table": "X",
+   "osisRef": "John.18.15b",
+   "assocates": ""
+  },
+  {
+   "id": "4.166",
+   "table": "I",
+   "osisRef": "John.18.16a",
+   "assocates": "1.314 2.195 3.291"
+  },
+  {
+   "id": "4.167",
+   "table": "X",
+   "osisRef": "John.18.16b",
+   "assocates": ""
+  },
+  {
+   "id": "4.168",
+   "table": "I",
+   "osisRef": "John.18.17",
+   "assocates": "1.314 2.195 3.291"
+  },
+  {
+   "id": "4.169",
+   "table": "X",
+   "osisRef": "John.18.18-19",
+   "assocates": ""
+  },
+  {
+   "id": "4.170",
+   "table": "I",
+   "osisRef": "John.18.20",
+   "assocates": "1.304 2.184 3.289"
+  },
+  {
+   "id": "4.171",
+   "table": "X",
+   "osisRef": "John.18.21",
+   "assocates": ""
+  },
+  {
+   "id": "4.172",
+   "table": "I",
+   "osisRef": "John.18.22",
+   "assocates": "1.313 2.194 3.294"
+  },
+  {
+   "id": "4.173",
+   "table": "X",
+   "osisRef": "John.18.23",
+   "assocates": ""
+  },
+  {
+   "id": "4.174",
+   "table": "I",
+   "osisRef": "John.18.24",
+   "assocates": "1.306 2.187 3.290"
+  },
+  {
+   "id": "4.175",
+   "table": "I",
+   "osisRef": "John.18.25-27",
+   "assocates": "1.315 2.196 3.292"
+  },
+  {
+   "id": "4.176",
+   "table": "I",
+   "osisRef": "John.18.28a",
+   "assocates": "1.318 2.199 3.300"
+  },
+  {
+   "id": "4.177",
+   "table": "X",
+   "osisRef": "John.18.28c-32",
+   "assocates": ""
+  },
+  {
+   "id": "4.178",
+   "table": "I",
+   "osisRef": "John.18.33",
+   "assocates": "1.320 2.200 3.302"
+  },
+  {
+   "id": "4.179",
+   "table": "X",
+   "osisRef": "John.18.34-36",
+   "assocates": ""
+  },
+  {
+   "id": "4.180",
+   "table": "I",
+   "osisRef": "John.18.37a",
+   "assocates": "1.320 2.200 3.302"
+  },
+  {
+   "id": "4.181",
+   "table": "X",
+   "osisRef": "John.18.37b-38a",
+   "assocates": ""
+  },
+  {
+   "id": "4.182",
+   "table": "IX",
+   "osisRef": "John.18.38b",
+   "assocates": "3.303 3.307 3.312"
+  },
+  {
+   "id": "4.183",
+   "table": "IV",
+   "osisRef": "John.18.39",
+   "assocates": "1.323 2.203"
+  },
+  {
+   "id": "4.184",
+   "table": "I",
+   "osisRef": "John.18.40",
+   "assocates": "1.325 2.204 3.310"
+  },
+  {
+   "id": "4.185",
+   "table": "IV",
+   "osisRef": "John.19.1-3",
+   "assocates": "1.329 2.207"
+  },
+  {
+   "id": "4.186",
+   "table": "IX",
+   "osisRef": "John.19.4",
+   "assocates": "3.303 3.307 3.312"
+  },
+  {
+   "id": "4.187",
+   "table": "IV",
+   "osisRef": "John.19.5",
+   "assocates": "1.329 2.207"
+  },
+  {
+   "id": "4.188",
+   "table": "I",
+   "osisRef": "John.19.6a",
+   "assocates": "1.326 2.205 3.311"
+  },
+  {
+   "id": "4.189",
+   "table": "X",
+   "osisRef": "John.19.6b",
+   "assocates": ""
+  },
+  {
+   "id": "4.190",
+   "table": "IX",
+   "osisRef": "John.19.6d",
+   "assocates": "3.303 3.307 3.312"
+  },
+  {
+   "id": "4.191",
+   "table": "X",
+   "osisRef": "John.19.7",
+   "assocates": ""
+  },
+  {
+   "id": "4.192",
+   "table": "IV",
+   "osisRef": "John.19.8-9",
+   "assocates": "1.321 2.201"
+  },
+  {
+   "id": "4.193",
+   "table": "X",
+   "osisRef": "John.19.10-14",
+   "assocates": ""
+  },
+  {
+   "id": "4.194",
+   "table": "I",
+   "osisRef": "John.19.15a",
+   "assocates": "1.326 2.205 3.313"
+  },
+  {
+   "id": "4.195",
+   "table": "X",
+   "osisRef": "John.19.15b",
+   "assocates": ""
+  },
+  {
+   "id": "4.196",
+   "table": "I",
+   "osisRef": "John.19.16",
+   "assocates": "1.328 2.206 3.314"
+  },
+  {
+   "id": "4.197",
+   "table": "I",
+   "osisRef": "John.19.17-18a",
+   "assocates": "1.331 1.332 2.209 2.210 3.315 3.318"
+  },
+  {
+   "id": "4.198",
+   "table": "I",
+   "osisRef": "John.19.18b",
+   "assocates": "1.336 2.215 3.317 3.319"
+  },
+  {
+   "id": "4.199",
+   "table": "I",
+   "osisRef": "John.19.19",
+   "assocates": "1.335 2.214 3.324"
+  },
+  {
+   "id": "4.200",
+   "table": "X",
+   "osisRef": "John.19.20-22",
+   "assocates": ""
+  },
+  {
+   "id": "4.201",
+   "table": "I",
+   "osisRef": "John.19.23-24b",
+   "assocates": "1.334 2.212 3.321"
+  },
+  {
+   "id": "4.202",
+   "table": "X",
+   "osisRef": "John.19.24c-27",
+   "assocates": ""
+  },
+  {
+   "id": "4.203",
+   "table": "IV",
+   "osisRef": "John.19.28-30a",
+   "assocates": "1.333 2.211"
+  },
+  {
+   "id": "4.204",
+   "table": "I",
+   "osisRef": "John.19.30b",
+   "assocates": "1.343 2.223 3.329"
+  },
+  {
+   "id": "4.205",
+   "table": "X",
+   "osisRef": "John.19.31-37",
+   "assocates": ""
+  },
+  {
+   "id": "4.206",
+   "table": "I",
+   "osisRef": "John.19.38",
+   "assocates": "1.348 2.227 3.332"
+  },
+  {
+   "id": "4.207",
+   "table": "X",
+   "osisRef": "John.19.39",
+   "assocates": ""
+  },
+  {
+   "id": "4.208",
+   "table": "I",
+   "osisRef": "John.19.40-42",
+   "assocates": "1.349 2.228 3.333"
+  },
+  {
+   "id": "4.209",
+   "table": "I",
+   "osisRef": "John.20.1",
+   "assocates": "1.352 2.231 3.336"
+  },
+  {
+   "id": "4.210",
+   "table": "X",
+   "osisRef": "John.20.2-10",
+   "assocates": ""
+  },
+  {
+   "id": "4.211",
+   "table": "I",
+   "osisRef": "John.20.11-12",
+   "assocates": "1.352 2.231 3.336"
+  },
+  {
+   "id": "4.212",
+   "table": "X",
+   "osisRef": "John.20.13-18",
+   "assocates": ""
+  },
+  {
+   "id": "4.213",
+   "table": "IX",
+   "osisRef": "John.20.19-20a",
+   "assocates": "3.340"
+  },
+  {
+   "id": "4.214",
+   "table": "X",
+   "osisRef": "John.20.20b-22",
+   "assocates": ""
+  },
+  {
+   "id": "4.215",
+   "table": "VII",
+   "osisRef": "John.20.23",
+   "assocates": "1.185"
+  },
+  {
+   "id": "4.216",
+   "table": "X",
+   "osisRef": "John.20.24-25",
+   "assocates": ""
+  },
+  {
+   "id": "4.217",
+   "table": "IX",
+   "osisRef": "John.20.26-27",
+   "assocates": "3.340"
+  },
+  {
+   "id": "4.218",
+   "table": "X",
+   "osisRef": "John.20.28-31",
+   "assocates": ""
+  },
+  {
+   "id": "4.219",
+   "table": "IX",
+   "osisRef": "John.21.1-6",
+   "assocates": "3.30"
+  },
+  {
+   "id": "4.220",
+   "table": "X",
+   "osisRef": "John.21.7-8",
+   "assocates": ""
+  },
+  {
+   "id": "4.221",
+   "table": "IX",
+   "osisRef": "John.21.9-10",
+   "assocates": "3.341"
+  },
+  {
+   "id": "4.222",
+   "table": "IX",
+   "osisRef": "John.21.11",
+   "assocates": "3.30"
+  },
+  {
+   "id": "4.223",
+   "table": "IX",
+   "osisRef": "John.21.12a",
+   "assocates": "3.341"
+  },
+  {
+   "id": "4.224",
+   "table": "X",
+   "osisRef": "John.21.12b",
+   "assocates": ""
+  },
+  {
+   "id": "4.225",
+   "table": "IX",
+   "osisRef": "John.21.13",
+   "assocates": "3.341"
+  },
+  {
+   "id": "4.226",
+   "table": "X",
+   "osisRef": "John.21.14-15a",
+   "assocates": ""
+  },
+  {
+   "id": "4.227",
+   "table": "IX",
+   "osisRef": "John.21.15c",
+   "assocates": "3.274"
+  },
+  {
+   "id": "4.228",
+   "table": "X",
+   "osisRef": "John.21.16a",
+   "assocates": ""
+  },
+  {
+   "id": "4.229",
+   "table": "IX",
+   "osisRef": "John.21.16c",
+   "assocates": "3.274"
+  },
+  {
+   "id": "4.230",
+   "table": "X",
+   "osisRef": "John.21.17a",
+   "assocates": ""
+  },
+  {
+   "id": "4.231",
+   "table": "IX",
+   "osisRef": "John.21.17c",
+   "assocates": "3.274"
+  },
+  {
+   "id": "4.232",
+   "table": "X",
+   "osisRef": "John.21.18-25",
+   "assocates": ""
+  }
+ ]
+}

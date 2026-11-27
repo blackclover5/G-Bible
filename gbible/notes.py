@@ -160,16 +160,20 @@ def listing(kind: str = "", *, q: str = "", tag: str = "",
     if since:
         sql += " AND (created_at>=? OR updated_at>=?)"
         a += [since, since]
+    if q:
+        # The old code applied LIMIT first and filtered afterwards, so a
+        # search for an older note returned nothing even though it existed.
+        like = "%" + q.lower().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+        sql += (" AND (lower(COALESCE(title,'')) LIKE ? ESCAPE '\\' "
+                "OR lower(COALESCE(body,'')) LIKE ? ESCAPE '\\' "
+                "OR lower(COALESCE(ref_label,'')) LIKE ? ESCAPE '\\')")
+        a += [like] * 3
+    if tag:
+        sql += " AND tags LIKE ? ESCAPE '\\'"
+        a.append('%"' + tag.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + '"%')
     sql += " ORDER BY COALESCE(updated_at, created_at) DESC LIMIT ?"
     a.append(limit)
-    out = [_row_to_note(r) for r in db.connect().execute(sql, a)]
-    if q:
-        ql = q.lower()
-        out = [n for n in out
-               if ql in (n["title"] + " " + n["body"] + " " + n["ref_label"]).lower()]
-    if tag:
-        out = [n for n in out if tag in (n["tags"] or [])]
-    return out
+    return [_row_to_note(r) for r in db.connect().execute(sql, a)]
 
 
 def _verse_place(module_id: str, unit_key: str):
@@ -221,6 +225,43 @@ def notes_at(module_id: str, unit_key: str) -> list[dict]:
     return out
 
 
+def word_marks(module_id: str, keys: list[str]) -> dict:
+    """Notes anchored to an original-language word, by unit key.
+
+    A note stores its anchor in `meta.anchor_strongs`.  Matching is by the
+    canonical verse, so a note written on G2316 in one Bible appears on that
+    word in every tagged Bible that has the verse.  The note's own module and
+    key are kept in the returned rows so a click can open the right note.
+    """
+    conn = db.connect()
+    keys = [str(k) for k in (keys or []) if str(k)][:60]
+    places = {k: _verse_place(module_id, k) for k in keys}
+    places = {k: v for k, v in places.items() if v}
+    if not places:
+        return {}
+    wanted = set(places.values())
+    out: dict[str, list[dict]] = {}
+    for r in conn.execute(
+            "SELECT * FROM note WHERE meta LIKE '%anchor_strongs%'"):
+        note = _row_to_note(r)
+        anchor = note.get("meta", {}).get("anchor_strongs") or ""
+        if not anchor:
+            continue
+        place = _verse_place(note["module_id"], note["unit_key"])
+        if place not in wanted:
+            continue
+        for key, kplace in places.items():
+            if kplace != place:
+                continue
+            out.setdefault(key, []).append({
+                "id": note["id"], "title": note["title"], "body": note["body"],
+                "strongs": anchor, "word_pos": note["meta"].get("word_pos"),
+                "module_id": note["module_id"],
+                "unit_key": note["unit_key"], "ref_label": note["ref_label"],
+            })
+    return out
+
+
 def stats() -> dict:
     conn = db.connect()
     out = {}
@@ -244,21 +285,30 @@ def prayer_day(day: str | None = None) -> dict | None:
     """
     conn = db.connect()
     row = None
+    dated = False
     if day:
         row = conn.execute(
             "SELECT * FROM note WHERE kind='prayer' AND ref_label=? LIMIT 1",
             (day,)).fetchone()
+        dated = row is not None
     if row is None:
         today = time.localtime()
         day = f"{today.tm_year:04d}-{today.tm_mon:02d}-{today.tm_mday:02d}"
         row = conn.execute(
             "SELECT * FROM note WHERE kind='prayer' AND ref_label=? LIMIT 1",
             (day,)).fetchone()
+        dated = row is not None
     if row is None:
         row = conn.execute(
             "SELECT * FROM note WHERE kind='prayer' "
             "ORDER BY updated_at DESC LIMIT 1").fetchone()
-    return _row_to_note(row) if row else None
+        dated = False
+    result = _row_to_note(row) if row else None
+    if result is not None:
+        # The Home card uses this to avoid calling an old list "today's".
+        result["dated"] = dated
+        result["for_date"] = day or ""
+    return result
 
 
 # ------------------------------------------------------------- export

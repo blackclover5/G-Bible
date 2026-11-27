@@ -6,6 +6,11 @@ const Clippings = {
     const main = $('#cl-main');
     main.innerHTML = '<div class="st-loading">Loading…</div>';
     const r = await api('clipping');
+    if (!r || r.ok === false) {
+      main.innerHTML = '<div class="empty">Could not load clips: '
+        + esc((r && r.error) || 'unknown error') + '.</div>';
+      return;
+    }
     const rows = r.clippings || [];
     if (!this._id || !rows.some(x => x.id === this._id)) {
       this._id = rows.length ? rows[0].id : '';
@@ -60,25 +65,29 @@ const Clippings = {
     main.innerHTML = h + '</div>';
     $('#cl-rename').onclick = async (e) => {
       e.preventDefault();
-      await post('clipping', { action: 'save', id: cur.id,
+      const r = await post('clipping', { action: 'save', id: cur.id,
         heading: $('#cl-head').value });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not rename.', 'err'); return; }
       toast('Renamed.');
+      this.load();
     };
     $('#cl-del').onclick = async (e) => {
       e.preventDefault();
       if (!confirm('Delete "' + cur.heading + '"?')) return;
-      await post('clipping', { action: 'delete', id: cur.id });
+      const r = await post('clipping', { action: 'delete', id: cur.id });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not delete the clip.', 'err'); return; }
       this._id = '';
       this.load();
     };
     $('#cl-citeall').onclick = async () => {
-      await Clipboard.write([cur.heading, ''].concat(items.map(i =>
+      await Clipboard.write([cur.heading, ''].concat(all.map(i =>
         i.quote + '\n— ' + [i.source, i.ref].filter(Boolean).join(', ')))
         .join('\n\n'));
     };
     main.querySelectorAll('[data-clrm]').forEach(b => b.onclick = async (e) => {
       e.preventDefault();
-      await post('clipping', { action: 'remove', id: cur.id, item: b.dataset.clrm });
+      const r = await post('clipping', { action: 'remove', id: cur.id, item: b.dataset.clrm });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not remove the excerpt.', 'err'); return; }
       this.load();
     });
     main.querySelectorAll('[data-clcopy]').forEach(b => b.onclick = async (e) => {
@@ -96,9 +105,10 @@ const Clippings = {
     main.querySelectorAll('[data-clnote]').forEach(b => b.onclick = async (e) => {
       e.preventDefault();
       const i = items[+b.dataset.clnote];
-      await post('notes/save', { kind: 'note', title: cur.heading,
+      const r = await post('notes/save', { kind: 'note', title: cur.heading,
         body: '> ' + i.quote.split('\n').join('\n> ') + '\n\n— '
           + [i.source, i.ref].filter(Boolean).join(', ') });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not save the note.', 'err'); return; }
       toast('Saved as a note.');
     });
   },
@@ -109,6 +119,9 @@ const Clippings = {
   async capture(quote, moduleId, ref, unitKey) {
     if (!quote || !quote.trim()) return;
     const r = await api('clipping');
+    if (!r || r.ok === false) {
+      toast((r && r.error) || 'Could not load clips.', 'err'); return;
+    }
     const rows = r.clippings || [];
     let cid = rows.length ? await this.pick(rows) : '';
     if (cid === null) return;
@@ -116,11 +129,17 @@ const Clippings = {
       const heading = prompt('Name the new clip', ref || quote.slice(0, 40));
       if (!heading) return;
       const made = await post('clipping', { action: 'save', heading });
-      cid = made.clipping ? made.clipping.id : '';
+      if (!made || made.ok === false || !made.clipping) {
+        toast((made && made.error) || 'Could not create the clip.', 'err'); return;
+      }
+      cid = made.clipping.id;
     }
     if (!cid) return;
-    await post('clipping', { action: 'add', id: cid, quote, module: moduleId,
-      ref, key: unitKey });
+    const added = await post('clipping', { action: 'add', id: cid, quote,
+      module: moduleId, ref, key: unitKey });
+    if (!added || added.ok === false) {
+      toast((added && added.error) || 'Could not add the excerpt.', 'err'); return;
+    }
     this._id = cid;
     toast('Added to the clip.');
   },
@@ -150,14 +169,19 @@ const Clippings = {
       });
       $('#cl-pick-add').onclick = () => {
         const heading = $('#cl-pick-new').value.trim();
-        done(heading ? { heading } : null);
+        if (!heading) { toast('Name the clip first.', 'warn'); return; }
+        done({ heading });
         closeModal();
       };
     }).then(async (choice) => {
       if (choice && typeof choice === 'object') {
         const made = await post('clipping', { action: 'save',
           heading: choice.heading });
-        return made.clipping ? made.clipping.id : '';
+        if (!made || made.ok === false || !made.clipping) {
+          toast((made && made.error) || 'Could not create the clip.', 'err');
+          return null;
+        }
+        return made.clipping.id;
       }
       return choice;
     });

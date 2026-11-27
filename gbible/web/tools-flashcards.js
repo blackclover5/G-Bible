@@ -33,7 +33,10 @@ const Flashcards = {
       $('#fl-no').disabled = false;
     };
     const score = async (known) => {
-      await post('flash', { action: 'score', known });
+      const r = await post('flash', { action: 'score', known });
+      if (!r || r.ok === false) {
+        toast((r && r.error) || 'Could not save that score.', 'err'); return;
+      }
       this.show();
     };
     $('#fl-yes').onclick = () => score(true);
@@ -42,7 +45,8 @@ const Flashcards = {
     if (op) op.onclick = () => {
       closeModal();
       App.show('workspace');
-      Workspace.openModule(c.module_id, { ref: c.front, span: 'verse' });
+      Workspace.openModule(c.module_id, c.unit_key
+        ? { key: c.unit_key } : { ref: c.front, span: 'verse' });
     };
   },
 };

@@ -25,7 +25,7 @@
   --fg-3: #71798e;      /* hint / placeholder text */
   --dim: #5a6178;       /* decorative / metadata */
 
-  /* Brand — indigo, never gold (G-Bible is not Logos) */
+  /* Brand — indigo, never gold */
   --accent: #5b7cff;    /* primary brand */
   --accent-2: #8b9ef7;  /* lighter accent */
   --link: #749bf8;      /* links */
@@ -828,6 +828,10 @@ eu-details, .eu-details { margin: 8px 0; }
   border-right: 1px solid var(--line); background: var(--bg);
 }
 .tile:last-child { border-right: none; }
+.tile.tile-drop {
+  box-shadow: inset 0 0 0 2px var(--accent);
+  background: var(--bg-2);
+}
 
 .layout-root { display: flex; flex: 1; min-width: 0; min-height: 0; }
 .layout-group { display: flex; flex: 1; min-width: 0; min-height: 0; }
@@ -892,6 +896,7 @@ eu-details, .eu-details { margin: 8px 0; }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .pane-tools .mod-switch { min-width: 140px; max-width: 200px; }
+.pane-tools .move-pane { max-width: 160px; color: var(--fg-2); }
 
 .pane-body {
   flex: 1; min-height: 0; overflow: auto; padding: 16px 20px 64px;
@@ -939,6 +944,14 @@ eu-details, .eu-details { margin: 8px 0; }
   display: block; font-weight: 700; color: var(--accent-2);
   font-size: 1.05em; margin: 14px 0 4px; font-family: var(--sans);
 }
+/* Nave/Torrey outline entries: a real list instead of arrow glyphs and
+   ragged whitespace.  The refs remain plain text so they stay clickable. */
+.docheading[data-t="outline"] {
+  margin: 10px 0 2px; padding-left: 8px; font-size: 1em;
+  border-left: 3px solid var(--accent-2);
+}
+.entryref { color: var(--accent-2); border-bottom: 1px dotted var(--accent-2);
+  text-decoration: none; cursor: pointer; }
 h3.unitheading { margin: 16px 0 6px; font-size: 1.02em; color: var(--accent-2);
   border-bottom: 1px solid var(--line); padding-bottom: 3px; }
 .supplied { color: var(--link); }
@@ -1055,16 +1068,62 @@ mark.hl-orange{ background: #f6cda2; color: #1c1b18; }
 .item .actions { margin-left: auto; display: flex; gap: 6px; flex: 0 0 auto; }
 
 /* ------------------------------------------------------------------ dashboard */
-#v-today .store-head { flex: 0 0 auto; }
 .dash { flex: 1; display: flex; gap: 14px; align-items: flex-start;
   overflow-y: auto; min-height: 0; padding: 14px 16px 40px; }
 .dash-col { flex: 1; min-width: 0; }
 .dash-card {
+  position: relative;
   background: var(--bg-2); border: 1px solid var(--line);
   border-radius: var(--r); padding: 14px 16px; margin-bottom: 14px;
   transition: border-color var(--transition), box-shadow var(--transition);
 }
 .dash-card:hover { border-color: var(--line-2); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+.dash-card[hidden] { display: none; }
+.dash-card.dash-loading { min-height: 96px; }
+.dash-busy {
+  position: absolute; inset: 0; z-index: 1;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 8px; pointer-events: none;
+}
+.dash-spinner {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid var(--line-2); border-top-color: var(--accent);
+  animation: dash-spin .7s linear infinite;
+}
+@keyframes dash-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .dash-spinner { animation-duration: 2s; }
+}
+.dash-x {
+  position: absolute; top: 6px; right: 6px; z-index: 2;
+  width: 22px; height: 22px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; line-height: 1;
+  color: var(--fg-3); background: var(--bg-3);
+  border: 1px solid var(--line); border-radius: 4px; cursor: pointer;
+}
+.dash-x:hover { color: var(--error); border-color: var(--error); background: var(--bg-4); }
+#v-today .view-head { position: relative; }
+#d-hidden { position: relative; margin-left: 8px; font-size: 15px; line-height: 1;
+            padding: 4px 8px; }
+/* .btn sets display:inline-flex, which beats the UA [hidden] rule. */
+#d-hidden[hidden] { display: none; }
+#v-today .dash-h { padding-right: 26px; }
+.dash-gear-count {
+  position: absolute; top: -6px; right: -6px;
+  min-width: 15px; height: 15px; padding: 0 3px;
+  border-radius: 8px; background: var(--accent); color: #0b0d12;
+  font-size: 10px; font-weight: 700; line-height: 15px; text-align: center;
+}
+.dash-gear-count[hidden] { display: none; }
+.dash-hidden-menu {
+  position: absolute; right: 20px; top: 100%; z-index: 30;
+  display: flex; flex-direction: column; gap: 6px; align-items: stretch;
+  min-width: 220px; padding: 10px;
+  background: var(--bg-2); border: 1px solid var(--line-2);
+  border-radius: var(--r); box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+}
+.dash-hidden-menu[hidden] { display: none; }
 .dash-h { font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
   color: var(--fg-3); margin-bottom: 10px; font-weight: 700; }
 .dash-item { margin-bottom: 12px; }
@@ -1072,6 +1131,9 @@ mark.hl-orange{ background: #f6cda2; color: #1c1b18; }
 .dash-row { padding: 3px 0; font-size: 12.5px; }
 .dash-row a { text-decoration: none; color: var(--fg-1); }
 .dash-row a:hover { color: var(--accent); }
+.dash-card.sponsor a, .dash-card.community a { display: block; }
+.dash-card.sponsor img, .dash-card.community img { display: block; width: 100%;
+                         height: auto; border-radius: var(--r-sm); }
 
 /* ------------------------------------------------------------------ search */
 .search-bar {
@@ -1178,10 +1240,6 @@ mark { background: var(--mark); color: #241c00; border-radius: 2px; padding: 0 1
 .sync-row { display: flex; gap: 10px; font-size: 13px; }
 .sync-row .k { flex: 0 0 110px; color: var(--fg-3); }
 .sync-row .v { flex: 1; min-width: 0; word-break: break-word; }
-.sync-chip {
-  font-size: 11.5px; padding: 1px 7px; border-radius: 999px;
-  background: var(--bg-3); color: var(--fg-2); border: 1px solid var(--line);
-}
 .sync-form { display: flex; flex-direction: column; gap: 10px; max-width: 620px; }
 .sync-field { display: flex; flex-direction: column; gap: 3px; }
 .sync-field > label.st-lbl { font-size: 12px; color: var(--fg-2); }
@@ -1463,30 +1521,6 @@ mark.hl-orange{ background: #f6cda2; color: #1c1b18; }
             max-height: 50vh; overflow: auto; }
 .srs-foot { display: flex; gap: 6px; flex-wrap: wrap; }
 
-/* ------------------------------------------------------------------ sermon calendar */
-.sc-wrap { display: flex; flex-direction: column; gap: 8px; }
-.sc-nav { display: flex; align-items: center; justify-content: space-between; }
-.sc-title { font-weight: 600; color: var(--fg); }
-.sc-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-.sc-dow { text-align: center; font-size: 11px; color: var(--fg-3); padding: 4px 0; }
-.sc-cell { min-height: 60px; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 4px; }
-.sc-cell.empty { border: none; background: transparent; }
-.sc-cell.has { background: var(--bg-2); }
-.sc-day { font-size: 11px; color: var(--fg-3); }
-.sc-sermon { font-size: 11px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-1); }
-
-/* ------------------------------------------------------------------ passage analysis */
-.pa-wrap { display: flex; flex-direction: column; gap: 12px; max-height: 70vh; overflow: auto; }
-.pa-ref { font-weight: 600; font-size: 15px; color: var(--fg); }
-.pa-section { border-top: 1px solid var(--line); padding-top: 8px; }
-.pa-h { font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em;
-        margin-bottom: 6px; color: var(--fg-3); }
-.pa-trans { margin-bottom: 8px; }
-.pa-text { margin-top: 2px; line-height: 1.6; }
-.pa-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
-.pa-tbl th, .pa-tbl td { padding: 3px 6px; border-bottom: 1px solid var(--line); text-align: left; }
-.pa-tbl th { font-weight: 600; color: var(--fg-3); }
-
 /* ------------------------------------------------------------------ genealogy */
 .gn-block { margin-top: 12px; }
 .gn-h { font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
@@ -1501,6 +1535,13 @@ mark.hl-orange{ background: #f6cda2; color: #1c1b18; }
 .gn-gen a:hover { color: var(--accent); text-decoration: underline; }
 .gn-genn { display: inline-block; min-width: 2.2em; color: var(--fg-3);
            font-size: 10.5px; text-align: right; padding-right: 8px; }
+.gn-row, .gn-gen { line-height: 1.6; overflow-wrap: anywhere; }
+.gn-extra[hidden] { display: none; }
+a[data-gmore] { color: var(--accent); cursor: pointer; text-decoration: none; }
+a[data-gmore]:hover { text-decoration: underline; }
+.cs-book { cursor: pointer; }
+.cs-book:hover .st-src, .cs-book:hover .st-t { color: var(--accent); }
+.cs-book:focus-visible { outline: 1px solid var(--accent); }
 
 /* ------------------------------------------------------------------ guides toolbar */
 #g-tab, #g-trad, #g-ref, #g-name {
@@ -2172,6 +2213,10 @@ html[data-theme="light"] .sd-word .t { color: #f6f7fb; }
 .cv-node.dragging { opacity: .92; z-index: 5; }
 .cv-node.selected { outline: 2.5px solid var(--accent); outline-offset: 1px; }
 .cv-node.linking { outline: 2px dashed var(--accent-2); outline-offset: 1px; }
+/* Headings came from the old dashboard canvases; keep their visual weight. */
+.cv-node.cv-heading { font-size: 17px; font-weight: 700; letter-spacing: .01em;
+  min-height: 64px; }
+.cv-node.cv-heading textarea.cv-text { font-weight: 700; font-size: 17px; }
 .cv-yellow { background: linear-gradient(#ffe98a, #f7dc62); }
 .cv-blue   { background: linear-gradient(#bfe3ff, #8fc7f5); }
 .cv-green  { background: linear-gradient(#cdf0b7, #93d978); }
@@ -2234,6 +2279,13 @@ html[data-theme="light"] .sd-word .t { color: #f6f7fb; }
   text-align: center; cursor: pointer; }
 .pcal-day:hover { background: var(--bg-3); color: var(--fg); }
 .pcal-day.current { background: var(--accent); color: #0b0d12; font-weight: 600; }
+.pcal-day.today:not(.current) { outline: 1px solid var(--accent-2); }
+/* Shared picker: same grid, positioned against whichever control opened it. */
+.dp-popover { position: fixed; top: 0; left: 0; min-width: 262px; }
+.dp-popover .ref-picker-col { width: auto; }   /* 7x34px grid needs more than 170px */
+.dp-controls { display: inline-flex; gap: 4px; align-items: center; }
+.dp-month, .dp-year { font: inherit; font-size: 12px; padding: 2px; max-width: 122px; }
+.dp-foot { display: flex; gap: 5px; justify-content: flex-end; margin-top: 6px; }
 
 /* Highlighter colours. The default yellow had no rule of its own: the bare
    `.hl` fell back to a dark olive panel accent that disappears on the dark
@@ -2415,5 +2467,62 @@ mark.hl-yellow:hover { filter: brightness(0.95); }
   min-width: 0;
 }
 
+/* ------------------------------------------------------------------ web research */
+.ai-src.wr-src { border-style: dashed; }
+.ai-web-used {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line-2);
+}
+.ai-web-used-h { font-size: 11px; font-weight: 600; color: var(--muted, #888); }
+.ai-web-site {
+  font-size: 11px; padding: 3px 8px; text-decoration: none;
+  border: 1px solid var(--line-2); border-radius: 999px;
+  background: var(--bg-2); color: var(--accent, inherit);
+}
+.ai-web-site:hover { border-color: var(--accent, #4f8b6a); }
+
 /* Accessibility: visible focus for keyboard users */
 :focus-visible { outline: 2px solid var(--accent, #4f8b6a); outline-offset: 2px; }
+
+.ai-web-status { margin: 5px 0; color: var(--muted, #888); font-size: 11px; }
+
+/* The AI Assistant is opt-in.  Until it is enabled, none of its entry points
+   exist in the interface — not merely disabled, but absent. */
+body.ai-off .ai-only { display: none !important; }
+.ai-setup-card { max-width: 720px; }
+.ai-setup-card h3 { margin: 0 0 8px; }
+.ai-setup-card p { line-height: 1.55; }
+.ai-setup-choices { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.ai-setup-progress { margin-top: 12px; }
+.ai-setup-card .btn { min-width: 190px; }
+
+/* A citation's temporary landing mark: long enough to see where the chip
+   went, short enough not to be mistaken for a saved highlight. */
+@keyframes gbible-cite-flash {
+  0%   { background-color: rgba(255, 196, 0, .45); }
+  100% { background-color: transparent; }
+}
+.cite-flash { animation: gbible-cite-flash 2.2s ease-out; }
+
+/* A note pinned to an original-language word, not just its verse. */
+.wnotemark {
+  border: 0; background: transparent; color: var(--accent, #e0b040);
+  font-size: 10px; padding: 0 2px; cursor: pointer; vertical-align: super;
+}
+
+/* Small in-verse markers added by the reader for tags, notes and nearby places. */
+.vtag { border-bottom: 1px dotted var(--accent-2, #7aa); }
+.notemark, .atlas-near {
+  border: 0; background: transparent; color: var(--accent, #e0b040);
+  font-size: 10px; padding: 0 2px; cursor: pointer; vertical-align: super;
+}
+
+/* Find-in-pane: a compact search box in the pane toolbar and its highlights. */
+.pane-find { display: inline-flex; align-items: center; gap: 2px; }
+.pane-find-q { width: 120px; font-size: 11px; padding: 2px 5px; }
+.pane-find-count { font-size: 10px; color: var(--muted, #888); min-width: 28px; text-align: center; }
+.find-hit { background: #ffe08a; color: #1a1a1a; border-radius: 2px; padding: 0 1px; }
+.find-hit.current { background: #ff9f1c; box-shadow: 0 0 0 2px #ff9f1c; }
+
+/* Search-result action sits at the end of the hit header. */
+.hit-send { margin-left: auto; }

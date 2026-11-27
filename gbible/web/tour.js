@@ -21,7 +21,7 @@ const Tour = {
     { target: '#nav .menu-btn[data-menu="library"]', title: "Library — your books and the Store",
       body: "My library is everything you've installed. Resource store is where it came from: the Store catalogue is curated and only offers works that are freely redistributable — public-domain editions and clearly licensed open data." },
     { target: '#nav .menu-btn[data-menu="settings"]', title: "Settings — configure carefully",
-      body: "Appearance, synchronisation, read-aloud, AI providers, and Passage guide configuration. Two honest notes: sync is still settling (only sync folders you trust), and the AI Assistant does nothing until you supply your own provider key — it's a research aid, not a pope." },
+      body: "Appearance, synchronisation, read-aloud, the AI Assistant, and Passage guide configuration. Two honest notes: sync is still settling (only sync folders you trust), and the AI Assistant is opt-in — enable it in Settings → AI Assistant if you want it. It's a research aid, not a pope." },
     { target: null, title: "You're ready",
       body: "That's the whole tour. Nothing here will annoy you again — it is a one-time hello. When you want a slower reminder later, the docs folder has the getting-started guide this tour is based on.",
       final: true },

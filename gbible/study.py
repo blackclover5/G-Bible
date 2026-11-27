@@ -20,7 +20,6 @@ import re
 import time
 
 from . import canon, db, library, store, taxonomy, topicindex
-from .library import slugify
 
 # --------------------------------------------------------------------------
 # small helpers
@@ -36,14 +35,6 @@ _REF_IN_TEXT = re.compile(
     r"\b(1|2|3)?\s?([A-Za-z][A-Za-z]{1,14})\s+(\d{1,3}):(\d{1,3})\b")
 
 
-def _place_mods() -> dict:
-    """module ids by the kind of thing they are, computed once per call."""
-    out: dict[str, list[str]] = {}
-    for m in library.list_all():
-        out.setdefault(m.type, []).append(m.id)
-    return out
-
-
 def _ids_of_type(types: tuple[str, ...]) -> list[str]:
     return [m.id for m in library.list_all() if m.type in types]
 
@@ -51,6 +42,35 @@ def _ids_of_type(types: tuple[str, ...]) -> list[str]:
 def _chunk(text: str, limit: int) -> str:
     text = (text or "").strip()
     return text if len(text) <= limit else text[:limit].rstrip() + "…"
+
+
+def _summary_text(text: str, limit: int = 320) -> str:
+    """A scannable summary of an entry.
+
+    Outline indexes (Nave, Torrey) open with long whitespace and a chain of
+    ``→ Heading  refs`` lines, so the first 320 characters are usually a single
+    half-finished reference.  Show the headings instead: that is the answer a
+    reader wants from a topic index, with "Open in a pane" for the full list.
+    Ordinary prose keeps the old truncation.
+    """
+    raw = text or ""
+    heads = [ln.strip()[1:].strip() for ln in raw.splitlines()
+             if ln.strip().startswith("→")]
+    if not heads and ("•  See" in raw or "• See" in raw):
+        # Some SWORD outlines number their points instead of using arrows.
+        heads = [re.sub(r"^\d+\.\s*", "", ln.strip())
+                 for ln in raw.splitlines() if re.match(r"^\s*\d+\.\s", ln)]
+    if not heads:
+        return _chunk(raw, limit)
+    out = []
+    for h in heads[:4]:
+        m = re.search(r"\b(?:\d\s?)?[A-Z][a-z]{1,9}\.?\s+\d{1,3}", h)
+        label = (h[:m.start()].strip() if m and m.start() > 0 else h)
+        out.append(_chunk(label, 64))
+    summary = " · ".join(x for x in out if x)
+    if len(heads) > 4:
+        summary += " …"
+    return summary
 
 
 # --------------------------------------------------------------------------
@@ -308,6 +328,48 @@ def crossref_panel(ref: str, *, module_ids: list[str] | None = None) -> dict:
 # --------------------------------------------------------------------------
 # topic entries from the FactBook-shaped modules
 
+def my_topics_at(conn, book: str, chapter: int, verse: int,
+                 limit: int = 24) -> list[dict]:
+    """The reader's own tags on this verse, in the same shape as topic articles.
+
+    Reader tags live in `tag_item` with canonical book/chapter/verse columns,
+    so they follow the passage across translations just as published articles
+    do.  They are kept separate from FactBook material: a tag is the reader's
+    own view, not a reference work.
+    """
+    if not book:
+        return []
+    rows = conn.execute(
+        "SELECT t.id, t.name, t.color FROM tag_item i "
+        "JOIN tag t ON t.id=i.tag_id "
+        "WHERE i.book=? AND i.chapter=? AND i.verse=? "
+        "ORDER BY t.name COLLATE NOCASE LIMIT ?",
+        (book, chapter, verse, limit)).fetchall()
+    return [{"module_id": "my-tags", "module": "My topics", "key": r["id"],
+             "title": r["name"], "text": r["name"],
+             "kind": "mytopic", "color": r["color"] or "", "length": len(r["name"])}
+            for r in rows]
+
+
+def my_topics_for_term(conn, term: str, limit: int = 24) -> list[dict]:
+    """Verses the reader tagged with a topic matching `term`."""
+    q = (term or "").strip()
+    if len(q) < 2:
+        return []
+    rows = conn.execute(
+        "SELECT t.name, i.book, i.chapter, i.verse FROM tag_item i "
+        "JOIN tag t ON t.id=i.tag_id "
+        "WHERE lower(t.name) LIKE ? AND i.book IS NOT NULL "
+        "ORDER BY i.book, i.chapter, i.verse LIMIT ?",
+        (f"%{q.lower()}%", limit)).fetchall()
+    return [{"module_id": "my-tags", "module": "My topics",
+             "key": f"{r['book']}.{r['chapter']}.{r['verse']}",
+             "title": f"{r['name']} — {r['book']} {r['chapter']}:{r['verse']}",
+             "text": f"{r['book']} {r['chapter']}:{r['verse']}",
+             "kind": "mytopic", "length": 0}
+            for r in rows]
+
+
 def topics_at(conn, book: str, chapter: int, verse: int,
               limit: int = 24) -> list[dict]:
     """Topic articles that mention this verse.
@@ -345,7 +407,7 @@ def topics_at(conn, book: str, chapter: int, verse: int,
                         "from_index": True})
             if len(out) >= limit:
                 break
-        return out
+        return my_topics_at(conn, book, chapter, verse, limit) + out
     ph = ",".join("?" * len(ids))
     # Search every spelling the corpus actually uses for this book, not just the
     # OSIS name -- Nave writes "Joh 3:16" where the unit key says "John.3.16".
@@ -380,7 +442,7 @@ def topics_at(conn, book: str, chapter: int, verse: int,
                     "from_index": False})
         if len(out) >= limit:
             break
-    return out
+    return my_topics_at(conn, book, chapter, verse, limit) + out
 
 
 # --------------------------------------------------------------------------
@@ -399,27 +461,47 @@ def _places() -> list[dict]:
     return _PLACE_CACHE
 
 
+_PLACE_REF_CACHE: dict = {}
+
+
+def _place_refs():
+    """Parse gazetteer passages once, not on every verse lookup."""
+    from . import refmatch
+    places = _places()
+    key = id(places)
+    got = _PLACE_REF_CACHE.get(key)
+    if got is None:
+        got = [refmatch.parse_cited("; ".join(p.get("passages") or []))
+               for p in places]
+        _PLACE_REF_CACHE.clear()
+        _PLACE_REF_CACHE[key] = got
+    return places, got
+
+
 def places_at(book: str, chapter: int, verse: int) -> list[dict]:
     """Geocoded places whose passage list includes this verse.
 
-    The catalogue writes book names inconsistently -- "1 Chr 6:74" with a space,
-    "Josh 21:30" without -- so the match is on the numeric part of the reference
-    rather than the whole string.
+    References are parsed with canon, so the catalogue's inconsistent book
+    abbreviations do not matter.  A chapter-level request (verse 0) matches
+    every verse in that chapter.
     """
-    want = {f"{book} {chapter}:{verse}", f"{book}.{chapter}.{verse}",
-            f"{book} {chapter}:{verse}".replace(" ", "")}
-    nums = {f"{chapter}:{verse}"}
+    from . import refmatch
+    if verse:
+        target = refmatch.milestones(f"{book} {chapter}:{verse}")
+    else:
+        target = refmatch.milestones(f"{book} {chapter}")
+    if not target:
+        return []
     out = []
-    for p in _places():
-        for ref in (p.get("passages") or []):
-            ref = ref.strip()
-            tail = ref.rsplit(" ", 1)[-1]
-            if ref in want or tail in nums:
-                out.append({"name": p.get("name", ""), "lat": p.get("lat"),
-                            "lon": p.get("lon"), "type": p.get("type", ""),
-                            "comment": _chunk(p.get("comment", ""), 300),
-                            "slug": p.get("slug", "")})
-                break
+    places, parsed_refs = _place_refs()
+    for p, cited in zip(places, parsed_refs):
+        if not refmatch.intersects(cited, [target]):
+            continue
+        if True:
+            out.append({"name": p.get("name", ""), "lat": p.get("lat"),
+                        "lon": p.get("lon"), "type": p.get("type", ""),
+                        "comment": _chunk(p.get("comment", ""), 300),
+                        "slug": p.get("slug", "")})
     return out[:20]
 
 
@@ -622,28 +704,44 @@ def morph_search(conn, code: str, *, scheme: str = "", limit: int = 400,
     if not code:
         return {"ok": False, "error": "no morphology code"}
     ref = (ref or "").strip()
-    esc = code.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-    where = "m.kind='morph' AND m.value LIKE ? ESCAPE '\\'"
-    args = [esc + "%"]
+    from . import morphq
+    # Resolve the request once through the same decoder the search engine uses.
+    # A prefix search on the raw code found spellings, not grammatical forms:
+    # `HNcms` missed the same noun written under another scheme, and a fragment
+    # inside an unrelated tag matched a word with none of the requested features.
+    codes = morphq.resolve_query(code)["codes"]
+    if not codes:
+        return {"ok": True, "query": code, "total": 0, "scanned": 0,
+                "schemes": [], "hits": [],
+                "note": "No tagged word carries those morphological features."}
+    extra_where, extra_args = "", []
     if module_id:
-        where += " AND m.module_id=?"
-        args.append(module_id)
+        extra_where += " AND m.module_id=?"
+        extra_args.append(module_id)
     if ref:
-        from . import morphq
         scoped = [module_id] if module_id else morphq.morph_module_ids(conn)
         try:
             morphq.passage_table(conn, ref, scoped)
         except ValueError as e:
             return {"ok": False, "error": str(e)}
-        where += morphq._passage_clause("m")
-    # exact count first, so "total" is the real number and not the size of the
-    # sample the panel happens to have fetched
-    total = conn.execute(
-        "SELECT count(*) FROM marker m WHERE " + where, args).fetchone()[0]
-    rows = conn.execute(
-        "SELECT m.value, m.module_id, m.unit_key, m.surface FROM marker m "
-        "WHERE " + where + " "
-        "ORDER BY m.module_id, m.unit_key LIMIT ?", (*args, limit)).fetchall()
+        extra_where += morphq._passage_clause("m")
+    # Exact count over every matching tag, not over the page the panel shows.
+    # Chunked IN below the common SQLite variable floor: a broad feature match
+    # can resolve to hundreds of tag values.
+    found: list = []
+    total = 0
+    for i in range(0, len(codes), 400):
+        chunk = codes[i:i + 400]
+        ph = ",".join("?" * len(chunk))
+        where = "m.kind='morph' AND m.value IN (" + ph + ")" + extra_where
+        args = [*chunk, *extra_args]
+        total += conn.execute(
+            "SELECT count(*) FROM marker m WHERE " + where, args).fetchone()[0]
+        found.extend(conn.execute(
+            "SELECT m.value, m.module_id, m.unit_key, m.surface FROM marker m "
+            "WHERE " + where, args).fetchall())
+    found.sort(key=lambda r: (r["module_id"], r["unit_key"], r["value"]))
+    rows = found[:limit]
     groups: dict[str, dict] = {}
     hits: list[dict] = []
     for r in rows:
@@ -655,18 +753,18 @@ def morph_search(conn, code: str, *, scheme: str = "", limit: int = 400,
                                             "codes": set()})
         g["count"] += 1
         g["codes"].add(v)
-        ref = None
+        hit_ref = None
         u = conn.execute("SELECT book, chapter, verse, ref_label FROM unit "
                          "WHERE module_id=? AND key=?",
                          (r["module_id"], r["unit_key"])).fetchone()
         if u and u["book"]:
-            ref = {"book": u["book"], "chapter": u["chapter"],
-                   "verse": u["verse"], "label": u["ref_label"] or ""}
+            hit_ref = {"book": u["book"], "chapter": u["chapter"],
+                       "verse": u["verse"], "label": u["ref_label"] or ""}
         hits.append({"code": v, "module_id": r["module_id"],
                      "key": r["unit_key"],
                      "surface": _surface_for(conn, r["module_id"],
                                              r["unit_key"], v, r["surface"] or ""),
-                     "ref": ref})
+                     "ref": hit_ref})
     return {
         "ok": True, "query": code,
         "total": total,
@@ -866,23 +964,63 @@ def _original_form(conn, num: str) -> str:
     return ""
 
 
-def word_tip(num: str) -> dict:
-    """The hover tooltip for a Strong's number: headword and one-line gloss.
+def definition(word: str = "", num: str = "") -> dict:
+    """A small, fast definition lookup by printed word and/or Strong's number.
 
-    Deliberately cheap: `_gloss_for` is cached, and the original-language
-    form is one indexed query.  The hover should never wait on a concordance
-    scan or a full lexicon dump.
+    The reader's old word paths only asked for a Strong's number, which no
+    headword-keyed dictionary (Smith's, Easton, Webster, TIPNR) can answer.
+    This is the one place both key types meet: lexicons and concordances by
+    number, dictionaries and fact books by the word as printed.
     """
     conn = db.connect()
+    word = (word or "").strip()
     num = canon.normalise_strongs(num or "") or (num or "").strip()
-    if not num:
-        return {"ok": False, "error": "no Strong's number"}
-    form = _original_form(conn, num)
-    gloss = _gloss_for(conn, num)
-    if len(gloss) > 110:
-        cut = gloss.rfind(" ", 0, 109)
-        gloss = gloss[:cut if cut > 40 else 110].rstrip(" ,;") + " …"
-    return {"ok": True, "number": num, "form": form, "gloss": gloss}
+    out = {"ok": True, "word": word, "num": num,
+           "strongs": None, "entries": [], "more": 0}
+    if num:
+        form = _original_form(conn, num)
+        gloss = _gloss_for(conn, num).strip()
+        out["strongs"] = {"number": num, "form": form, "gloss": gloss[:300]}
+    if not word:
+        return out
+    mods = [m for m in library.list_all()
+            if m.type in ("Dictionary", "Lexicon", "FactBook", "Concordance")]
+    if not mods:
+        return out
+    ids = [m.id for m in mods]
+    by_id = {m.id: m for m in mods}
+    ph = ",".join("?" * len(ids))
+    key = word.lower()
+    rows = conn.execute(
+        f"SELECT module_id,key,title,text FROM unit WHERE module_id IN ({ph}) "
+        "AND (lower(key)=? OR lower(title)=?) LIMIT 300",
+        [*ids, key, key]).fetchall()
+    if not rows:
+        rows = conn.execute(
+            f"SELECT module_id,key,title,text FROM unit WHERE module_id IN ({ph}) "
+            "AND (lower(key) LIKE ? OR lower(title) LIKE ?) LIMIT 300",
+            [*ids, key + "%", key + "%"]).fetchall()
+    seen = set()
+    for r in rows:
+        mid = r["module_id"]
+        title = (r["title"] or r["key"] or "").strip()
+        marker = (mid, title.lower())
+        if marker in seen:
+            continue
+        seen.add(marker)
+        text = re.sub(r"<[^>]+>", " ", r["text"] or "")
+        # Keep line breaks: outline indexes are summarised by their headings,
+        # and collapsing whitespace here would hide that structure.
+        text = re.sub(r"[ \t]+", " ", text).strip()
+        m = by_id.get(mid)
+        out["entries"].append({
+            "module_id": mid, "module": (m.name if m else mid) or mid,
+            "type": (m.type if m else "") or "",
+            "title": title, "key": r["key"] or "",
+            "text": _summary_text(text, 300),
+        })
+    out["more"] = max(0, len(rows) - len(out["entries"]))
+    return out
 
 
 def reverse_interlinear(conn, module_id: str, book: str, chapter: int,
@@ -996,7 +1134,8 @@ _VERSE_BIBLE_PREFERENCE = (
 )
 
 
-def _related_verses(q: str, *, limit: int = 12) -> list[dict]:
+def _related_verses(q: str, *, limit: int = 12,
+                    modules: dict | None = None) -> list[dict]:
     """Verses in which the word stands, from a translation or two.
 
     A plain scan of one Bible's ~31,000 verses takes about ten milliseconds and
@@ -1009,7 +1148,8 @@ def _related_verses(q: str, *, limit: int = 12) -> list[dict]:
     term = (q or "").strip()
     if len(term) < 3:
         return []
-    have = {m.id: m for m in library.list_all() if m.type == "Bible"}
+    have = {m.id: m for m in (modules.values() if modules is not None
+                              else library.list_all()) if m.type == "Bible"}
     ordered = [have[i] for i in _VERSE_BIBLE_PREFERENCE if i in have]
     ordered += [m for m in have.values() if m not in ordered]
     conn = db.connect()
@@ -1042,9 +1182,12 @@ def _related_verses(q: str, *, limit: int = 12) -> list[dict]:
     return out[:limit]
 
 
-def _atlas_for(conn, ql: str, limit: int) -> list[dict]:
+def _atlas_for(conn, ql: str, limit: int,
+               modules: dict | None = None) -> list[dict]:
     """Atlas and map entries whose name mentions the term."""
-    atlas = [m for m in library.list_all() if m.type in ("Atlas", "Map")]
+    atlas = [m for m in (modules.values() if modules is not None
+                         else library.list_all())
+             if m.type in ("Atlas", "Map")]
     if not atlas:
         return []
     ph = ",".join("?" * len(atlas))
@@ -1113,17 +1256,17 @@ def _extra_sections(conn, mods, q: str, per_section: int, *,
     passages that name them.
     """
     out: list[dict] = []
-    all_mods = {m.id: m for m in library.list_all()}
+    all_mods = dict(mods)
 
     # -- Related Verses: where the term is actually addressed.
     # This section lets you save the result as a passage list.
-    verses = _related_verses(q, limit=14)
+    verses = _related_verses(q, limit=14, modules=all_mods)
     if verses:
         out.append({"kind": "verses", "label": "Related Verses",
                     "note": "Verses containing the word", "items": verses})
 
     # -- Atlas: the map and atlas resources.  Eighty-six of them are installed.
-    atlas = _atlas_for(conn, q, per_section)
+    atlas = _atlas_for(conn, q, per_section, modules=all_mods)
     if atlas:
         out.append({"kind": "atlas", "label": "Atlas",
                     "note": "From your atlas and map resources",
@@ -1204,10 +1347,19 @@ def _item(r, mods: dict, limit: int) -> dict:
     """One unit as a section item, with its text trimmed to `limit`."""
     return {"module_id": r["module_id"], "module": mods[r["module_id"]].name,
             "key": r["key"], "title": r["title"] or r["key"],
-            "text": _chunk(r["text"], limit), "length": len(r["text"] or "")}
+            "text": _summary_text(r["text"], limit), "length": len(r["text"] or "")}
 
 
-def topic_guide(query: str, *, per_section: int = 6) -> dict:
+def _priority_rank(m) -> int:
+    """Negative priority, so a plain sort puts the reader's preferred books first."""
+    try:
+        return -int(getattr(m, "priority", 0) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def topic_guide(query: str, *, per_section: int = 6,
+                modules: dict | None = None) -> dict:
     """Every installed resource on one topic, gathered under one heading.
 
     This is the shape a good fact book has: a topical article, a short
@@ -1228,7 +1380,8 @@ def topic_guide(query: str, *, per_section: int = 6) -> dict:
     conn = db.connect()
     out: dict = {"ok": True, "query": q, "sections": []}
 
-    mods = {m.id: m for m in library.list_all()}
+    mods = dict(modules) if modules is not None else {
+        m.id: m for m in library.list_all()}
 
     # -- the full article, and a way on to the Fact guide.
     # A short definition here links onward to the Fact guide article; the Fact
@@ -1236,15 +1389,23 @@ def topic_guide(query: str, *, per_section: int = 6) -> dict:
     # twice.
     fb = [i for i in mods.values()
           if i.type == "FactBook" and _is_a_fact_book(i.name)]
+    fb.sort(key=lambda m: (_priority_rank(m), m.name or ""))
     if fb:
         rows = _fact_rows(conn, fb, q)
-        rows = sorted(rows, key=lambda r: -len(r["text"] or ""))[:per_section]
+        prio = {m.id: _priority_rank(m) for m in fb}
+        rows = sorted(rows, key=lambda r: (
+            prio.get(r["module_id"], 0), -len(r["text"] or "")))[:per_section]
         out["sections"].append({
             "kind": "topic", "label": "Topic", "note": "The full article",
             "fact_query": q,
             "items": [_item(r, mods, 2200) for r in rows]})
 
     # -- the material that is not a fact-book entry
+    mine = my_topics_for_term(conn, q, per_section)
+    if mine:
+        out["sections"].append({
+            "kind": "mytopics", "label": "My topics",
+            "note": "Verses you tagged with this topic", "items": mine})
     out["sections"].extend(_extra_sections(conn, mods, q, per_section))
 
     out["total_sections"] = len(out["sections"])
@@ -1264,9 +1425,14 @@ def compare(ref: str, module_ids: list[str]) -> dict:
         return {"ok": False, "error": "no verse in that range"}
     conn = db.connect()
     out = []
+    skipped = []
     for mid in module_ids:
-        m = library.get(mid)
-        if m is None or m.type not in library.VERSE_TEXT_TYPES:
+        m = library.get_installed(mid)
+        if m is None:
+            skipped.append({"module_id": mid, "reason": "not installed"})
+            continue
+        if m.type not in library.VERSE_TEXT_TYPES:
+            skipped.append({"module_id": mid, "reason": "not a verse text"})
             continue
         # Look the verse up by its columns, not by key: the key format is not
         # consistent between modules -- WEB stores "John.3.16" and the Berean
@@ -1276,14 +1442,20 @@ def compare(ref: str, module_ids: list[str]) -> dict:
             "AND chapter=? AND verse=? LIMIT 1",
             (mid, osis.book, osis.chapter, osis.verse)).fetchone()
         if r is None or not (r["text"] or "").strip():
+            skipped.append({"module_id": mid, "reason": "does not contain that verse"})
             continue
         out.append({"module_id": mid, "module": m.name, "abbrev": m.abbrev or "",
                     "version": m.version or "", "lang": m.lang,
                     "text": r["text"].strip(),
                     "label": r["ref_label"] or f"{osis.book} {osis.chapter}:{osis.verse}"})
     if not out:
-        return {"ok": False, "error": "none of those resources have that verse"}
-    return {"ok": True, "ref": f"{osis.book} {osis.chapter}:{osis.verse}",
+        return {"ok": False, "error": "none of those resources have that verse",
+                "skipped": skipped}
+    requested = list(rr.refs())
+    return {"ok": True, "ref": canon.format_ref(osis),
+            "requested": ref, "skipped": skipped,
+            "note": ("Only the first verse of the requested range was compared."
+                     if len(requested) > 1 else ""),
             "columns": out}
 
 
@@ -1331,10 +1503,21 @@ def verse_bundle(module_id: str, unit_key: str, *, want_morph: bool = True) -> d
     return out
 
 
-def word_bundle(num: str, *, module_ids: list[str] | None = None) -> dict:
-    """Everything installed that bears on one Strong's number."""
+def word_bundle(num: str, *, module_ids: list[str] | None = None,
+                word: str = "") -> dict:
+    """Everything installed that bears on one Strong's number.
+
+    A surface word is accepted too: callers used to send "love" as a number
+    and get "no Strong's number", even though the marker table can resolve it.
+    """
     conn = db.connect()
     num = canon.normalise_strongs(num or "")
+    if not num and word:
+        row = conn.execute(
+            "SELECT value FROM marker WHERE kind='strongs' AND lower(surface)=lower(?) "
+            "ORDER BY pos LIMIT 1", (word.strip(),)).fetchone()
+        if row:
+            num = canon.normalise_strongs(row["value"] or "")
     if not num:
         return {"ok": False, "error": "no Strong's number"}
     row = conn.execute("SELECT word, lemma FROM strongs WHERE strongs=?",
@@ -1353,6 +1536,10 @@ def word_bundle(num: str, *, module_ids: list[str] | None = None) -> dict:
     return {
         "ok": True, "number": num,
         "word": (row["word"] if row else "") or "",
+        # Several renderers read these keys; without them the root label fell
+        # back to the bare number and clause participants were always empty.
+        "headword": (row["word"] if row else "") or num,
+        "morph_codes": [],
         "lemma": (row["lemma"] if row else "") or "",
         "total": total,
         "entries": lexicon_entries_for(conn, num),
@@ -1400,18 +1587,12 @@ def _lens_score(text: str, hints: tuple[str, ...]) -> int:
     return sum(1 for h in hints if h in low)
 
 
-#: The fact books, by what they are actually good for.  Classifying them here
-#: rather than trusting the taxonomy is the point: all six are "FactBook", and
-#: presenting a name-meaning list beside a full topical article, undifferentiated,
-#: is what the Topic guide already does and what makes it less useful than it
-#: could be.
-_FACT_ROLES = (
-    # (label, note, types, prefer)
-    ("Names and meanings", "What a name meant", ("FactBook",), ("names",)),
-    ("People", "Articles about a person", ("FactBook", "Dictionary"), ()),
-    ("Places", "Articles about a place", ("FactBook", "Dictionary"), ()),
-    ("Topic", "The full article", ("FactBook",), ()),
-)
+#: The primary Topics sections come from FactBook modules only.  Headword
+#: reference works (Smith's, Easton, Webster, TIPNR, the Strong's lexicons) are
+#: deliberately a separate "Dictionary" section added by `_extra_sections`,
+#: and are also available in the definition popup and the dictionary pane.
+#: An older `_FACT_ROLES` table claimed People/Places searched Dictionaries but
+#: was never read; it was removed rather than left contradicting the code.
 
 _NAME_MEANING_HINTS = ("Hitchcock", "Names", "Proper Names")
 
@@ -1432,7 +1613,8 @@ def _is_names_book(name: str) -> bool:
     return "hitchcock" in low or "names" in low
 
 
-def fact_guide(query: str, *, per_section: int = 8, lens: str = "") -> dict:
+def fact_guide(query: str, *, per_section: int = 8, lens: str = "",
+               modules: dict | None = None) -> dict:
     """Every fact-book entry about one term, sorted into what kind it is.
 
     The Topic guide gathers everything sharing a heading.  This one asks the
@@ -1465,8 +1647,11 @@ def fact_guide(query: str, *, per_section: int = 8, lens: str = "") -> dict:
     if not q:
         return {"ok": False, "error": "no term"}
     conn = db.connect()
-    mods = [m for m in library.list_all()
+    all_mods = dict(modules) if modules is not None else {
+        m.id: m for m in library.list_all()}
+    mods = [m for m in all_mods.values()
             if m.type == "FactBook" and _is_a_fact_book(m.name)]
+    mods.sort(key=lambda m: (_priority_rank(m), m.name or ""))
     if not mods:
         return {"ok": False, "error":
                 "No fact book is installed. The Store has Nave, Hitchcock, "
@@ -1502,13 +1687,15 @@ def fact_guide(query: str, *, per_section: int = 8, lens: str = "") -> dict:
             return 1
         return 2 if (t.startswith(ql + " ") or t.startswith(ql + ",")) else 3
 
-    ordered = sorted(rows, key=lambda r: (rank(r), -len(r["text"] or "")))
+    prio = {m.id: _priority_rank(m) for m in mods}
+    ordered = sorted(rows, key=lambda r: (
+        rank(r), prio.get(r["module_id"], 0), -len(r["text"] or "")))
 
     def item(r):
         m = by_id[r["module_id"]]
         return {"module_id": m.id, "module": m.name, "key": r["key"],
                 "title": r["title"] or r["key"],
-                "text": _chunk(r["text"], 2400), "length": len(r["text"] or "")}
+                "text": _summary_text(r["text"], 2400), "length": len(r["text"] or "")}
 
     sections: list[dict] = []
 
@@ -1522,10 +1709,17 @@ def fact_guide(query: str, *, per_section: int = 8, lens: str = "") -> dict:
 
     geo = _geo_for(conn, ql)
 
+    # Gather the non-fact-book sections once.  Dictionary is placed directly
+    # after Name: a one-line name meaning is the quick answer, and the full
+    # headword article from Smith's/Easton/Webster is the substance that follows.
+    extra = _extra_sections(conn, all_mods, q, per_section, places=False)
     name_rows = [r for r in ordered if _is_names_book(by_id[r["module_id"]].name)]
     add("name", "Name",
         [item(r) for r in name_rows[:per_section]],
         note="What the name meant to those who heard it")
+    for sec in extra:
+        if sec["kind"] == "dictionary":
+            add(sec["kind"], sec["label"], sec["items"], note=sec.get("note", ""))
 
     # A place is established by the gazetteer, not by reading the prose.  A
     # keyword heuristic on the article put Aaron under "Places", because his
@@ -1570,8 +1764,14 @@ def fact_guide(query: str, *, per_section: int = 8, lens: str = "") -> dict:
     # The places are left out, because this guide already carries the
     # gazetteer in its own *located* list -- the same places, with their
     # coordinates and the passages that name them.
-    all_mods = {m.id: m for m in library.list_all()}
-    for sec in _extra_sections(conn, all_mods, q, per_section, places=False):
+    mine = my_topics_for_term(conn, q, per_section)
+    if mine:
+        sections.append({
+            "kind": "mytopics", "label": "My topics",
+            "note": "Verses you tagged with this topic", "items": mine})
+    for sec in extra:
+        if sec["kind"] == "dictionary":
+            continue                      # already shown right after Name
         add(sec["kind"], sec["label"], sec["items"], note=sec.get("note", ""))
 
     # Curated questions a reader can take to the material -- the non-AI
@@ -1622,8 +1822,11 @@ def factbook_search(q: str = "", module_ids: list[str] = None,
     if not q:
         return {"ok": False, "error": "no query given"}
     conn = db.connect()
+    # The Topics search covers headword reference works as well as fact books:
+    # looking up "AARON" should find Smith's and Easton, not only Nave.
     mods = [m for m in library.list_all()
-            if m.type == "FactBook" and _is_a_fact_book(m.name)]
+            if (m.type == "FactBook" and _is_a_fact_book(m.name))
+            or m.type in ("Dictionary", "Lexicon")]
     if module_ids:
         keep = set(module_ids)
         mods = [m for m in mods if m.id in keep]
@@ -1637,25 +1840,19 @@ def factbook_search(q: str = "", module_ids: list[str] = None,
     # Headings are stored in each book's own case -- Hitchcock and Nave are
     # all caps, Torrey title case -- so match the given and the capitalised
     # form.  "aaron" has to find AARON.
-    like, like_cap = f"%{q}%", f"%{q.capitalize()}%"
+    esc = lambda t: t.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    like, like_cap = "%" + esc(q) + "%", "%" + esc(q.capitalize()) + "%"
+    where = (f"module_id IN ({ph}) AND (title LIKE ? ESCAPE '\\' "
+             "OR title LIKE ? ESCAPE '\\' OR key LIKE ? ESCAPE '\\' "
+             "OR key LIKE ? ESCAPE '\\')")
+    args = [*names, like, like_cap, like, like_cap]
+    total = conn.execute(
+        f"SELECT count(*) c FROM unit WHERE {where}", args).fetchone()["c"]
     rows = conn.execute(
-        f"SELECT module_id, key, title, text FROM unit WHERE module_id IN ({ph}) "
-        f"AND (title LIKE ? OR title LIKE ? OR key LIKE ? OR key LIKE ?) "
-        f"LIMIT ?",
-        [*names, like, like_cap, like, like_cap, max(1, limit) * 4]).fetchall()
-
-    ql = q.lower()
+        f"SELECT module_id, key, title, text FROM unit WHERE {where} "
+        "ORDER BY length(text) DESC LIMIT ?", args + [max(1, limit) * 4]).fetchall()
 
     def rank(r):
-        t = (r["title"] or "").lower().strip()
-        k = (r["key"] or "").lower().strip()
-        if t == ql or k == ql:
-            return 0
-        if t.startswith(ql) or k.startswith(ql):
-            return 1
-        if any(t.startswith(p) or k.startswith(p)
-               for p in (ql + " ", ql + ",", ql + "'")):
-            return 2
         return 3
 
     by_id = {m.id: m for m in mods}
@@ -1671,7 +1868,10 @@ def factbook_search(q: str = "", module_ids: list[str] = None,
             "text": _chunk(r["text"] or "", 220),
             "length": len(r["text"] or ""),
         })
-    return {"ok": True, "query": q, "results": results, "count": len(results)}
+    return {"ok": True, "query": q, "results": results,
+            "count": total, "returned": len(results),
+            "more": total > len(results),
+            "notice": "" if results else "No fact-book heading matches that term."}
 
 
 def _geo_for(conn, ql: str) -> list[dict]:
@@ -2028,15 +2228,15 @@ def passage_guide(ref: str, *, span: int = 3) -> dict:
 
 
 # ===========================================================================
-# Bible Word Study — Logos-equivalent: lemma, translation, senses, example uses
+# Bible Word Study — lemma, translation, senses, example uses
 # ===========================================================================
 
 def bible_word_study(num: str = "", word: str = "", *,
                      module_id: str = "", limit: int = 30) -> dict:
     """Everything known about one word, collated from the installed library.
 
-    Mirrors Logos' Bible Word Study Guide: for original-language words it
-    returns Lemma, Translation, Root, Senses, Example Uses, Clause Participants,
+    For original-language words it returns Lemma, Translation, Root, Senses,
+    Example Uses, Clause Participants,
     and Textual Searches.  For English words it returns Topic, Hebrew Words,
     Greek Words, Senses, Phrases, and Textual Searches.
 
@@ -2136,14 +2336,14 @@ def bible_word_study(num: str = "", word: str = "", *,
 
 
 # ===========================================================================
-# Exegetical Guide — Logos-equivalent: textual variants, grammars, word-by-word
+# Exegetical Guide — textual variants, grammars, word-by-word
 # ===========================================================================
 
 def exegetical_guide(ref: str, *, span: int = 3) -> dict:
     """Detailed exegesis of a passage: variants, grammar, word-by-word analysis.
 
-    Mirrors Logos' Exegetical Guide: Textual Variants, Grammars, Grammatical
-    Constructions, Visualizations, Word by Word, Important Words, Commentaries,
+    It collects Textual Variants, Grammars, Grammatical Constructions,
+    Visualizations, Word by Word, Important Words, Commentaries,
     and Ancient Literature.
     """
     rr = canon.parse_ref(ref)
@@ -2269,6 +2469,9 @@ def exegetical_guide(ref: str, *, span: int = 3) -> dict:
     }
 
 
+_GEN_REF_CACHE: dict = {}
+
+
 def _people_in(conn, verses) -> list[dict]:
     """People whose recorded references fall inside this passage.
 
@@ -2288,31 +2491,30 @@ def _people_in(conn, verses) -> list[dict]:
     if not g.get("ok"):
         return []
 
-    def key(v):
-        # osis_id is a method, not a property.  Reading it as an attribute gave
-        # a bound method, and the range test below then compared a method with a
-        # string: "'<=' not supported between instances of 'method' and 'str'".
-        return canon.Ref(v.book, v.chapter, v.verse).osis_id()
+    # Genealogy refs keep their module's key format ("Gen.4.18", "1Chr.22.17").
+    # Parse them once per distinct string, then use the shared ref matcher so
+    # whole-book and whole-chapter references are honoured.
+    from . import refmatch
+    targets = [refmatch.milestones(f"{v.book} {v.chapter}:{v.verse}")
+               for v in verses]
+    targets = [t for t in targets if t]
 
-    # Genealogy refs are written "Gen 4:18" -- human style, not OSIS -- so the
-    # range has to be built in that same shape or nothing ever matches.
-    def human(v):
-        return f"{v.book} {v.chapter}" if not v.verse else \
-            f"{v.book} {v.chapter}:{v.verse}"
-    lo, hi = human(verses[0]), human(verses[-1])
+    def in_passage(ref):
+        got = _GEN_REF_CACHE.get(ref)
+        if got is None:
+            got = refmatch.milestones(ref)
+            _GEN_REF_CACHE[ref] = got
+        return any(refmatch.intersects([got], [t]) for t in targets)
+
     out = []
     for name, p in (g.get("people") or {}).items():
-        hits = [r for r in p.get("refs", []) if lo <= r <= hi]
+        hits = [r for r in p.get("refs", []) if in_passage(r)]
         if hits:
             out.append({"name": name, "refs": hits[:6],
                         "father": p.get("father") or "",
                         "mentions": len(p.get("refs", []))})
     out.sort(key=lambda x: (-len(x["refs"]), x["name"]))
     return out[:20]
-
-
-def _osis_key(v) -> str:
-    return f"{v.book}.{v.chapter}.{v.verse}"
 
 
 def _fact_terms(body: str, *, limit: int = 8) -> list[dict]:
@@ -2671,11 +2873,14 @@ def sense_lexicon(q: str = "", *, module_id: str = "", limit: int = 10) -> dict:
     num = canon.normalise_strongs(q)
     if not num:
         # Look up the word as a surface form to find its Strong's number.
+        # With no module chosen, look across all tagged modules: the UI
+        # advertises "love or G26", not "G26 only".
+        extra = " AND m.module_id=?" if module_id else ""
+        args = [q, module_id] if module_id else [q]
         row = conn.execute(
             "SELECT m.value FROM marker m JOIN module md ON md.id=m.module_id "
-            "WHERE m.kind='strongs' AND m.surface=? AND m.module_id=? "
-            "ORDER BY m.pos LIMIT 1",
-            (q, module_id or "")).fetchone()
+            "WHERE m.kind='strongs' AND m.surface=?" + extra + " "
+            "ORDER BY m.pos LIMIT 1", args).fetchone()
         if row:
             num = canon.normalise_strongs(row["value"] or "")
 
@@ -3004,7 +3209,7 @@ def _read_pdf(path: str) -> str:
 def courses(action: str = "", course_id: str = "", lesson_id: str = "",
             title: str = "", description: str = "", author: str = "",
             lesson_title: str = "", content: str = "", video_url: str = "",
-            audio_url: str = "") -> dict:
+            audio_url: str = "", completed: str = "1") -> dict:
     """Course library and player.
 
     Actions: list, open, lesson, progress.
@@ -3122,7 +3327,7 @@ def courses(action: str = "", course_id: str = "", lesson_id: str = "",
     if action == "progress":
         if not course_id or not lesson_id:
             return {"ok": False, "error": "need course_id and lesson_id"}
-        completed = q.get("completed", "1") not in ("0", "false", "")
+        completed = str(completed).lower() not in ("0", "false", "")
         conn.execute(
             "INSERT OR REPLACE INTO course_progress(course_id, lesson_id, completed) "
             "VALUES(?,?,?)", (course_id, lesson_id, 1 if completed else 0))
@@ -3206,12 +3411,11 @@ def print_export(action: str = "", content_type: str = "", content_id: str = "",
     if action == "list":
         return {"ok": True, "action": "list",
                 "formats": ["pdf", "html", "txt", "md", "docx"],
-                "content_types": ["passage", "guide", "search", "notes",
-                                  "sermon", "word-study", "canvas"]}
+                "content_types": ["passage", "search", "notes"]}
 
     if action == "formats":
         return {"ok": True, "action": "formats",
-                "formats": ["pdf", "html", "txt", "md", "docx"]}
+                "formats": ["pdf", "html", "txt", "md"]}
 
     if action == "export":
         if not content_type or not content_id:
@@ -3249,13 +3453,17 @@ def _do_export(content_type: str, content_id: str, format: str) -> dict:
             title = content_id
     elif content_type == "notes":
         row = conn.execute(
-            "SELECT title, content FROM notes WHERE id=?", (content_id,)).fetchone()
+            "SELECT title, body FROM note WHERE id=?", (content_id,)).fetchone()
         if row:
             title = row["title"] or content_id
-            body = row["content"] or ""
+            body = row["body"] or ""
     elif content_type == "search":
         # Return the search query text.
         body = f"Search results for: {content_id}\n\n(Full search export requires the search panel.)"
+    else:
+        return {"ok": False, "error":
+                f"export of {content_type!r} is not supported; "
+                "choose passage, search or notes"}
 
     if format == "txt":
         content = f"{title}\n{'=' * len(title)}\n\n{body}"
@@ -3283,7 +3491,7 @@ def _do_export(content_type: str, content_id: str, format: str) -> dict:
             c.setFont("Helvetica-Bold", 14)
             c.drawString(50, y, title[:80]); y -= 24
             c.setFont("Helvetica", 10)
-            for line in (body or "").split("\\n"):
+            for line in (body or "").split("\n"):
                 if y < 60:
                     c.showPage(); y = h - 50; c.setFont("Helvetica", 10)
                 c.drawString(50, y, line[:110]); y -= 13
@@ -3376,15 +3584,18 @@ def info_tool(ref: str = "", module_id: str = "") -> dict:
     result["strongs"] = strongs_markers
     result["morphology"] = morph_markers
 
+    # The reader's own notes on these verses.  This used to requery the
+    # Strong's markers, printing the same numbers a second time under "Notes".
     notes = []
     for v in verses:
         rows = conn.execute(
-            "SELECT m.value FROM marker m "
-            "JOIN unit u ON u.module_id=m.module_id AND u.key=m.unit_key "
-            "WHERE u.ref_label=? AND m.kind='strongs' LIMIT 5",
-            (v["ref"],)).fetchall()
-        notes.extend([r["value"] for r in rows if r["value"]])
-
+            "SELECT title, body FROM note WHERE ref_label=? "
+            "ORDER BY updated_at DESC LIMIT 5", (v["ref"],)).fetchall()
+        for n in rows:
+            label = (n["title"] or "").strip()
+            body = (n["body"] or "").strip()
+            if label or body:
+                notes.append((label + ": " if label else "") + body[:300])
     result["notes"] = notes[:5]
 
     topics = []
@@ -3417,67 +3628,86 @@ def info_tool(ref: str = "", module_id: str = "") -> dict:
 # ===========================================================================
 
 def bibliography(module_ids: list[str] = None, *, style: str = "sbl") -> dict:
-    """Generate bibliography entries for modules."""
+    """Styled citations for installed modules, via the shared citation engine.
+
+    This used to hand-build one "author. year. name." string and echo the
+    requested `style` without ever using it.  `citation.bibliography` already
+    implements the styles and reports which entries are missing fields.
+    """
+    from . import citation
+    if style not in citation.STYLES:
+        return {"ok": False, "error": f"unknown citation style {style!r}",
+                "styles": sorted(citation.STYLES)}
     conn = db.connect()
-    if not module_ids:
-        rows = conn.execute(
-            "SELECT id, name, type, lang, author, year, description FROM module WHERE installed_at > 0 ORDER BY name").fetchall()
+    skipped = list(module_ids or [])
+    if module_ids is None:
+        ids = [r["id"] for r in conn.execute(
+            "SELECT id FROM module WHERE installed_at>0 ORDER BY name").fetchall()]
+        skipped = []
     else:
-        ph = ",".join("?" * len(module_ids))
-        rows = conn.execute(
-            f"SELECT id, name, type, lang, author, year, description FROM module WHERE id IN ({ph}) ORDER BY name",
-            module_ids).fetchall()
-
+        ids = [mid for mid in module_ids
+               if conn.execute("SELECT 1 FROM module WHERE id=? AND installed_at>0",
+                               (mid,)).fetchone()]
+        skipped = [mid for mid in module_ids if mid not in ids]
+    if not ids:
+        return {"ok": False, "error": "no installed resources to cite",
+                "skipped": skipped}
+    r = citation.bibliography(ids, style=style)
     entries = []
-    for r in rows:
-        m = {
-            "module_id": r["id"],
-            "name": r["name"] or "",
-            "type": r["type"] or "",
-            "lang": r["lang"] or "",
-            "author": r["author"] or "",
-            "year": r["year"] or "",
-            "description": (r["description"] or "")[:500],
-        }
-        parts = []
-        if m["author"]:
-            parts.append(m["author"])
-        if m["year"]:
-            parts.append(m["year"])
-        if m["name"]:
-            parts.append(m["name"])
-        m["citation"] = ". ".join([p for p in parts if p]) + "."
-        entries.append(m)
-
-    return {"ok": True, "style": style, "entries": entries, "count": len(entries)}
+    for c in r.get("entries", []):
+        meta = c.get("meta") or {}
+        entries.append({
+            "module_id": c.get("module_id") or "",
+            "name": meta.get("name") or "",
+            "title": meta.get("name") or "",
+            "type": meta.get("type") or "",
+            "lang": meta.get("lang") or "",
+            "author": meta.get("author") or "",
+            "year": meta.get("year") or "",
+            "description": ((meta.get("description") or "")[:497] + "…"
+                            if len(meta.get("description") or "") > 500
+                            else (meta.get("description") or "")),
+            "citation": c.get("citation") or "",
+            "complete": c.get("complete", False),
+        })
+    return {"ok": True, "style": style, "entries": entries,
+            "count": len(entries), "text": r.get("text", ""),
+            "flagged": r.get("flagged", []), "skipped": skipped,
+            "note": r.get("note", "")}
 
 
 # ===========================================================================
 # Books Search — search inside books/modules.
 # ===========================================================================
 
-def books_search(q: str = "", module_ids: list[str] = None, limit: int = 20) -> dict:
-    """Search inside books/modules for a term."""
+def books_search(q: str = "", module_ids: list[str] = None, limit: int = 20,
+                 kind: str = "") -> dict:
+    """Search inside books/modules for a term, optionally in one resource type."""
     conn = db.connect()
     q = (q or "").strip()
     if not q:
         return {"ok": False, "error": "no query given"}
 
+    limit = max(1, min(int(limit or 20), 200))
     module_ids_list = list(module_ids) if module_ids else []
+    # Escape LIKE wildcards: a bare "%" used to match the entire library.
+    like = "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+    where = "u.text LIKE ? ESCAPE '\\' AND m.installed_at>0"
+    args: list = [like]
     if module_ids_list:
         ph = ",".join("?" * len(module_ids_list))
-        rows = conn.execute(
-            f"SELECT u.text, u.ref_label, u.module_id, m.name FROM unit u "
-            f"JOIN module m ON m.id=u.module_id "
-            f"WHERE u.text LIKE ? AND m.installed_at>0 "
-            f"AND u.module_id IN ({ph}) LIMIT ?",
-            [f"%{q}%", *module_ids_list, limit]).fetchall()
-    else:
-        rows = conn.execute(
-            "SELECT u.text, u.ref_label, u.module_id, m.name FROM unit u "
-            f"JOIN module m ON m.id=u.module_id "
-            f"WHERE u.text LIKE ? AND m.installed_at>0 LIMIT ?",
-            (f"%{q}%", limit)).fetchall()
+        where += f" AND u.module_id IN ({ph})"
+        args.extend(module_ids_list)
+    if (kind or "").strip():
+        where += " AND m.type=?"
+        args.append(kind.strip())
+    total = conn.execute(
+        "SELECT count(*) c FROM unit u JOIN module m ON m.id=u.module_id "
+        f"WHERE {where}", args).fetchone()["c"]
+    rows = conn.execute(
+        "SELECT u.text, u.ref_label, u.module_id, m.name FROM unit u "
+        f"JOIN module m ON m.id=u.module_id WHERE {where} "
+        "ORDER BY m.name, u.ord LIMIT ?", args + [limit]).fetchall()
 
     results = []
     for r in rows:
@@ -3488,7 +3718,10 @@ def books_search(q: str = "", module_ids: list[str] = None, limit: int = 20) -> 
             "module": r["name"] or "",
         })
 
-    return {"ok": True, "query": q, "results": results, "count": len(results)}
+    return {"ok": True, "query": q, "results": results,
+            "count": total, "returned": len(results),
+            "more": total > len(results),
+            "notice": "" if results else "No books matched that term."}
 
 
 # ===========================================================================
@@ -3503,33 +3736,39 @@ def search_synopsis(q: str = "", module_ids: list[str] = None) -> dict:
         return {"ok": False, "error": "no query given"}
 
     module_ids_list = list(module_ids) if module_ids else []
+    esc = lambda t: t.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    like = "%" + esc(q) + "%"
     if module_ids_list:
         ph = ",".join("?" * len(module_ids_list))
         rows = conn.execute(
             f"SELECT u.module_id, m.name, COUNT(*) as c FROM unit u "
             f"JOIN module m ON m.id=u.module_id "
-            f"WHERE u.text LIKE ? AND m.installed_at>0 "
+            f"WHERE u.text LIKE ? ESCAPE '\\' AND m.installed_at>0 "
             f"AND u.module_id IN ({ph}) "
             f"GROUP BY u.module_id ORDER BY c DESC",
-            [f"%{q}%", *module_ids_list])
+            [like, *module_ids_list])
     else:
         rows = conn.execute(
             "SELECT u.module_id, m.name, COUNT(*) as c FROM unit u "
             f"JOIN module m ON m.id=u.module_id "
-            f"WHERE u.text LIKE ? AND m.installed_at>0 "
+            f"WHERE u.text LIKE ? ESCAPE '\\' AND m.installed_at>0 "
             f"GROUP BY u.module_id ORDER BY c DESC",
-            (f"%{q}%",)).fetchall()
+            (like,)).fetchall()
 
     synopsis = []
     for r in rows:
         row = conn.execute(
-            "SELECT u.text FROM unit u WHERE u.module_id=? AND u.text LIKE ? LIMIT 1",
-            (r["module_id"], f"%{q}%")).fetchone()
+            "SELECT u.text, u.key FROM unit u WHERE u.module_id=? "
+            "AND u.text LIKE ? ESCAPE '\\' LIMIT 1",
+            (r["module_id"], like)).fetchone()
+        sample = (row["text"] or "")[:200] if row else ""
         synopsis.append({
             "module_id": r["module_id"],
             "module": r["name"] or r["module_id"],
             "count": r["c"],
-            "sample": row["text"][:200] if row and row["text"] else "",
+            "sample": sample,
+            # The matched unit key lets the UI make the sample a real link.
+            "sample_ref": row["key"] if row else "",
         })
 
     return {"ok": True, "query": q, "synopsis": synopsis, "count": len(synopsis)}
@@ -3540,7 +3779,12 @@ def search_synopsis(q: str = "", module_ids: list[str] = None) -> dict:
 # ===========================================================================
 
 def insights(ref: str = "", module_id: str = "") -> dict:
-    """Insights about a passage: themes, key verses, applications."""
+    """Word frequency and a passage excerpt — deterministic, not AI analysis.
+
+    Called "Insights" in the menu for historical reasons.  It reports the most
+    frequent non-common words up to five verses and quotes the text it read, so
+    every claim can be checked.  It does not infer themes or applications.
+    """
     conn = db.connect()
     q = (ref or "").strip()
     if not q:
@@ -3587,13 +3831,16 @@ def insights(ref: str = "", module_id: str = "") -> dict:
     if verses:
         insights_list.append({
             "type": "theme",
-            "title": f"Key Themes in {refs[0].label if refs else q}",
-            "content": f"The key themes in this passage include: {', '.join(w for w, _ in sorted(word_counts.items(), key=lambda x: -x[1])[:5])}.",
+            "title": f"Common words in {refs[0].label if refs else q}",
+            "content": ("The words appearing most often here are: "
+                        + ', '.join(w for w, _ in
+                                    sorted(word_counts.items(), key=lambda x: (-x[1], x[0]))[:5])
+                        + ". Frequency is not the same as importance."),
             "verses": [v["ref"] for v in verses],
         })
         insights_list.append({
             "type": "summary",
-            "title": "Summary",
+            "title": "Passage excerpt",
             "content": verses[0]["text"][:200] + "..." if len(verses[0]["text"]) > 200 else verses[0]["text"],
         })
 
@@ -3605,28 +3852,19 @@ def insights(ref: str = "", module_id: str = "") -> dict:
 # ===========================================================================
 
 def sermon_import(text: str = "", title: str = "", series: str = "") -> dict:
-    """Import a sermon document."""
+    """Import a sermon document into the same store the Sermon Manager uses.
+
+    This used to create a row in its own ``sermons`` table, so the sermon was
+    invisible to the Manager, Editor, Documents search, calendar and backups.
+    """
+    from . import docs
     if not text:
         return {"ok": False, "error": "no text provided"}
-
-    title = title or "Untitled Sermon"
-    sermon_id = f"sermon-{slugify(title)}-{int(time.time())}"
-
-    conn = db.connect()
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS sermons ("
-        "  id TEXT PRIMARY KEY,"
-        "  title TEXT NOT NULL,"
-        "  series TEXT,"
-        "  text TEXT NOT NULL,"
-        "  created_at REAL NOT NULL)"
-    )
-    conn.execute(
-        "INSERT INTO sermons(id, title, series, text, created_at) VALUES(?,?,?,?,?)",
-        (sermon_id, title, series, text, time.time()))
-    conn.commit()
-
-    return {"ok": True, "sermon_id": sermon_id, "title": title, "series": series}
+    r = docs.sermon_import(text, title, series)
+    if not r.get("ok"):
+        return r
+    return {"ok": True, "sermon_id": r.get("id"), "id": r.get("id"),
+            "title": r.get("title") or title, "series": series}
 
 
 # ===========================================================================
@@ -3634,17 +3872,28 @@ def sermon_import(text: str = "", title: str = "", series: str = "") -> dict:
 # ===========================================================================
 
 def sermon_documents(sermon_id: str = "") -> dict:
-    """View/manage sermon documents."""
-    conn = db.connect()
-    if not sermon_id:
-        rows = conn.execute("SELECT * FROM sermons ORDER BY created_at DESC").fetchall()
-        return {"ok": True, "sermons": [dict(r) for r in rows], "count": len(rows)}
+    """List sermon documents from the canonical note store.
 
-    row = conn.execute("SELECT * FROM sermons WHERE id=?", (sermon_id,)).fetchone()
-    if not row:
-        return {"ok": False, "error": "sermon not found"}
+    The response keeps the legacy shape (``sermons[].text``, ``sermon_id``)
+    because the Study Tools dialog renders it, but the rows are now the same
+    ``note`` rows the Sermon Manager and Editor read and write.
+    """
+    from . import docs, notes
 
-    return {"ok": True, "sermon": dict(row)}
+    def show(n):
+        meta = docs._sermon_meta(n)
+        return {"id": n.get("id") or "", "title": n.get("title") or "Untitled",
+                "series": meta.get("series") or "",
+                "text": n.get("body") or "",
+                "created_at": n.get("created_at") or 0}
+
+    if sermon_id:
+        n = notes.get(sermon_id)
+        if not n or n.get("kind") != "sermon":
+            return {"ok": False, "error": "sermon not found"}
+        return {"ok": True, "sermon": show(n)}
+    rows = [show(n) for n in (notes.listing(kind="sermon", limit=5000) or [])]
+    return {"ok": True, "sermons": rows, "count": len(rows)}
 
 
 # ===========================================================================
@@ -3652,7 +3901,11 @@ def sermon_documents(sermon_id: str = "") -> dict:
 # ===========================================================================
 
 def visual_copy(ref: str = "", module_id: str = "", style: str = "default") -> dict:
-    """Copy verse as an image (text representation for now)."""
+    """Supply the verse text for a shareable image.
+
+    The old ASCII rendering is kept as `content` for callers that still want a
+    text preview, but the browser now draws a real PNG from `text`.
+    """
     conn = db.connect()
     ref = (ref or "").strip()
     if not ref:
@@ -3662,18 +3915,32 @@ def visual_copy(ref: str = "", module_id: str = "", style: str = "default") -> d
     if rr is None:
         return {"ok": False, "error": f"cannot read {ref!r} as a reference"}
 
-    refs = list(rr.refs())[:1]
-    if not refs:
+    all_refs = list(rr.refs())
+    if not all_refs:
         return {"ok": False, "error": "no valid reference"}
+    r_ = all_refs[0]
 
-    r_ = refs[0]
+    # unit.key is not unique across modules. Without a module filter the image
+    # could be drawn from Greek/Hebrew or a commentary while showing an English
+    # reference, and a bad id silently picked whichever module sorted first.
+    m = library.get_installed(module_id) if module_id else None
+    if module_id and m is None:
+        return {"ok": False, "error": "that resource is not installed"}
+    if m is None:
+        mods = library.list_all()
+        m = (next((x for x in mods
+                   if x.type == "Bible" and x.lang == "eng" and x.is_bible), None)
+             or next((x for x in mods if x.is_bible), None))
+    if m is None:
+        return {"ok": False, "error": "no installed Bible to read that verse from"}
+
     row = conn.execute(
         "SELECT u.text, u.ref_label FROM unit u "
-        "WHERE u.book=? AND u.chapter=? AND u.verse=? LIMIT 1",
-        (r_.book, r_.chapter, r_.verse)).fetchone()
+        "WHERE u.module_id=? AND u.book=? AND u.chapter=? AND u.verse=? LIMIT 1",
+        (m.id, r_.book, r_.chapter, r_.verse)).fetchone()
 
     if not row:
-        return {"ok": False, "error": "verse not found"}
+        return {"ok": False, "error": f"{m.name} has no text for that verse"}
 
     text = row["text"]
     ascii_art = f"""
@@ -3685,7 +3952,13 @@ def visual_copy(ref: str = "", module_id: str = "", style: str = "default") -> d
 ╚═══════════════════════════════════════╝
 """
 
-    return {"ok": True, "ref": ref, "content": ascii_art, "format": "text"}
+    return {"ok": True, "ref": canon.format_ref(r_),
+            "requested": ref, "label": row["ref_label"] or ref,
+            "note": ("Only the first verse was rendered."
+                     if len(all_refs) > 1 else ""),
+            "module_id": m.id, "module": m.name,
+            "license": m.license or "", "attribution": m.rights or "",
+            "text": text, "content": ascii_art, "format": "text"}
 
 
 # ===========================================================================
@@ -3693,32 +3966,40 @@ def visual_copy(ref: str = "", module_id: str = "", style: str = "default") -> d
 # ===========================================================================
 
 def confessional_documents(doc_type: str = "", limit: int = 20) -> dict:
-    """Confessional documents: creeds, confessions, catechisms."""
+    """Creeds, confessions and catechisms from installed reference works.
+
+    This used to keyword-search ``unit.text`` for "confession" and present
+    lexicon headwords as confessional documents. It now requires a source that
+    is actually a confessional work, and says so plainly when none is installed.
+    """
     conn = db.connect()
-
+    mods = [m for m in library.list_all()
+            if m.type in ("Book", "FactBook", "StudyGuide")
+            and re.search(r"creed|confess| catech| Westminster|Augsburg",
+                          m.name or "", re.I)]
+    if not mods:
+        return {"ok": False,
+                "error": ("No confessional document source is installed. "
+                          "Install a creed, confession or catechism from the "
+                          "Store to use this tool."),
+                "documents": [], "count": 0}
+    ids = [m.id for m in mods]
+    ph = ",".join("?" * len(ids))
+    where = f"u.module_id IN ({ph})"
+    args: list = list(ids)
     if doc_type:
-        rows = conn.execute(
-            "SELECT u.text, u.ref_label, m.name FROM unit u "
-            "JOIN module m ON m.id=u.module_id "
-            "WHERE m.installed_at>0 AND (u.text LIKE ? OR m.name LIKE ?) "
-            f"LIMIT {limit}",
-            (f"%{doc_type}%", f"%{doc_type}%")).fetchall()
-    else:
-        rows = conn.execute(
-            "SELECT u.text, u.ref_label, m.name FROM unit u "
-            "JOIN module m ON m.id=u.module_id "
-            "WHERE m.installed_at>0 AND u.text LIKE '%confession%' "
-            f"LIMIT {limit}").fetchall()
-
-    results = []
-    for r in rows:
-        results.append({
-            "title": r["ref_label"] or "Untitled",
-            "text": (r["text"] or "")[:500],
-            "module": r["name"] or "",
-        })
-
-    return {"ok": True, "documents": results, "count": len(results)}
+        where += " AND (u.title LIKE ? OR u.text LIKE ?)"
+        esc = lambda t: t.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        args += ["%" + esc(doc_type) + "%"] * 2
+    rows = conn.execute(
+        f"SELECT u.text, u.ref_label, m.name FROM unit u "
+        f"JOIN module m ON m.id=u.module_id WHERE {where} LIMIT ?",
+        args + [max(1, min(int(limit or 20), 200))]).fetchall()
+    results = [{"title": r["ref_label"] or "Untitled",
+                "text": (r["text"] or "")[:500], "module": r["name"] or ""}
+               for r in rows]
+    return {"ok": True, "documents": results, "count": len(results),
+            "sources": [m.name for m in mods]}
 
 
 # ===========================================================================
@@ -3726,39 +4007,39 @@ def confessional_documents(doc_type: str = "", limit: int = 20) -> dict:
 # ===========================================================================
 
 def catholic_daily_readings(date: str = "", liturgical_season: str = "") -> dict:
-    """Catholic daily readings / topical index."""
+    """Daily readings from an installed Lectionary module.
+
+    The old implementation searched for the literal date string inside verse
+    text, which cannot work: the ``unit`` table has no date column. It returned
+    lexicon headwords and called them readings. With no Lectionary installed
+    the only honest answer is to say so.
+    """
     conn = db.connect()
-
+    mods = [m for m in library.list_all() if m.type == "Lectionary"]
+    if not mods:
+        return {"ok": False,
+                "error": ("No Lectionary module is installed. Daily readings "
+                          "cannot be looked up from a date with the resources "
+                          "currently in this library."),
+                "readings": [], "count": 0, "date": date,
+                "season": liturgical_season}
+    ids = [m.id for m in mods]
+    ph = ",".join("?" * len(ids))
+    args: list = list(ids)
+    where = f"u.module_id IN ({ph})"
     if date:
-        rows = conn.execute(
-            "SELECT u.text, u.ref_label, m.name FROM unit u "
-            "JOIN module m ON m.module_id=u.module_id "
-            "WHERE m.installed_at>0 AND (u.text LIKE ? OR u.ref_label LIKE ?) "
-            f"LIMIT 20",
-            (f"%{date}%", f"%{date}%")).fetchall()
-    elif liturgical_season:
-        rows = conn.execute(
-            "SELECT u.text, u.ref_label, m.name FROM unit u "
-            "JOIN module m ON m.module_id=u.module_id "
-            "WHERE m.installed_at>0 AND (u.text LIKE ? OR m.name LIKE ?) "
-            f"LIMIT 20",
-            (f"%{liturgical_season}%", f"%{liturgical_season}%")).fetchall()
-    else:
-        rows = conn.execute(
-            "SELECT u.text, u.ref_label, m.name FROM unit u "
-            "JOIN module m ON m.id=u.module_id "
-            "WHERE m.installed_at>0 AND u.text LIKE '%gospel%' "
-            f"LIMIT 20").fetchall()
-
-    results = []
-    for r in rows:
-        results.append({
-            "title": r["ref_label"] or "Daily Reading",
-            "text": (r["text"] or "")[:500],
-            "module": r["name"] or "",
-        })
-
-    return {"ok": True, "date": date, "season": liturgical_season, "readings": results, "count": len(results)}
+        where += " AND (u.key LIKE ? OR u.ref_label LIKE ?)"
+        args += [f"%{date}%", f"%{date}%"]
+    rows = conn.execute(
+        f"SELECT u.text, u.ref_label, m.name FROM unit u "
+        f"JOIN module m ON m.id=u.module_id WHERE {where} LIMIT 100",
+        args).fetchall()
+    results = [{"title": r["ref_label"] or "Daily Reading",
+                "text": (r["text"] or "")[:500], "module": r["name"] or ""}
+               for r in rows]
+    return {"ok": True, "date": date, "season": liturgical_season,
+            "readings": results, "count": len(results),
+            "sources": [m.name for m in mods]}
 
 
 # ===========================================================================
@@ -3766,38 +4047,52 @@ def catholic_daily_readings(date: str = "", liturgical_season: str = "") -> dict
 # ===========================================================================
 
 def popular_quotes(module_ids: list[str] = None, limit: int = 20) -> dict:
-    """Popular quotes: most-quoted Bible verses based on cross-reference frequency."""
+    """Verses most often pointed to by installed scripture cross-references.
+
+    Topic-index links were previously mixed into the count, and the displayed
+    text came from whichever module first had a matching ``unit.key`` -- often
+    Greek or Hebrew under an English reference. The count now uses only
+    ``kind='ref'`` links, and the text is read from an installed Bible at the
+    reference the link points to, with that Bible named in the response.
+    """
     conn = db.connect()
-
-    if module_ids:
-        ph = ",".join("?" * len(module_ids))
-        rows = conn.execute(
-            f"SELECT x.to_key, COUNT(*) as c FROM xref x "
-            f"WHERE x.module_id IN ({ph}) "
-            f"AND EXISTS (SELECT 1 FROM unit u WHERE u.module_id=x.module_id AND u.key=x.from_key) "
-            f"GROUP BY x.to_key ORDER BY c DESC LIMIT ?",
-            [*module_ids, limit]).fetchall()
-    else:
-        rows = conn.execute(
-            "SELECT x.to_key, COUNT(*) as c FROM xref x "
-            "WHERE x.module_id IN (SELECT id FROM module WHERE installed_at>0) "
-            "AND EXISTS (SELECT 1 FROM unit u WHERE u.module_id=x.module_id AND u.key=x.from_key) "
-            "GROUP BY x.to_key ORDER BY c DESC LIMIT ?",
-            (limit,)).fetchall()
-
+    limit = max(1, min(int(limit or 20), 200))
+    bibles = [m for m in library.list_all()
+              if m.is_bible and (not module_ids or m.id in module_ids)]
+    if not bibles:
+        return {"ok": False, "error": "no installed Bible to read quoted verses",
+                "quotes": [], "count": 0}
+    rows = conn.execute(
+        "SELECT x.to_key, COUNT(DISTINCT x.from_key) as c FROM xref x "
+        "JOIN module m ON m.id=x.module_id "
+        "WHERE x.kind='ref' AND m.installed_at>0 "
+        "GROUP BY x.to_key ORDER BY c DESC LIMIT ?", (limit,)).fetchall()
+    # Prefer an English tagged Bible for the displayed text.
+    bibles.sort(key=lambda m: ((2 if m.lang == "eng" else 0)
+                               + (1 if m.has_strongs or m.has_morph else 0)),
+                reverse=True)
     results = []
-    for r in rows:
-        row = conn.execute(
-            "SELECT u.text, u.ref_label FROM unit u WHERE u.key=? LIMIT 1",
-            (r["to_key"],)).fetchone()
-        if row:
-            results.append({
-                "ref": row["ref_label"] or r["to_key"],
-                "text": (row["text"] or "")[:200],
-                "count": r["c"],
-            })
-
-    return {"ok": True, "quotes": results, "count": len(results)}
+    for row in rows:
+        target = canon.parse_ref(row["to_key"])
+        if target is None:
+            continue
+        ref = target.start
+        for m in bibles:
+            text_row = conn.execute(
+                "SELECT u.text, u.ref_label FROM unit u "
+                "WHERE u.module_id=? AND u.book=? AND u.chapter=? AND u.verse=? "
+                "LIMIT 1", (m.id, ref.book, ref.chapter, ref.verse)).fetchone()
+            if text_row and (text_row["text"] or "").strip():
+                results.append({
+                    "ref": text_row["ref_label"] or canon.format_ref(ref),
+                    "text": (text_row["text"] or "")[:200],
+                    "count": row["c"],
+                    "module": m.name,
+                    "license": m.license or "",
+                })
+                break
+    return {"ok": True, "quotes": results, "count": len(results),
+            "metric": "distinct scripture cross-references (topic links excluded)"}
 
 
 # ===========================================================================
@@ -3813,8 +4108,7 @@ def senses_domains(num: str, limit: int = 12) -> dict:
     """The Louw–Nida sense domains a Strong's number carries in SBLGNT.
 
     Each entry is one domain code and how often the words of this Strong's
-    number bear it.  This is the kind of word-level sense index Logos
-    builds into its commercial Bible Sense Lexicon; this one comes from
+    number bear it.  This is a word-level sense index built entirely from
     CC BY 4.0 data.
     """
     num = canon.normalise_strongs(num or "")

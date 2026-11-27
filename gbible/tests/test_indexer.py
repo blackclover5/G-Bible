@@ -82,5 +82,26 @@ class IndexerTests(unittest.TestCase):
         self.assertIn("and he left.", row["text"])
 
 
+    def test_repeated_key_across_batches_leaves_one_fts_row(self):
+        # `unit` replaces a repeated key; FTS must do the same even when the
+        # two occurrences land in different batches.  A stale row made search
+        # return a verse whose text did not contain the search words.
+        from gbible import indexer, markup
+        from gbible.indexer import UnitIn
+        ix = indexer.Indexer("m1", batch=1)
+        for wording in ("first wording", "second wording"):
+            ix.add(UnitIn(key="Gen.1.1", label="Gen 1:1",
+                          segs=list(markup.parse_osis(wording))))
+        ix.flush()
+        rows = self.conn.execute(
+            "SELECT unit_key, text FROM unit_fts WHERE module_id='m1'").fetchall()
+        self.assertEqual([(r["unit_key"], r["text"]) for r in rows],
+                         [("Gen.1.1", "second wording")])
+        unit = self.conn.execute(
+            "SELECT text FROM unit WHERE module_id='m1' AND key='Gen.1.1'"
+        ).fetchone()
+        self.assertEqual(unit["text"], "second wording")
+
+
 if __name__ == "__main__":
     unittest.main()

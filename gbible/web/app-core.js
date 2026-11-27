@@ -14,25 +14,30 @@ const App = {
       }
       if (v) localStorage.setItem('gbible:last-version', v);
     } catch (e) {}
-    document.addEventListener('keydown', (e) => {
-      if (e.target && /input|textarea|select/i.test(e.target.tagName)) return;
-      if (e.key === '/') { e.preventDefault(); const s = document.getElementById('sq'); if (s) { App.show('search'); s.focus(); } }
-    });
     /* The pill is the quickest honest answer to "did anything break?". */
     const pill = document.getElementById('status-errors');
     if (pill) {
-      pill.onclick = () => { App.show('logs'); };
+      pill.onclick = () => { if (typeof Logs !== 'undefined') Logs.open(); else App.show('logs'); };
     }
     if (typeof refreshErrorPill === 'function') refreshErrorPill();
     Appearance.init();
     try {
       const st = await api('status');
+      if (!st || st.ok === false) throw new Error((st && st.error) || 'Could not read status.');
       $('#status').innerHTML = st.total
         ? `${st.total} module${st.total === 1 ? '' : 's'} · ${esc(st.size_label)}`
         : 'no modules — visit the <b>Store</b>';
+      // The AI Assistant is opt-in.  This is the one call that is allowed
+      // before it is enabled; everything else is gated server-side too.
+      try {
+        const aiState = await api('ai/status');
+        S.aiEnabled = !!(aiState && aiState.enabled);
+      } catch (e) { S.aiEnabled = false; }
+      applyAiGate();
       const tax = await api('taxonomy');
+      if (!tax || tax.ok === false) throw new Error((tax && tax.error) || 'Could not read resource categories.');
       S.tax = tax; S.types = tax.types; S.subjects = tax.subjects; S.langs = tax.languages;
-      await this.loadLibrary();
+      if (!await this.loadLibrary()) throw new Error('Could not load the library.');
       // Tour runs first; the recommended-modules prompt only appears after
       // the tour complete(s) or is dismissed — they used to fire together.
       if (typeof Tour !== 'undefined') {
@@ -42,7 +47,7 @@ const App = {
       } else {
         RecommendedPrompt.maybeShow().catch(() => {});
       }
-      await this.loadWorkspace();
+      if (!await this.loadWorkspace()) throw new Error('Could not load the workspace.');
       // Load the highlights up front: mark() reads this cache while painting a
       // pane, so without this a page reload shows no marks at all until
       // something else happens to trigger a load.  Deliberately not awaited --
@@ -78,11 +83,21 @@ const App = {
     let s = null;
     try { s = JSON.parse(sessionStorage.getItem('gbible:last-restore') || 'null'); } catch (e) { return; }
     if (!s) return;
-    try { sessionStorage.removeItem('gbible:last-restore'); } catch (e) { /* harmless */ }
+    // Remove only after the banner is on screen; if rendering throws, the
+    // notice stays and can be shown on the next load.
     const applied = Number(s.applied) || 0;
     const bits = [applied + ' record' + (applied === 1 ? '' : 's') + ' restored'];
     if (Number(s.existed)) bits.push(s.existed + ' already here');
-    if (Number(s.conflict)) bits.push(s.conflict + ' kept yours');
+    if (Number(s.conflict)) {
+      const named = Array.isArray(s.conflicts) ? s.conflicts.slice(0, 3)
+        .map(x => x.kind + ' ' + x.id).join(', ') : '';
+      bits.push(s.conflict + ' kept yours'
+        + (named ? ' (' + named + (Number(s.conflict) > 3 ? ', …' : '') + ')' : ''));
+    }
+    if (Number(s.deletes)) bits.push(s.deletes + ' deleted');
+    if (Number(s.deletes_skipped)) {
+      bits.push(s.deletes_skipped + ' deletes skipped (revision unknown)');
+    }
     if (s.ai_keys_added || s.ai_keys_kept) {
       bits.push('AI keys: ' + (s.ai_keys_added || 0) + ' restored, '
         + (s.ai_keys_kept || 0) + ' already set');
@@ -123,13 +138,19 @@ const App = {
     }
     bar.appendChild(right);
     document.body.appendChild(bar);
+    try { sessionStorage.removeItem('gbible:last-restore'); } catch (e) { /* harmless */ }
     // Let it stay as long as it needs; the reader closes it.
   },
 
   async loadLibrary() {
     const r = await api('library', { links: 1 });
+    if (!r || r.ok === false) {
+      toast((r && r.error) || 'Could not load the library.', 'err');
+      return false;
+    }
     S.modules = r.modules || [];
     S.links = r.links || {};
+    return true;
   },
 
   /* Populate the Store's category / subject / language filters.
@@ -176,18 +197,32 @@ const App = {
 
   async loadWorkspace() {
     const r = await api('workspace');
+    if (!r || r.ok === false) {
+      toast((r && r.error) || 'Could not load the workspace.', 'err');
+      return false;
+    }
     S.layout = r.layout;
     S.arrangements = r.arrangements || {};
     S.guide = r.guide || {};
     S.linkSets = r.link_sets || ['A', 'B', 'C', 'D', 'E', 'F'];
-    S.linkGroups = (await api('workspace/linksets')).groups || {};
+    const sets = await api('workspace/linksets');
+    if (!sets || sets.ok === false) {
+      toast((sets && sets.error) || 'Could not load link sets.', 'err');
+      return false;
+    }
+    S.linkGroups = sets.groups || {};
     this.renderWorkspace();
     /* Linked panes were saved with their own cursors; bring them into step so
      * a restored link set shows the same passage everywhere. */
     try { await Workspace.restoreLinks(); } catch (e) { /* never block a restore */ }
+    return true;
   },
 
   show(v) {
+    // The Assistant view does not exist until the reader enables it.  Send
+    // anyone who reaches it another way (a saved view, a link) to the setup
+    // card instead of an empty chat panel.
+    if (v === 'ai' && aiOff()) v = 'aisettings';
     S.view = v;
     $$('#nav button[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === v));
     $$('#nav .nav-menu').forEach(w => {
@@ -209,7 +244,12 @@ const App = {
     if (v === 'today') Dashboard.load();
     if (v === 'guides') { Guides.load(); }
     if (v === 'sermon-manager') {
-      const smTab = $('#sm-tab'); if (smTab) smTab.value = 'sermon-manager';
+      // Do not clobber a tab chosen just before calling show(): the Sermons
+      // "edit" link sets it to the editor, then calls show() to open the view,
+      // and used to be bounced straight back to the home tab.
+      const smTab = $('#sm-tab');
+      if (smTab && !['sermon-manager', 'sermons', 'sermon-editor'].includes(smTab.value))
+        smTab.value = 'sermon-manager';
       SermonHub.load();
     }
     if (v === 'organise') { Organise.load(); }
@@ -302,12 +342,64 @@ const App = {
   removeTileLeaf(node, id) {
     if (!node || typeof node !== 'object') return node;
     if (node.kind === 'tile') return node.id === id ? null : node;
-    node.children = (node.children || [])
-      .map(c => this.removeTileLeaf(c, id))
-      .filter(Boolean);
-    if (node.children.length === 0) return null;
-    if (node.children.length === 1) return node.children[0];
+    const kids = [], kept = [];
+    (node.children || []).forEach((c, i) => {
+      const pruned = this.removeTileLeaf(c, id);
+      if (pruned) { kids.push(pruned); kept.push(i); }
+    });
+    if (!kids.length) return null;
+    /* Keep each surviving child's own share: dropping a tile from a 3-column
+     * group must not leave three ratios for two children, or the split that
+     * follows snaps back to the wrong size. */
+    if (node.ratios) node.ratios = kept.map(i => node.ratios[i] || 1);
+    if (kids.length === 1) return kids[0];
+    node.children = kids;
     return node;
+  },
+
+  /* Collapse layout slots left empty after a pane is closed or moved away.
+   * removeTileLeaf folds a group down when only one child survives, so a
+   * two-pane layout whose commentary is closed comes back as one pane.  When
+   * every pane is gone we still keep a single empty tile so there is somewhere
+   * for the "+" button to open a resource.  forceSave is used by a move whose
+   * source tile is still occupied: the order/tile change must be persisted even
+   * though there is no empty tile to prune. */
+  async pruneEmptyTiles(opts) {
+    const lay = S.layout;
+    if (!lay || !lay.id) { this.renderWorkspace(); return false; }
+    const panes = lay.panes || [];
+    const tree = this.ensureTiles();
+    const leaves = this.leafTileIds(tree);
+    if (!leaves.length) { this.renderWorkspace(); return false; }
+    const occupied = new Set(panes.map(p => this.tileKey(p.tile_id)));
+    let next = tree, changed = false;
+    if (!occupied.size) {
+      next = { kind: 'tile', id: leaves[0] };
+      changed = true;
+    } else {
+      leaves.forEach(t => {
+        if (occupied.has(t)) return;
+        const pruned = this.removeTileLeaf(next, t);
+        if (pruned) { next = pruned; changed = true; }
+      });
+    }
+    if (changed || (opts && opts.forceSave)) {
+      lay.tiles = next;
+      await this.saveCurrentTree();
+    }
+    this.renderWorkspace();
+    return changed;
+  },
+
+  /* A short label for a pane's tab/move destination: its resource name, or the
+   * kind of study pane when it has no resource. */
+  paneLabel(p) {
+    const m = modById(p.module_id);
+    if (m) return m.name;
+    if (p.view === 'guide') return 'Passage Guide';
+    if (p.view === 'wordstudy') return 'Word Study';
+    if (p.view === 'factbook') return 'Factbook';
+    return 'Study pane';
   },
 
   /* Replace one tile node with a new group containing the old tile and the new
@@ -416,26 +508,49 @@ const App = {
       byTile.get(t).push(p);
     });
     const list = byTile.get(tileId) || [];
+    const remembered = this._activePane && this._activePane[tileId];
+    const activeIdx = Math.max(0, list.findIndex(p => p.id === remembered));
     (list.length ? list : []).forEach((p, idx) => {
       const m = modById(p.module_id);
       const tabName = m ? m.name
         : (p.view === 'guide' ? 'Passage'
           : (p.view === 'wordstudy' ? 'Word Study' : '(closed)'));
-      const tab = el('div', 'tile-tab' + (idx === 0 ? ' on' : ''));
+      const tab = el('div', 'tile-tab' + (idx === activeIdx ? ' on' : ''));
       if (p.link_set) tab.appendChild(el('span', 'ls ' + p.link_set, p.link_set));
-      tab.appendChild(el('span', 'modname', tabName));
+      tab.appendChild(el('span', 'modname', esc(tabName)));
       const x = el('span', 'x', '✕');
       x.onclick = (e) => { e.stopPropagation(); Workspace.closePane(p.id); };
-      x.oncontextmenu = (e) => { e.preventDefault(); e.stopPropagation(); Study.menu(e.clientX, e.clientY, [
-        { label: 'Add another pane beside', fn: () => Workspace.split(p.id, 'row') },
-        { label: 'Split this pane below', fn: () => Workspace.split(p.id, 'column') },
-        { label: 'Float in new window', fn: () => Workspace.floatPane(p.id) },
-        { label: 'Fullscreen reading', fn: () => Workspace.fullscreen(p.id) },
-        { label: 'Copy location', fn: () => Workspace.copyLocation(p.id) },
-        { label: 'Mark progress here', fn: () => Workspace.markHere(p.id) },
-        { label: 'Close pane', fn: () => Workspace.closePane(p.id) },
-      ]); };
       tab.appendChild(x);
+      /* Right-click anywhere on the tab, not just its ✕, so a pane can be
+       * moved to another layout slot without hunting for a tiny target. */
+      tab.oncontextmenu = (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const items = [
+          { label: 'Add another pane beside', fn: () => Workspace.split(p.id, 'row') },
+          { label: 'Split this pane below', fn: () => Workspace.split(p.id, 'column') },
+        ];
+        const others = App.leafTileIds(App.ensureTiles())
+          .filter(t => t !== App.tileKey(p.tile_id));
+        if (others.length) {
+          items.push('-', { section: 'MOVE TO PANE' });
+          others.forEach(t => {
+            const there = (S.layout.panes || []).filter(x => App.tileKey(x.tile_id) === t);
+            const label = there.length
+              ? there.map(x => App.paneLabel(x)).join(', ')
+              : 'Empty pane';
+            items.push({ label: label + ' →', fn: () => Workspace.movePane(p.id, t) });
+          });
+          items.push('-');
+        }
+        items.push(
+          { label: 'Float in new window', fn: () => Workspace.floatPane(p.id) },
+          { label: 'Fullscreen reading', fn: () => Workspace.fullscreen(p.id) },
+          { label: 'Copy location', fn: () => Workspace.copyLocation(p.id) },
+          { label: 'Mark progress here', fn: () => Workspace.markHere(p.id) },
+          { label: 'Close pane', fn: () => Workspace.closePane(p.id) },
+        );
+        Study.menu(e.clientX, e.clientY, items);
+      };
       tab.draggable = true;
       tab.addEventListener('dragstart', (ev) => {
         ev.dataTransfer.setData('text/plain', p.id);
@@ -448,27 +563,33 @@ const App = {
       });
       tab.addEventListener('dragleave', () => tab.classList.remove('dragover'));
       tab.addEventListener('drop', (ev) => {
-        ev.preventDefault();
+        ev.preventDefault(); ev.stopPropagation();
         tab.classList.remove('dragover');
         const srcId = ev.dataTransfer.getData('text/plain');
         if (!srcId || srcId === p.id) return;
-        const panes = (S.layout && S.layout.panes) || [];
-        const srcIdx = panes.findIndex(x => x.id === srcId);
-        const dstIdx = panes.findIndex(x => x.id === p.id);
-        if (srcIdx < 0 || dstIdx < 0) return;
-        const [moved] = panes.splice(srcIdx, 1);
-        moved.tile_id = p.tile_id;
-        let insertAt = dstIdx;
-        if (srcIdx < dstIdx) insertAt--;
-        if (insertAt < 0) insertAt = 0;
-        panes.splice(insertAt, 0, moved);
-        App.saveCurrentTree().then(() => App.loadWorkspace());
+        /* Dropping onto a tab moves the pane into that tab's slot and makes it
+         * the active tab there.  Dropping on empty tile space (handled below)
+         * just files it in that slot. */
+        Workspace.movePane(srcId, p.tile_id, p.id);
       });
       tab.onclick = (ev) => { if (ev.target.classList.contains('x')) return; this.showPane(tileId, p.id); };
       tabs.appendChild(tab);
     });
     const add = el('div', 'tile-tab', '<span style="color:var(--fg-3)">+</span>');
     add.onclick = () => Workspace.pickModule(tileId);
+    /* The + tab is a .tile-tab too, so the tile-level drop handler skips it;
+     * give it its own drop behaviour so dragging onto it files the pane here. */
+    add.addEventListener('dragover', (ev) => {
+      ev.preventDefault(); ev.dataTransfer.dropEffect = 'move';
+      add.classList.add('dragover');
+    });
+    add.addEventListener('dragleave', () => add.classList.remove('dragover'));
+    add.addEventListener('drop', (ev) => {
+      ev.preventDefault(); ev.stopPropagation();
+      add.classList.remove('dragover');
+      const srcId = ev.dataTransfer.getData('text/plain');
+      if (srcId) Workspace.movePane(srcId, tileId);
+    });
     tabs.appendChild(add);
     tile.appendChild(tabs);
     const active = list[0];
@@ -477,6 +598,26 @@ const App = {
     tile.appendChild(pane);
     if (active) this.fillPane(pane, active);
     else pane.appendChild(el('div', 'empty', 'Open a resource with +'));
+    /* The whole tile is a drop target, not just its tabs: a resource can now be
+     * dragged straight into an empty slot (e.g. My Bible into the other pane of
+     * a two-pane layout).  Tab drops are handled on the tab itself. */
+    tile.addEventListener('dragover', (ev) => {
+      if (ev.target.closest && ev.target.closest('.tile-tab')) return;
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = 'move';
+      tile.classList.add('tile-drop');
+    });
+    tile.addEventListener('dragleave', (ev) => {
+      if (tile.contains(ev.relatedTarget)) return;
+      tile.classList.remove('tile-drop');
+    });
+    tile.addEventListener('drop', (ev) => {
+      if (ev.target.closest && ev.target.closest('.tile-tab')) return;
+      ev.preventDefault(); ev.stopPropagation();
+      tile.classList.remove('tile-drop');
+      const srcId = ev.dataTransfer.getData('text/plain');
+      if (srcId) Workspace.movePane(srcId, tileId);
+    });
     return tile;
   },
 
@@ -543,11 +684,15 @@ const App = {
     /* "The first tile that has tabs" is not the tile you asked for: selecting a
      * tab in the third column moved the first column instead.  Ask for the tile
      * by id, and only fall back if the layout predates the attribute. */
-    let tile = $('.tile[data-tile="' + tid + '"]');
+    let tile = document.querySelector('.tile[data-tile="' + tid + '"]');
     if (!tile) tile = $$('.tile').find(t => t.querySelector('.tile-tab'));
-    if (!tile) return;
+    if (!tile || !tile.querySelectorAll) return;
     const tabs = $$('.tile-tab', tile);
     tabs.forEach((t, k) => t.classList.toggle('on', k === idx));
+    // Track focus on the model too: article/map links and Print use it.
+    (S.layout.panes || []).forEach(x => { x.is_focus = x.id === panes[idx].id; });
+    this._activePane = this._activePane || {};
+    this._activePane[tid] = panes[idx].id;
     const pane = $('.pane', tile);
     if (pane) { pane.dataset.pane = panes[idx].id; this.fillPane(pane, panes[idx]); }
   },
@@ -558,8 +703,26 @@ const App = {
     const tools = el('div', 'pane-tools');
     const body = el('div', 'pane-body');
     pane.appendChild(tools); pane.appendChild(body);
-    const modLabel = el('span', 'mod', m ? m.name : (p.view === 'guide' ? 'Passage' : '(none)'));
+    const modLabel = el('span', 'mod', esc(m ? m.name : (p.view === 'guide' ? 'Passage' : '(none)')));
     tools.appendChild(modLabel);
+    /* Move this pane into another slot of the layout.  Added before the view
+     * branches below so it is available on every kind of pane, including
+     * Passage Guides and Word Study panes. */
+    const movers = App.leafTileIds(App.ensureTiles())
+      .filter(t => t !== App.tileKey(p.tile_id));
+    if (movers.length) {
+      const mv = el('select', 'move-pane');
+      mv.title = 'Move this pane to another layout pane';
+      mv.innerHTML = '<option value="">→ move to…</option>' + movers.map(t => {
+        const there = (S.layout.panes || []).filter(x => App.tileKey(x.tile_id) === t);
+        const label = there.length
+          ? there.map(x => App.paneLabel(x)).join(', ')
+          : 'Empty pane';
+        return '<option value="' + esc(t) + '">' + esc(label) + '</option>';
+      }).join('');
+      mv.onchange = () => { if (mv.value) Workspace.movePane(p.id, mv.value); };
+      tools.appendChild(mv);
+    }
     /* Translation switcher: swap this pane's Bible for another installed one,
      * keeping the pane, its link set and its reading position. */
     if (m && m.is_bible) {
@@ -603,7 +766,14 @@ const App = {
       refBox.value = (p.cursor && (p.cursor.ref || p.cursor.key)) || '';
       refBox.placeholder = 'Jn 3:16';
       const gtype = (p.cursor && p.cursor.guide) || 'passage';
-      refBox.onkeydown = (e) => { if (e.key === 'Enter') { Study.openGuidePane(gtype, refBox.value, body); } };
+      refBox.onkeydown = async (e) => {
+        if (e.key !== 'Enter') return;
+        const ref = refBox.value.trim();
+        if (!ref) return;
+        p.cursor = Object.assign({}, p.cursor, { ref, guide: gtype });
+        await Study.openGuidePane(gtype, ref, body);
+        await Reader.saveNow(p);
+      };
       tools.appendChild(refBox);
       const ref = (p.cursor && (p.cursor.ref || p.cursor.key)) || '';
       if (ref) Study.openGuidePane(gtype, ref, body);
@@ -746,12 +916,12 @@ const App = {
      * the server filters by type, so the same two buttons serve both. */
     const parP = el('button', '', '‹‖'); parP.title = 'Previous parallel resource';
     parP.onclick = async () => {
-      const r = await Workspace.parallelStep(p.module_id, -1);
+      const r = await Workspace.parallelStep(p.module_id, -1, '', p.id);
       if (!r || !r.ok) toast('No parallel resource.', 'warn');
     };
     const parN = el('button', '', '‖›'); parN.title = 'Next parallel resource';
     parN.onclick = async () => {
-      const r = await Workspace.parallelStep(p.module_id, 1);
+      const r = await Workspace.parallelStep(p.module_id, 1, '', p.id);
       if (!r || !r.ok) toast('No parallel resource.', 'warn');
     };
     const ed = el('button', '', '¶'); ed.title = 'Toggle reader’s edition (clean text)';
@@ -759,11 +929,21 @@ const App = {
       const clean = !(p.options && p.options.show_notes === false);
       Workspace.edition(p.id, clean ? 'clean' : 'study');
     };
-    const vf = el('button', '', 'F'); vf.title = 'Filters — highlight saved queries here (click for list)';
-    vf.onclick = () => VisualFilters.dialog();
+    const vf = el('button', '', 'F');
+    vf.title = 'Filters — click for the list, double-click to turn highlighting on/off';
+    let vfTimer = null;
+    vf.onclick = (e) => {
+      // A double-click fires two click events; waiting lets the dblclick
+      // handler cancel the pending dialog instead of opening it twice.
+      if (e.detail > 1) return;
+      vfTimer = setTimeout(() => VisualFilters.dialog(), 220);
+    };
     vf.ondblclick = (e) => {
       e.stopPropagation();
+      clearTimeout(vfTimer);
       VisualFilters.on = !VisualFilters.on;
+      try { localStorage.setItem('gbible:vf-on', VisualFilters.on ? '1' : '0'); }
+      catch (err) { /* private browsing: the in-memory toggle still works */ }
       toast('Filters ' + (VisualFilters.on ? 'on.' : 'off.'));
       if (S.layout) App.loadWorkspace();
     };
@@ -791,42 +971,7 @@ const App = {
           text = mt ? mt[0].trim() : text.slice(0, 220);
         }
         if (!text) { toast('Nothing to render.', 'warn'); return; }
-        const canvas = document.createElement('canvas');
-        canvas.width = 1080; canvas.height = 540;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) { toast('Cannot render image.', 'warn'); return; }
-        const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-        grad.addColorStop(0, '#1e2a3a'); grad.addColorStop(1, '#0f1724');
-        ctx.fillStyle = grad; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#f5f1e8';
-        ctx.font = 'italic 34px Georgia, serif';
-        ctx.textAlign = 'center';
-        const words = text.split(' ');
-        const lines = []; let line = '';
-        const maxW = canvas.width - 120;
-        words.forEach(w => {
-          const test = line ? line + ' ' + w : w;
-          if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
-          else line = test;
-        });
-        if (line) lines.push(line);
-        const lineH = 46;
-        const startY = (canvas.height - lines.length * lineH) / 2 - 10;
-        lines.forEach((ln, i) => ctx.fillText(ln, canvas.width / 2, startY + i * lineH));
-        ctx.font = 'bold 22px Georgia, serif';
-        ctx.fillStyle = '#c9a961';
-        ctx.fillText(ref + (m.name ? '  ·  ' + m.name : ''), canvas.width / 2,
-                     startY + lines.length * lineH + 30);
-        const done = (blob) => {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url; a.download = (ref.replace(/[^a-z0-9]+/gi, '-') || 'verse') + '.png';
-          document.body.appendChild(a); a.click(); a.remove();
-          URL.revokeObjectURL(url);
-          toast('Saved image.');
-        };
-        if (canvas.toBlob) { canvas.toBlob(done, 'image/png'); }
-        else { done(canvas.msToBlob ? canvas.msToBlob() : null); }
+        VisualCopy.save(ref, text, m.name);
       } catch (e) {
         toast('Visual copy failed: ' + (e && e.message ? e.message : String(e)), 'warn');
       }
@@ -996,7 +1141,10 @@ const App = {
       picker.innerHTML = '<div class="ref-picker-col" style="min-width:250px">'
         + '<div class="ref-picker-heading cal-head">'
         + '<button class="btn tiny" id="pcal-prev" type="button" title="Previous month">‹</button>'
-        + '<span class="tiny" id="pcal-month"></span>'
+        + '<span class="dp-controls">'
+        + '<select class="dp-month" id="pcal-monthsel" aria-label="Month"></select>'
+        + '<select class="dp-year" id="pcal-yearsel" aria-label="Year"></select>'
+        + '</span>'
         + '<button class="btn tiny" id="pcal-next" type="button" title="Next month">›</button>'
         + '</div>'
         + '<div class="pcal-grid" id="pcal-days"></div>'
@@ -1015,10 +1163,21 @@ const App = {
           pickerCloseEvents = null;
         }
       };
+      const monthSel = $('#pcal-monthsel', picker);
+      const yearSel = $('#pcal-yearsel', picker);
+      ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+       'August', 'September', 'October', 'November', 'December']
+        .forEach((name, i) => {
+          const o = el('option', '', name); o.value = String(i); monthSel.appendChild(o);
+        });
+      const y0 = new Date().getFullYear();
+      for (let y = y0 - 30; y <= y0 + 30; y++) {
+        const o = el('option', '', String(y)); o.value = String(y); yearSel.appendChild(o);
+      }
       const drawCalendar = () => {
         const host = $('#pcal-days', picker);
-        const label = $('#pcal-month', picker);
-        label.textContent = pickerView.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+        monthSel.value = String(pickerView.getMonth());
+        yearSel.value = String(pickerView.getFullYear());
         host.innerHTML = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
           .map(d => '<div class="pcal-dow">' + d + '</div>').join('');
         const first = new Date(pickerView.getFullYear(), pickerView.getMonth(), 1).getDay();
@@ -1059,6 +1218,14 @@ const App = {
       $('#pcal-next', picker).onclick = (e) => {
         e.stopPropagation();
         pickerView = new Date(pickerView.getFullYear(), pickerView.getMonth() + 1, 1);
+        drawCalendar();
+      };
+      monthSel.onchange = () => {
+        pickerView = new Date(pickerView.getFullYear(), Number(monthSel.value), 1);
+        drawCalendar();
+      };
+      yearSel.onchange = () => {
+        pickerView = new Date(Number(yearSel.value), pickerView.getMonth(), 1);
         drawCalendar();
       };
       $('#pcal-today', picker).onclick = (e) => {
@@ -1103,6 +1270,10 @@ const App = {
     };
     tools.appendChild(ls);
 
+    // Find within this pane.  Ctrl+F while reading uses this rather than the
+    // library search, so looking up a word does not leave the passage.
+    if (typeof PaneFind !== 'undefined') PaneFind.attach(pane, body, tools);
+
     const size = el('input', ''); size.type = 'range'; size.min = 70; size.max = 190;
     size.value = p.text_size || 100; size.style.width = '70px';
     size.title = 'Text size';
@@ -1123,16 +1294,16 @@ const App = {
       tools.appendChild(t);
     }
     if (m.has_notes) {
-      const t = el('button', 'on', 'Notes');
+      const t = el('button', (p.options && p.options.show_notes === false) ? '' : 'on', 'Notes');
       t.onclick = () => { Reader.toggle(p, body, 'show_notes', t); };
       tools.appendChild(t);
     }
     if (m.reader === 'verse') {
-      const t = el('button', 'on', 'WJ'); t.title = 'Words of Christ (red, where the Bible tags them)';
+      const t = el('button', (p.options && p.options.show_red === false) ? '' : 'on', 'WJ'); t.title = 'Words of Christ (red, where the Bible tags them)';
       t.onclick = () => { Reader.toggle(p, body, 'show_red', t); };
       tools.appendChild(t);
     }
-    const h = el('button', 'on', 'Headings'); h.title = 'Headings';
+    const h = el('button', (p.options && p.options.show_headings === false) ? '' : 'on', 'Headings'); h.title = 'Headings';
     h.onclick = () => { Reader.toggle(p, body, 'show_headings', h); };
     tools.appendChild(h);
     const mem = el('button', '', 'Mem'); mem.title = 'Memorise this passage';
@@ -1163,48 +1334,45 @@ const App = {
       tools.appendChild(more);
 
       /* One click for everything installed that bears on this passage.
-       *
-       * The current passage is resolved when the button is *clicked*, not now.
-       * It was read here from `r`, a variable that does not exist in this
-       * function: the pane is built first and only then read, so there is no
-       * result yet.  That threw "r is not defined" on every pane fill, which
-       * aborted the rest of the toolbar -- so the Study, Compare and Interlinear
-       * buttons had never once appeared in the reader, and the only way into
-       * the study panel was right-click. */
+       * Each button resolves the passage at click time (see `v` below), so it
+       * follows the verse the reader last selected rather than a stale verse
+       * captured while the toolbar was still being built. */
       if (m.reader === 'verse' || m.reader === 'date') {
-        const v = anchor();
+        // Resolve the passage when a button is clicked, not when the toolbar
+        // is built.  Capturing it here gave every button the chapter's first
+        // verse, because the reader resets the selection on each repaint.
+        const v = () => anchor();
         // If the user has clicked a verse, remember it so buttons use that verse
         // instead of always the first one in the pane.
         p.selectedVerse = p.selectedVerse || null;
         const study = el('button', '', 'Study');
         study.title = 'Commentaries, cross-references, topics, places, words';
-        study.onclick = () => { if (v) Study.openVerse(v.source, v.key, v.label); };
+        study.onclick = () => { const a = v(); if (a) Study.openVerse(a.source, a.key, a.label); };
         tools.appendChild(study);
         const pg = el('button', '', 'Passage');
         pg.title = 'Passage for the open verse';
-        pg.onclick = () => { if (v) Study.openPassage(v.label); };
+        pg.onclick = () => { const a = v(); if (a) Study.openPassage(a.label); };
         tools.appendChild(pg);
         const info = el('button', '', 'Info');
         info.title = 'Follow-pane card: text, people, places, library coverage';
-        info.onclick = () => { if (v) InfoPane.open(v.label); };
+        info.onclick = () => { const a = v(); if (a) InfoPane.open(a.label); };
         tools.appendChild(info);
         const cmp = el('button', '', 'Compare');
         cmp.title = 'The same passage in several translations';
-        cmp.onclick = () => { if (v) Study.openCompare(v.label); };
+        cmp.onclick = () => { const a = v(); if (a) Study.openCompare(a.label); };
         const mrg = el('button', 'btn tiny', 'Merge');
         mrg.title = 'Fuse several translations into one text, marking where they differ';
-        mrg.onclick = () => { if (v) Study.openMerge(v.label); };
-        cmp.after(mrg);
-        tools.appendChild(cmp);
+        mrg.onclick = () => { const a = v(); if (a) Study.openMerge(a.label); };
+        tools.append(cmp, mrg);
         // Interlinear needs a tagged resource; offer it when there is one.
         if (m.has_morph || m.has_strongs) {
           const il = el('button', '', 'Interlinear');
           il.title = 'Word by word: form, lemma, morphology, gloss';
-          il.onclick = () => { if (v) Study.openInterlinear(v.source, v.key, v.label); };
+          il.onclick = () => { const a = v(); if (a) Study.openInterlinear(a.source, a.key, a.label); };
           tools.appendChild(il);
           const ril = el('button', '', 'Rev. interlinear');
           ril.title = 'Reverse interlinear: English on top, original language beneath';
-          ril.onclick = () => { if (v) Study.openReverseInterlinear(v.source, v.key, v.label); };
+          ril.onclick = () => { const a = v(); if (a) Study.openReverseInterlinear(a.source, a.key, a.label); };
           tools.appendChild(ril);
         }
         // Copy the passage to the clipboard, formatted.
@@ -1225,8 +1393,9 @@ const App = {
             }
             return;
           }
-          if (!v) return;
-          const parts = String(v.key || '').split('.');
+          const a = v();
+          if (!a) return;
+          const parts = String(a.key || '').split('.');
           const book = parts[0] || '';
           const chapter = parseInt(parts[1] || '0', 10) || 0;
           const r = await api('bible/chapter', { id: m.id, book, chapter });
@@ -1330,7 +1499,7 @@ const RecommendedPrompt = {
     { title: 'Explore the original languages', kicker: 'WORD STUDY', body: 'Follow Strong’s numbers, consult lexica, explore morphology and use the concordance to see how a word appears in context.' },
     { title: 'See the bigger picture', kicker: 'GUIDES & MAPS', body: 'Use Passage, cross-references, timelines, Bible places, maps, genealogy and gospel harmony to connect people, places and events.' },
     { title: 'Keep your study together', kicker: 'PERSONAL TOOLS', body: 'Save notes, highlights and clips; organise passages; and build reading plans, word lists and memorisation practice.' },
-    { title: 'Make it your own', kicker: 'OPTIONAL EXTRAS', body: 'Adjust the appearance, read passages aloud, import personal books, check for updates, and explore the optional AI assistant when you choose to configure it.' },
+    { title: 'Make it your own', kicker: 'OPTIONAL EXTRAS', body: 'Adjust the appearance, read passages aloud, import personal books, check for updates, and enable the optional AI assistant in Settings when you want it.' },
   ],
   slideIndex: 0,
   running: false,

@@ -130,8 +130,15 @@ def main():
         if len(links) >= 2:
             # index page: each link is a work
             for href, label in links:
+                # "Liber I" is a volume label used by several different works of
+                # one author. Deriving the id from the author + label alone made
+                # Confessions, City of God and De Trinitate share one id, so the
+                # store kept only the last and installing one fetched another.
+                work_file = re.sub(r"[^a-z0-9]+", "_",
+                                   href.rsplit("/", 1)[-1].lower()).strip("_")
                 wid = re.sub(r"[^a-z0-9]+", "_",
-                             (name + " " + label).lower()).strip("_")[:60]
+                             (name + " " + label + " " + work_file).lower()
+                             ).strip("_")[:80]
                 items.append(make_item(wid, label, name, dates, href))
         else:
             # single work on this page: the page itself

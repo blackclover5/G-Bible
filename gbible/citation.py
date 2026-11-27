@@ -259,6 +259,13 @@ def set_field(module_id: str, field: str, value: str) -> dict:
             "DELETE FROM citation_meta WHERE module_id=? AND field=?",
             (module_id, field))
     conn.commit()
+    if not v:
+        # The synced record is one per module, so name the module.
+        try:
+            from . import sync
+            sync.tombstone(module_id, "citation-meta")
+        except Exception:                               # noqa: BLE001
+            pass
     return {"ok": True, "module_id": module_id, "field": field, "value": v}
 
 

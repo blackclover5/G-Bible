@@ -1,9 +1,9 @@
 """Where sync puts its folder: a directory, or a WebDAV server.
 
-A target is the five operations the contract needs -- read, write, remove,
-exists -- and nothing else.  The folder layout, the manifest and the merge all
-live in `sync.py` and are deliberately indifferent to which target is in play:
-a target that can store and retrieve a named blob is all any of them require.
+A target is the five storage operations the contract needs -- read, write,
+remove, exists -- and nothing else.  The archive layout and the (manual)
+restore live in `sync.py` and are indifferent to which target is in play: a
+target that can store and retrieve a named blob is all any of them require.
 
 Two of them exist.  A filesystem directory is the simplest thing that works and
 the right answer for "another computer I have" -- a second disk, a NAS mount, a
@@ -17,9 +17,9 @@ from __future__ import annotations
 
 import base64
 import ipaddress
-import json
 import os
 import socket
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -211,29 +211,52 @@ class WebDAVTarget(Target):
         req.add_header("Authorization", self._auth())
         for k, v in (headers or {}).items():
             req.add_header(k, v)
-        try:
-            return urllib.request.urlopen(req, timeout=self.timeout)
-        except urllib.error.HTTPError as e:
-            if e.code == 404:
-                return None
-            if e.code == 405 and method == "MKCOL":
-                # 405 Method Not Allowed is how every server says "this
-                # collection already exists", which is what MKCOL was for.
-                return None
-            detail = ""
+        # A dropped connection or a busy server is not a reason to fail a sync:
+        # retry the transient cases a couple of times with a short backoff.
+        # HTTP errors are not retried (a 404 means "not there", not "try again")
+        # except 429 and the 502/503/504 gateway failures, which really do mean
+        # "later".
+        for attempt in range(3):
             try:
-                detail = e.read(200).decode("utf-8", "replace").strip()
-            except Exception:
-                pass
-            raise TargetError(
-                f"{e.code} from the server for {relpath}"
-                + (f": {detail[:120]}" if detail else "")) from e
-        except urllib.error.URLError as e:
-            reason = getattr(e, "reason", e)
-            raise TargetError(
-                f"Could not reach the server: {reason}") from e
-        except (socket.timeout, TimeoutError) as e:
-            raise TargetError("The server did not answer in time.") from e
+                return urllib.request.urlopen(req, timeout=self.timeout)
+            except urllib.error.HTTPError as e:
+                if e.code == 404:
+                    return None
+                if e.code == 405 and method == "MKCOL":
+                    # 405 Method Not Allowed is how every server says "this
+                    # collection already exists", which is what MKCOL was for.
+                    return None
+                if e.code in (429, 502, 503, 504) and attempt < 2:
+                    delay = 0.5 * (2 ** attempt)
+                    if e.code in (429, 503):
+                        try:
+                            delay = max(delay, float(
+                                e.headers.get("Retry-After", "") or 0))
+                        except (TypeError, ValueError):
+                            pass
+                    try:
+                        e.close()
+                    except Exception:                        # noqa: BLE001
+                        pass
+                    time.sleep(min(delay, 30))
+                    continue
+                detail = ""
+                try:
+                    detail = e.read(200).decode("utf-8", "replace").strip()
+                except Exception:
+                    pass
+                raise TargetError(
+                    f"{e.code} from the server for {relpath}"
+                    + (f": {detail[:120]}" if detail else "")) from e
+            except (urllib.error.URLError, socket.timeout, TimeoutError) as e:
+                if attempt < 2:
+                    time.sleep(0.5 * (2 ** attempt))
+                    continue
+                if isinstance(e, urllib.error.URLError):
+                    reason = getattr(e, "reason", e)
+                    raise TargetError(
+                        f"Could not reach the server: {reason}") from e
+                raise TargetError("The server did not answer in time.") from e
 
     def read(self, relpath: str) -> bytes | None:
         r = self._request("GET", relpath)
@@ -252,7 +275,9 @@ class WebDAVTarget(Target):
         tmp = ("tmp/" + uuid.uuid4().hex[:10] + "-" + tmp[-1]) if len(tmp) == 1 \
             else (tmp[0] + "/tmp/" + uuid.uuid4().hex[:10] + "-" + tmp[-1])
         try:
-            self._request("PUT", tmp, body)
+            put = self._request("PUT", tmp, body)
+            if put is not None:
+                put.close()
             r = self._request("MOVE", tmp, headers={
                 "Destination": self._url(relpath),
                 "Overwrite": "T"})

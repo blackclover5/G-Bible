@@ -404,7 +404,8 @@ def _dashboard(parts, q):
 def _notes_list(parts, q):
     return _ok(notes=notes.listing(q.get("kind", ""), q=q.get("q", ""),
                                    tag=q.get("tag", ""),
-                                   limit=int(q.get("limit") or 500),
+                                   limit=_bounded_int(q.get("limit"), 500,
+                                                      low=1, high=5000),
                                    since=float(q.get("since") or 0)),
                stats=notes.stats())
 
@@ -436,6 +437,19 @@ def _notes_delete(parts, body):
 def _notes_at(parts, q):
     """Notes anchored to one unit, so the reader can show them in the pane."""
     return _ok(notes=notes.notes_at(q.get("id", ""), q.get("key", "")))
+
+
+@endpoint("notes/wordmarks")
+def _notes_wordmarks(parts, q):
+    """Notes anchored to original-language words, by unit key."""
+    keys = q.get("keys") or []
+    if isinstance(keys, str):
+        import json as _json
+        try:
+            keys = _json.loads(keys)
+        except (ValueError, TypeError):
+            keys = [k for k in keys.split("|") if k]
+    return _ok(marks=notes.word_marks(q.get("id", ""), keys))
 
 
 @endpoint("notes/prayer")

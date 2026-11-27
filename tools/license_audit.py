@@ -31,6 +31,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from gbible import db, library, taxonomy  # noqa: E402
+from gbible.store import BUNDLED_REPO_IDS  # noqa: E402
 
 
 def audit() -> list[dict]:
@@ -41,7 +42,11 @@ def audit() -> list[dict]:
         "WHERE installed_at > 0 ORDER BY id").fetchall()
     bad = []
     for r in rows:
-        ok, why = taxonomy.redistributable(dict(r))
+        # An installed module loses the flag the Store adds when reading a
+        # curated catalogue.  Restore it from the source repo id, or every
+        # bundled public-domain work is reported as illegal.
+        item = {**dict(r), "bundled_catalog": r["source"] in BUNDLED_REPO_IDS}
+        ok, why = taxonomy.redistributable(item)
         if not ok:
             bad.append({"id": r["id"], "name": r["name"],
                         "license": r["license"], "year": r["year"],
@@ -52,6 +57,7 @@ def audit() -> list[dict]:
 # ---------------------------------------------------------------- bundled data
 
 BUNDLED = ROOT / "gbible" / "data" / "outlines.json.gz"
+BUNDLED_EUSEBIAN = ROOT / "gbible" / "data" / "eusebian_tables.json"
 
 #: The only fields a section entry is allowed to carry.
 #:
@@ -184,6 +190,49 @@ def audit_bundled() -> list[dict]:
     return bad
 
 
+def audit_bundled_eusebian() -> list[dict]:
+    """The committed canon tables claim public domain; check the claim.
+
+    The metadata lives in the file, as it does for the outlines.  A transcription
+    of a fourth-century work carries no copyright, and the modern edition is
+    released as Public Domain by its publisher; both facts are recorded there.
+    """
+    bad: list[dict] = []
+    if not BUNDLED_EUSEBIAN.exists():
+        return [{"id": "gbible/data/eusebian_tables.json",
+                 "name": "Eusebian canon tables", "license": "", "year": "",
+                 "reason": "the committed canon-table file is missing"}]
+    try:
+        doc = json.loads(BUNDLED_EUSEBIAN.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return [{"id": "gbible/data/eusebian_tables.json",
+                 "name": "Eusebian canon tables", "license": "", "year": "",
+                 "reason": f"it is not readable JSON: {type(exc).__name__}"}]
+    missing = [f for f in REQUIRED_FIELDS if not str(doc.get(f, "")).strip()]
+    if missing:
+        bad.append({"id": "gbible/data/eusebian_tables.json",
+                    "name": "Eusebian canon tables", "license": "", "year": "",
+                    "reason": "it records no provenance for these: " + ", ".join(missing)})
+    else:
+        ok, why = taxonomy.pd_dated_ok({"id": "eusebian-tables",
+                                        "license": doc["license"],
+                                        "year": doc["year"]})
+        if not ok:
+            bad.append({"id": "gbible/data/eusebian_tables.json",
+                        "name": "Eusebian canon tables", "license": doc["license"],
+                        "year": doc["year"], "reason": why})
+    entries = doc.get("entries") or []
+    if not entries:
+        bad.append({"id": "gbible/data/eusebian_tables.json",
+                    "name": "Eusebian canon tables", "license": "", "year": "",
+                    "reason": "it carries no canon-table entries"})
+    if any(not re.fullmatch(r"[IVX]+", str(e.get("table", ""))) for e in entries):
+        bad.append({"id": "gbible/data/eusebian_tables.json",
+                    "name": "Eusebian canon tables", "license": "", "year": "",
+                    "reason": "an entry names a canon table that does not exist"})
+    return bad
+
+
 def main(argv: list[str]) -> int:
     remove = "--remove" in argv
     conn = db.connect()
@@ -198,10 +247,10 @@ def main(argv: list[str]) -> int:
             print(f"    {b['id']}")
             print(f"      {b['reason']}")
     else:
-        print("  the committed JFB outlines pass: public domain, the authors' "
-              "own headings, no prose, no third-party contribution")
+        print("  the committed JFB outlines and Eusebian tables pass: public "
+              "domain, recorded provenance, no third-party contribution")
 
-    bad = audit()
+    bad = audit_bundled_eusebian() + audit()
     if not bad:
         print("  all installed modules pass the licence and date gates")
         return 1 if bundled else 0

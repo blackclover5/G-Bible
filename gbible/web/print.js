@@ -95,7 +95,7 @@ td, th { border: .5pt solid #ccc; padding: 3pt 6pt; font-size: 9.5pt; }
     return f;
   },
 
-  _write(title, html) {
+  _write(html) {
     const f = this._frame();
     const doc = f.contentDocument || f.contentWindow.document;
     doc.open();
@@ -169,43 +169,8 @@ td, th { border: .5pt solid #ccc; padding: 3pt 6pt; font-size: 9.5pt; }
     const html = this._doc((meta && meta.section) || (meta && meta.refLabel)
                               || this._moduleName(meta),
                             clone.outerHTML, meta || {});
-    this._write((meta && meta.section) || 'G-Bible', html);
+    this._write(html);
   },
 
-  /* A pane knows its module, its section title and its ref — everything here. */
-  printPane(p, body) {
-    const m = p && p.module_id ? modById(p.module_id) : null;
-    const c = (p && p._content) || {};
-    const section = c.section_title
-      || (p && p.cursor && p.cursor.ref ? '' : '') /* keep cursor out of the heading */
-      || '';
-    const ref = (c.ref_label)
-      || (c.cursor && (c.cursor.ref || c.cursor.key))
-      || (p && p.cursor && (p.cursor.ref || p.cursor.key || p.cursor.date))
-      || '';
-    this.printNode(body, {
-      moduleName: (m && m.name) || (p && p.module_name) || 'G-Bible',
-      section: section,
-      refLabel: ref,
-      license: (m && m.license) || ''
-    });
-  },
-
-  /* A modal knows its title — use it, skipping the dialog chrome. */
-  printModal() {
-    const body = document.getElementById('modal-body');
-    const titleEl = document.getElementById('modal-title');
-    const title = titleEl ? (titleEl.textContent || 'Document').trim() : 'Document';
-    const text = body && body.textContent ? body.textContent.trim() : '';
-    if (!text) { toast('Nothing to print.', 'warn'); return; }
-    /* Short prompts (confirmations, errors) print poorly; skip the button
-     * for those by never calling this.  It exists for content modals. */
-    this.printNode(body, {
-      moduleName: 'G-Bible',
-      section: title || 'Document',
-      refLabel: '',
-      license: ''
-    });
-  },
 };
 window.Print = Print;

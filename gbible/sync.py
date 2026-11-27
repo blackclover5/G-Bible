@@ -9,22 +9,19 @@ a Bible is large and re-installable from the Store, and moving it would make
 every sync a download.  What does travel is the list of module ids, so a new
 computer knows what to install.
 
-The shape of it:
+**What it does today:** ``run()`` writes one complete ``.gbz`` archive to the
+target.  It does not read a peer's archive or merge records automatically.
+Merging happens only when the reader explicitly restores from a backup
+(``sync/restore`` or the Backup screen), additively: identical records are
+skipped and differing records keep the local value.  Describing this as an
+automatic two-way merge would be false.
 
-  * every entity becomes a **record** -- a JSON envelope carrying an id, a
-    revision, a hybrid logical clock stamp and the payload itself;
-  * a **manifest** at the root of the sync folder lists every record any
-    device knows, with its hash, so a client can decide what to move without
-    fetching anything it already has;
-  * two devices that have never met agree on who won an edit, because ordering
-    comes from a clock that is advanced by *observing* the other device rather
-    than from either device's wall clock.  A laptop that comes back with a dead
-    battery and a clock three months behind must not be able to silently
-    overwrite a month of notes.
-
-Deletes are recorded as **tombstones**, because notes, highlights, collections
-and templates are deleted outright in this database.  A delete that is not
-recorded comes back on the next sync from any device that was not watching.
+The archive carries a manifest with each record's hash and revision, and a
+hybrid logical clock stamp so a restored record can be ordered against a local
+one.  Deletes are recorded as **tombstones**, because notes, highlights,
+collections and templates are deleted outright in this database.  A delete
+that is not recorded comes back on the next restore from any device that was
+not watching.  Tombstones are kept for 90 days.
 """
 
 from __future__ import annotations
@@ -37,7 +34,6 @@ import subprocess
 import threading
 import time
 import urllib.parse
-import urllib.request
 import uuid
 from pathlib import Path
 
@@ -81,16 +77,58 @@ KINDS = {
     "morph-query": "morph-queries",
 }
 
-#: Kinds that can be merged rather than won.  `plan-mark` is a set of days read,
-#: which is additive: a day marked on a phone and a day marked on a desktop are
-#: both true, and there is no conflict to resolve.
-MERGEABLE = ("plan-mark",)
+#: Human labels for the record kinds.  Kept beside KINDS so the two cannot drift
+#: apart; the UI reads these through scope() rather than keeping its own list.
+KIND_LABELS = {
+    "note": "Notes, journals, sermons & prayers",
+    "highlight": "Highlights & bookmarks",
+    "plan-mark": "Reading-plan progress",
+    "layout": "Pane layouts",
+    "collection": "Collections",
+    "passage-list": "Passage lists",
+    "passage": "Items inside passage lists",
+    "template": "Saved searches",
+    "favourite": "Favourite modules",
+    "setting": "Reading settings (allowlisted keys only)",
+    "tag": "Tags",
+    "word-list": "Word lists",
+    "workflow": "Workflows",
+    "srs-card": "Memory-verse cards",
+    "citation-meta": "Citation metadata",
+    "canvas-board": "Canvas boards",
+    "ai-chat": "AI conversations",
+    "morph-query": "Saved morphological searches",
+}
+
+#: Friendly names for the settings keys most easily mistaken for local state.
+SETTING_LABELS = {
+    "reading-plan/progress": "Reading-plan progress",
+    "reading-plan/custom": "Custom reading plans",
+    "module_tags": "Module tags",
+    "highlight_palettes": "Highlight palettes",
+    "top_bible": "Preferred Bible",
+    "prioritize_rules": "Module priority rules",
+    "visual_filters": "Visual filters",
+    "plan_paces": "Reading paces",
+    "plans_archived": "Archived plans",
+    "sermon_calendar": "Sermon calendar",
+    "notebooks": "Notebooks",
+    "clippings": "Clippings",
+    "canvases": "Community canvases list",
+    "print_books": "Print books",
+    "guide_configs": "Guide layouts",
+    "collection_rules": "Collection rules",
+    "search_panel_link": "Search panel linking",
+    "prayer_templates": "Prayer templates",
+    "installed_modules": "List of installed module ids",
+}
 
 #: Settings that travel.  Everything not here is device-local on purpose:
 #: `flash_session` is transient UI state and `highlight_palette_active` is which
 #: palette this screen happens to be showing.
 SETTINGS_ALLOWLIST = (
-    "reading-plan/progress", "module_tags", "highlight_palettes", "top_bible",
+    "reading-plan/progress", "reading-plan/custom",
+    "module_tags", "highlight_palettes", "top_bible",
     "prioritize_rules", "visual_filters", "plan_paces", "plans_archived",
     "sermon_calendar", "notebooks", "clippings", "canvases", "print_books",
     "guide_configs", "collection_rules", "search_panel_link",
@@ -105,7 +143,6 @@ INTERVALS = ((0, "Only when I press Sync now"), (5, "Every 5 minutes"),
 
 K_CONFIG = "sync.config"
 K_DEVICE = "sync.device_id"
-K_COUNTER = "sync.counter"
 K_LAST_RUN = "sync.last_run"
 K_LAST_OK = "sync.last_ok"
 K_LAST_ERROR = "sync.last_error"
@@ -422,8 +459,8 @@ def _collect_canvas_boards() -> list[dict]:
             "WHERE id IS NOT NULL"):
         bid = b["id"]
         nodes = [dict(n) for n in conn.execute(
-            "SELECT id, kind, x, y, w, h, text, ref, color, created_at "
-            "FROM canvas_node WHERE board_id=?", (bid,))]
+            "SELECT id, kind, x, y, w, h, text, ref, color, module_id, data, "
+            "created_at FROM canvas_node WHERE board_id=?", (bid,))]
         edges = [dict(e) for e in conn.execute(
             "SELECT from_id, to_id FROM canvas_edge WHERE board_id=?", (bid,))]
         out.append({"id": bid, "name": b["name"] or "Canvas",
@@ -717,12 +754,13 @@ def _apply_canvas_board(p: dict) -> None:
             continue
         conn.execute(
             "INSERT INTO canvas_node(id,board_id,kind,x,y,w,h,text,ref,color,"
-            "created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+            "module_id,data,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
             (nid, bid, str(n.get("kind") or "text"),
              float(n.get("x", 0)), float(n.get("y", 0)),
              float(n.get("w", 200)), float(n.get("h", 100)),
              str(n.get("text") or ""), str(n.get("ref") or ""),
              str(n.get("color") or "yellow"),
+             str(n.get("module_id") or ""), str(n.get("data") or ""),
              float(n.get("created_at") or now)))
     for e in edges:
         f = str(e.get("from_id") or "")[:12]
@@ -846,15 +884,141 @@ _APPLIERS = {
 
 
 def tombstone(rec_id: str, kind: str) -> None:
-    """Record a delete.  Under the unified backup this is intentionally a no-op.
+    """Record a delete so it can travel with the next backup.
 
-    A `.gbz` is a complete snapshot of the library, written on every sync.  A
-    record that is gone from the library simply is not in the next backup, and
-    restores apply additively and never delete — so there is nothing for a
-    delete to propagate to.  Kept as a no-op so the call sites that used to
-    notify sync do not need to change.
+    A `.gbz` used to omit deletes entirely: the record simply vanished from the
+    snapshot, and every other device brought it back on restore.  The
+    `sync_tombstone` table has existed in the schema from the start but was
+    never written.  Deletes are *recorded* here and *applied* only by a restore
+    that explicitly opts in (`gbz.restore_gbz(apply_deletes=True)`), so ordinary
+    additive restores keep their old, non-destructive behaviour.
     """
-    return
+    rid = str(rec_id or "")
+    if not rid:
+        return
+    try:
+        conn = db.connect()
+        conn.execute(
+            "INSERT OR REPLACE INTO sync_tombstone"
+            "(id,kind,deleted_at,rev,dev,ctr) VALUES(?,?,?,?,?,?)",
+            (rid, kind, _now(), 1, device_id(), 0))
+        conn.commit()
+    except Exception:                                       # noqa: BLE001
+        # Sync bookkeeping must never make a user-visible delete fail.
+        pass
+
+
+def tombstones(*, max_age: float = TOMBSTONE_KEEP) -> list[dict]:
+    """Deletes still worth telling other devices about."""
+    try:
+        cutoff = _now() - max_age
+        conn = db.connect()
+        # Expired tombstones are no longer useful and were otherwise kept
+        # forever, growing the table on every sync.
+        conn.execute("DELETE FROM sync_tombstone WHERE deleted_at<?", (cutoff,))
+        conn.commit()
+        rows = conn.execute(
+            "SELECT id, kind, deleted_at, dev, ctr FROM sync_tombstone "
+            "WHERE deleted_at>=? ORDER BY deleted_at", (cutoff,)).fetchall()
+        return [dict(r) for r in rows]
+    except Exception:                                       # noqa: BLE001
+        return []
+
+
+def remember_tombstone(rec_id: str, kind: str, deleted_at: float,
+                       dev: str = "", ctr: int = 0,
+                       conn=None) -> None:
+    """Keep a delete learned from another device so it propagates onward.
+
+    A caller restoring inside a transaction passes that connection: committing
+    here would finish the restore halfway through and leave it non-atomic.
+    """
+    try:
+        c = conn if conn is not None else db.connect()
+        c.execute(
+            "INSERT OR REPLACE INTO sync_tombstone"
+            "(id,kind,deleted_at,rev,dev,ctr) VALUES(?,?,?,?,?,?)",
+            (str(rec_id), kind, float(deleted_at), 1, str(dev or ""), int(ctr or 0)))
+        if conn is None:
+            c.commit()
+    except Exception:                                       # noqa: BLE001
+        pass
+
+
+#: Statements that remove one record of each synced kind.  A kind absent from
+#: this map is reported as skipped rather than guessed at.
+_DELETERS: dict[str, tuple[str, ...]] = {
+    "note": ("DELETE FROM note WHERE id=?",),
+    "highlight": ("DELETE FROM highlight WHERE id=?",),
+    "layout": ("DELETE FROM pane WHERE layout_id=?",
+               "DELETE FROM layout WHERE id=?"),
+    "collection": ("DELETE FROM collection_item WHERE collection_id=?",
+                   "DELETE FROM collection WHERE id=?"),
+    "passage-list": ("DELETE FROM passage_item WHERE list_id=?",
+                     "DELETE FROM passage_list WHERE id=?"),
+    "passage": ("DELETE FROM passage_item WHERE id=?",),
+    "template": ("DELETE FROM search_template WHERE id=?",),
+    "tag": ("DELETE FROM tag_item WHERE tag_id=?",
+            "DELETE FROM tag WHERE id=?"),
+    "favourite": ("UPDATE module SET favorite=0 WHERE id=?",),
+    "word-list": ("DELETE FROM word_list_item WHERE list_id=?",
+                  "DELETE FROM word_list WHERE id=?"),
+    "workflow": ("DELETE FROM workflow_step WHERE workflow_id=?",
+                 "DELETE FROM workflow WHERE id=?"),
+    "srs-card": ("DELETE FROM srs_card WHERE id=?",),
+    "canvas-board": ("DELETE FROM canvas_node WHERE board_id=?",
+                     "DELETE FROM canvas_edge WHERE board_id=?",
+                     "DELETE FROM canvas_board WHERE id=?"),
+    "ai-chat": ("DELETE FROM ai_chat_turn WHERE chat_id=?",
+                "DELETE FROM ai_chat WHERE id=?"),
+    "morph-query": ("DELETE FROM saved_morph_query WHERE id=?",),
+    "citation-meta": ("DELETE FROM citation_meta WHERE module_id=?",),
+}
+
+
+def apply_tombstones(conn, rows: list[dict]) -> dict:
+    """Apply foreign deletes inside `conn`'s transaction; return what happened.
+
+    Conservative on purpose: a delete is applied only when a `sync_meta` row
+    shows this device already knows the record and its revision is older than
+    the delete.  Without that evidence the record may have been created on this
+    device and never sent, so removing it would be a guess with real data loss.
+    """
+    applied: list[dict] = []
+    skipped: list[dict] = []
+    for row in rows:
+        kind, rid = str(row.get("kind") or ""), str(row.get("id") or "")
+        when = float(row.get("deleted_at") or 0.0)
+        # A plan-mark is one key in the reading-plan/progress JSON, not a row.
+        # Delete just that plan; deleting the whole setting would erase every
+        # other plan on this device.
+        special = kind == "plan-mark"
+        stmts = _DELETERS.get(kind)
+        if not stmts and not special:
+            skipped.append({"kind": kind, "id": rid, "why": "unsupported kind"})
+            continue
+        meta = conn.execute(
+            "SELECT updated_at FROM sync_meta WHERE id=? AND kind=?",
+            (rid, kind)).fetchone()
+        if meta is None:
+            skipped.append({"kind": kind, "id": rid,
+                            "why": "local revision unknown"})
+            continue
+        if float(meta["updated_at"] or 0.0) >= when:
+            skipped.append({"kind": kind, "id": rid, "why": "local edit is newer"})
+            continue
+        if special:
+            from . import readingplan
+            plan = rid[len("plan-"):] if rid.startswith("plan-") else rid
+            readingplan.clear_progress(plan, notify=False)
+        else:
+            for sql in stmts:
+                conn.execute(sql, (rid,))
+        conn.execute("DELETE FROM sync_meta WHERE id=? AND kind=?", (rid, kind))
+        remember_tombstone(rid, kind, when, row.get("dev", ""),
+                           row.get("ctr", 0), conn=conn)
+        applied.append({"kind": kind, "id": rid})
+    return {"applied": applied, "skipped": skipped}
 
 
 # ------------------------------------------------------------ configuration
@@ -863,10 +1027,6 @@ def config() -> dict:
     """The saved sync configuration, with no secrets in it."""
     cfg = db.get_setting(K_CONFIG) or {}
     return cfg if isinstance(cfg, dict) else {}
-
-
-def configured() -> bool:
-    return bool(config().get("kind"))
 
 
 def _target_from_config(cfg: dict):
@@ -905,6 +1065,9 @@ def save_config(cfg: dict) -> dict:
         "encrypt": bool(cfg.get("encrypt")),
         "auto_backup_hours": int(cfg.get("auto_backup_hours") or 0),
     }
+    # The launcher reads this top-level setting at boot; keeping both in step
+    # lets an in-app change take effect without editing the environment.
+    db.set_setting("auto_backup_hours", out["auto_backup_hours"])
     if cfg.get("passphrase"):
         save_credentials(out["name"], cfg.get("password") or "")
         creds = _read_credentials()
@@ -994,13 +1157,18 @@ def run(force: bool = False) -> dict:
             if m is True:
                 db.set_setting(K_LAST_ERROR,
                                "Waiting for an unmetered connection.")
-                return {"ok": True, "skipped": "metered"}
+                return {"ok": False, "error":
+                        "Waiting for an unmetered connection.",
+                        "skipped": "metered"}
             if m is None:
                 db.set_setting(K_LAST_ERROR,
                                "Wi-Fi only is on, but whether this connection "
                                "is metered cannot be told (NetworkManager not "
                                "found). Sync is paused until it can.")
-                return {"ok": True, "skipped": "unknown-metered"}
+                return {"ok": False, "error":
+                        "Wi-Fi only is on, but whether this connection is "
+                        "metered cannot be told. Sync is paused.",
+                        "skipped": "unknown-metered"}
 
         started = _now()
         db.set_setting(K_LAST_RUN, started)
@@ -1023,7 +1191,6 @@ def run(force: bool = False) -> dict:
 
         summary = {"ok": True,
                    "records": sum((out.get("counts") or {}).values()),
-                   "pushed": sum((out.get("counts") or {}).values()),   # compat with older UI builds
                    "bytes": int(out.get("size") or 0),
                    "file": _gbz.GBZ_NAME,
                    "seconds": round(_now() - started, 2)}
@@ -1031,6 +1198,78 @@ def run(force: bool = False) -> dict:
         db.set_setting(K_LAST_ERROR, "")
         db.set_setting(K_LAST_SUMMARY, summary)
         return summary
+
+
+def scope() -> dict:
+    """An honest, machine-readable answer to 'what travels on sync?'.
+
+    This is derived from KINDS, SETTINGS_ALLOWLIST and the backup behaviour in
+    gbz.py, so the Sync screen cannot drift away from what the code does.  It
+    describes the data, not how much of it is currently on this device.
+    """
+    kinds = []
+    for key, folder in KINDS.items():
+        ai_only = key == "ai-chat"
+        kinds.append({"key": key, "folder": folder,
+                      "label": KIND_LABELS.get(key, key),
+                      "by_default": not ai_only,
+                      "ai_inclusive_only": ai_only})
+    return {
+        "ok": True,
+        "kinds": kinds,
+        "settings": [{"key": k, "label": SETTING_LABELS.get(k, k)}
+                     for k in SETTINGS_ALLOWLIST],
+        "local_only": [
+            {"title": "The library itself",
+             "detail": "Module files, the search index and the genealogy graph "
+                       "are re-installable from the Store. Only the list of "
+                       "installed module ids travels."},
+            {"title": "Which layout is open",
+             "detail": "is_current belongs to the device in front of you; the "
+                       "layout's tiles and panes do travel."},
+            {"title": "Device-local settings",
+             "detail": "flash_session and highlight_palette_active describe this "
+                       "screen, not your work."},
+            {"title": "Appearance",
+             "detail": "Theme, font and size are chosen per device. Only an "
+                       "explicit export from the Backup screen carries them."},
+            {"title": "Sync passwords",
+             "detail": "Never placed in a backup or sync file; kept beside the "
+                       "database in a 0600 credentials file."},
+        ],
+        "ai": {
+            "settings_travel": True,
+            "conversations_by_default": False,
+            "credentials_by_default": False,
+            "usage_by_default": False,
+            "detail": "AI provider and model settings travel in every archive. "
+                      "Conversations, usage history and API keys do not: they "
+                      "need an explicit AI-inclusive backup from the Backup "
+                      "screen, which is always encrypted with a passphrase.",
+        },
+        "deletion": {
+            "param": "apply_deletes", "default": False,
+            "retention_days": TOMBSTONE_KEEP // 86400,
+            "detail": "Deletes are remembered as tombstones, then forgotten "
+                      "after the retention window. On restore, records deleted "
+                      "elsewhere are only removed here if you tick 'Apply "
+                      "deletes' — off by default, so a restore only adds what "
+                      "is missing.",
+        },
+        "encryption": {
+            "sync_flag": "encrypt", "min_passphrase": 12,
+            "ai_forces_encryption": True,
+            "detail": "A sync archive is plaintext unless you turn encryption on "
+                      "and set a passphrase of at least 12 characters. An "
+                      "AI-inclusive export is always encrypted.",
+        },
+        "notes": [
+            "This describes the data; it is not a count of what is currently on "
+            "this device.",
+            "If you do not want your questions on another device, leave AI "
+            "conversations out — ordinary sync already does.",
+        ],
+    }
 
 
 def status() -> dict:
@@ -1047,6 +1286,9 @@ def status() -> dict:
             "last_file": summary.get("file") or "gbible-backup.gbz",
             "last_size": int(summary.get("bytes") or 0),
             "encrypt": bool(cfg.get("encrypt")),
+            "auto_backup_hours": int(cfg.get("auto_backup_hours") or
+                                     db.get_setting("auto_backup_hours", 0) or 0),
+            "auto_backup_last": float(db.get_setting("auto_backup_last", 0) or 0),
             "intervals": intervals(), "kinds": dict(KINDS)}
 
 
@@ -1055,11 +1297,33 @@ def disable() -> None:
     db.set_setting(K_LAST_ERROR, "")
 
 
+# ------------------------------------------------------------- auto-backup
+
+
+def auto_backup() -> dict:
+    """Write a timestamped local .gbz and keep the last seven."""
+    from . import gbz as _gbz
+    out = _gbz.create_gbz(appearance=None, include_ai=False)
+    folder = Path(db.app_dir()) / "backups"
+    folder.mkdir(parents=True, exist_ok=True)
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    target = folder / f"gbible-backup-{stamp}.gbz"
+    target.write_bytes(out["data"])
+    for old in sorted(folder.glob("gbible-backup-*.gbz"))[:-7]:
+        try:
+            old.unlink()
+        except OSError:
+            pass
+    db.set_setting("auto_backup_last", _now())
+    return {"ok": True, "file": target.name, "records": out.get("counts", {})}
+
+
 # ------------------------------------------------------------------ worker
 
 _worker: threading.Thread | None = None
 _wake = threading.Event()
 _stop = False
+_atexit_registered = False
 
 #: How often the worker wakes to see whether a sync is due.  Shorter than the
 #: shortest interval so the first sync after boot is not late by much.
@@ -1072,13 +1336,18 @@ def start_worker() -> None:
     Sync is optional: if it cannot start, the app opens and reads exactly as
     before, and the Settings screen offers Sync now.
     """
-    global _worker, _stop
+    global _worker, _stop, _atexit_registered
     if _worker and _worker.is_alive():
         return
     _stop = False
     try:
         _worker = threading.Thread(target=_loop, name="gbible-sync", daemon=True)
         _worker.start()
+        # "When the app closes" was defined but never registered, so that
+        # interval choice silently did nothing.  Register once, idempotently.
+        if not _atexit_registered:
+            atexit.register(_final_sync)
+            _atexit_registered = True
     except Exception:
         _worker = None
 
@@ -1090,6 +1359,20 @@ def _loop() -> None:
         if _stop:
             return
         cfg = config()
+        # The in-app auto-backup setting is independent of the sync interval;
+        # run it even when no remote target is configured.  The launcher's
+        # environment variable already starts its own thread, so skip it here
+        # when both would otherwise write a backup at the same time.
+        hours = int(cfg.get("auto_backup_hours") or
+                    db.get_setting("auto_backup_hours", 0) or 0)
+        if hours > 0 and not os.environ.get("GBIBLE_AUTO_BACKUP"):
+            last = float(db.get_setting("auto_backup_last", 0) or 0)
+            if _now() - last >= hours * 3600:
+                try:
+                    auto_backup()
+                except Exception as e:
+                    db.set_setting(K_LAST_ERROR, f"auto-backup: {e}")
+                    errorlog.log_exception("auto-backup", e)
         interval = int(cfg.get("interval") or 0)
         if interval <= 0:
             continue
@@ -1111,6 +1394,11 @@ def _final_sync() -> None:
     """
     cfg = config()
     if int(cfg.get("interval") or 0) != -1:
+        return
+    # The worker is a daemon thread; if it is mid-sync at exit, waiting on the
+    # lock could hang shutdown.  A sync already in progress will write the
+    # snapshot anyway, so skip instead of blocking.
+    if _lock.locked():
         return
     try:
         run(force=True)

@@ -294,13 +294,14 @@ def clause_search(term_a: str, term_b: str = "", *, relation: str = "same",
 
     q = " AND ".join(_q(t.strip()) for t in terms)
     opts = searchmod.SearchOpts(modules=[module_id] if module_id else [],
-                                limit=want, snippets=False,
-                                search_bible_text=True,
-                                search_headings=False,
-                                smart=False)
+                                limit=want, snippets=False, smart=False)
     if book:
-        opts.reference_matching = "broad"
         q += f' AND bible:"{book}"'
+    if chapter:
+        # The route accepted `chapter` and then ignored it: asking for John 3
+        # searched the whole Gospel. Narrow through the same bible: field the
+        # book filter uses, so both constraints reach the engine.
+        q += f' AND bible:"{book} {chapter}"' if book else f' AND bible:"{chapter}"'
     res = searchmod.search(q, opts)
     if not res.get("ok"):
         return res
@@ -336,7 +337,9 @@ def clause_search(term_a: str, term_b: str = "", *, relation: str = "same",
     return {"ok": True, "relation": relation, "query": q,
             "script": (sorted(scripts)[0] if scripts else ""),
             "candidates": res.get("total", 0), "total": len(kept),
-            "hits": kept[:limit], "method": method, "note": _NOTE[relation]}
+            "hits": kept[:limit], "more": len(kept) > limit,
+            "exhausted": len(res.get("hits", [])) < want,
+            "method": method, "note": _NOTE[relation]}
 
 
 # ------------------------------------------------------- dependency search
@@ -616,7 +619,7 @@ def diagram(module_id: str, key: str, *, ref: str = "") -> dict:
                        (module_id, key)).fetchone()
     if row is None:
         return {"ok": False, "error": f"no unit {key!r} in {module_id!r}"}
-    m = library.get(module_id)
+    m = library.get_installed(module_id)
     text = row["text"] or ""
     seg = segment(text)
 
@@ -853,8 +856,9 @@ def verse_tokens(ref: str) -> dict:
         fav = _ws.top_bible_module()
     except Exception:  # noqa: BLE001
         fav = None
-    if fav is not None and fav in mods:
-        mods.sort(key=lambda m: (m.id != fav.id, m.lang != "eng"))
+    fav_id = getattr(fav, "id", None)
+    if fav_id and any(m.id == fav_id for m in mods):
+        mods.sort(key=lambda m: (m.id != fav_id, m.lang != "eng"))
     else:
         mods.sort(key=lambda m: (m.lang != "eng"))
     row = None
@@ -877,7 +881,7 @@ def verse_tokens(ref: str) -> dict:
             "words": words}
 
 
-def diagram_export(ref: str) -> dict:
+def diagram_export(ref: str, module_id: str = "") -> dict:
     """The sentence diagram as a standalone HTML document (print/PDF via the
     browser, Word/PowerPoint by opening the file). Same data the modal
     paints — clauses with governing verbs and words — as nested lists."""
@@ -891,6 +895,8 @@ def diagram_export(ref: str) -> dict:
         from . import library as _lib
         for m in _lib.list_all():
             if not m.is_bible:
+                continue
+            if module_id and m.id != module_id:
                 continue
             d = diagram(m.id, key, ref=ref)
             if d.get("ok"):
@@ -917,7 +923,7 @@ def diagram_export(ref: str) -> dict:
         for w in c.get("words", []):
             lab = w.get("surface", "")
             pos = w.get("pos_label") or w.get("pos_tag") or ""
-            rel = w.get("relation") or ""
+            rel = w.get("role") or w.get("relation") or ""
             extra = " — ".join(x for x in (pos, rel) if x)
             parts.append(f"<li>{_h.escape(lab)}"
                          + (f" <em>({_h.escape(extra)})</em>" if extra else "")

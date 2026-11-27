@@ -45,9 +45,6 @@ DATA = Path(__file__).resolve().parent / "data" / "outlines.json.gz"
 #: per library rather than on every request.
 _loaded = threading.local()
 
-META: dict = {}
-
-
 # --------------------------------------------------------------------- load
 
 def _bundled() -> dict:
@@ -141,7 +138,7 @@ def chapter(book: str, chapter_no: int) -> dict:
     rows = db.connect().execute(
         "SELECT path,depth,title,refs,ord FROM outline_node "
         "WHERE source=? AND book=? AND chapter=? ORDER BY ord, depth, path",
-        (META.get("source") or meta()["source"], osis, chapter_no)).fetchall()
+        (meta()["source"], osis, chapter_no)).fetchall()
     out["sections"] = [{"path": r["path"], "depth": r["depth"],
                         "title": r["title"], "ref": r["refs"] or ""}
                        for r in rows]

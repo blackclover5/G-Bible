@@ -39,33 +39,13 @@ from collections import defaultdict
 
 from . import canon, db, library
 
-# A run of shared words this long is treated as a quotation.  Four is the
-# shortest run that is unlikely by accident in biblical English.
-MIN_RUN = 4
 # The passage length compared between testaments, in words.
 WINDOW = 4
 # A passage appearing in more than this many Old Testament verses is ordinary
 # language and carries no evidence.
 MAX_DF = 12
 
-_WORD = re.compile(r"[^\W\d_]+", re.UNICODE)
-
-# Names in the source languages that the English texts render differently.
-_ALIAS = {
-    "god": {"lord", "alighty", "yahweh", "jehovah"},
-    "lord": {"god", "alighty", "yahweh", "jehovah"},
-    "yhwh": {"lord", "jehovah", "yahweh", "god"},
-    "messiah": {"christ"},
-    "christ": {"messiah"},
-    "spirit": {"spirit", "breath", "wind"},
-}
-
-_STOP_FOR_RUN = {
-    "and", "the", "of", "unto", "to", "in", "that", "for", "is", "was", "it",
-    "he", "his", "they", "them", "with", "as", "be", "on", "this", "by", "from",
-    "at", "which", "but", "not", "all", "my", "your", "his", "her", "their",
-    "thou", "ye", "have", "had", "shall", "will", "said", "say", "him", "her",
-}
+_WORD = re.compile(r"[^\W\d_]", re.UNICODE)
 
 
 def _norm(w: str) -> str:
@@ -75,17 +55,6 @@ def _norm(w: str) -> str:
 
 def _tokens(text: str) -> list[str]:
     return [_norm(w) for w in _WORD.findall(text or "")]
-
-
-def _variant(key: str) -> set[str]:
-    """Extra forms that count as the same word.
-
-    Without this, every OT quotation of "the LORD" is invisible to a New
-    Testament that writes "the Lord God", and vice versa.  Only a closed set of
-    substitutions is allowed -- a fuzzy matcher here would manufacture
-    quotations.
-    """
-    return _ALIAS.get(key, {key})
 
 
 def _fetch(conn, module_id: str, book: str | None = None) -> list[tuple[str, str]]:
@@ -167,7 +136,7 @@ def _build_index(verses):
     return kept, df, all_sets, len(verses)
 
 
-def _score(nt_toks, index, df) -> dict[str, dict]:
+def _score(nt_toks, index) -> dict[str, dict]:
     """Score each candidate OT verse by how many shared windows it has."""
     tally: dict[str, dict] = {}
     for w in _windows(nt_toks):
@@ -187,14 +156,14 @@ def _score(nt_toks, index, df) -> dict[str, dict]:
 
 
 def find(nt_module: str, ot_module: str | None = None, *,
-         min_hits: int = 2, limit: int = 500) -> dict:
+         min_hits: int = 2, limit: int = 500, offset: int = 0) -> dict:
     """New Testament verses that quote the Old Testament."""
-    nt = library.get(nt_module)
+    nt = library.get_installed(nt_module)
     if nt is None:
         return {"ok": False, "error": f"no such resource: {nt_module}"}
     if not ot_module:
         return {"ok": False, "error": "no Old Testament resource given"}
-    ot = library.get(ot_module)
+    ot = library.get_installed(ot_module)
     if ot is None:
         return {"ok": False, "error": f"no such resource: {ot_module}"}
     # Using one module for both testaments is not a mistake, it is the fair
@@ -214,7 +183,7 @@ def find(nt_module: str, ot_module: str | None = None, *,
 
     rows = []
     for key, label, toks in nt_verses:
-        cand = _score(toks, index, df)
+        cand = _score(toks, index)
         scored = []
         for d, e in cand.items():
             if e["hits"] < min_hits:
@@ -249,8 +218,9 @@ def find(nt_module: str, ot_module: str | None = None, *,
         "ot_module": ot.id, "ot": ot.name,
         "nt_verses_scanned": len(nt_verses), "ot_verses_scanned": len(ot_verses),
         "window": WINDOW, "max_df": MAX_DF, "min_hits": min_hits,
-        "verses": rows[:limit], "verse_count": len(rows),
-        "truncated": len(rows) > limit,
+        "verses": rows[offset:offset + limit], "verse_count": len(rows),
+        "offset": offset, "more": len(rows) > offset + limit,
+        "truncated": len(rows) > offset + limit,
         "notes": [
             f"Found by shared wording of {WINDOW}-word passages, compared "
             f"without regard to order so a re-quoted verse is still caught, and "
@@ -295,15 +265,15 @@ def _books_for(module_id: str, testament: str) -> list[str] | None:
 def for_verse(module_id: str, ref: str, ot_module: str,
               *, min_hits: int = 1) -> dict:
     """What one verse borrows: the shared passages, and the text they came from."""
-    nt = library.get(module_id)
-    ot = library.get(ot_module)
+    nt = library.get_installed(module_id)
+    ot = library.get_installed(ot_module)
     if nt is None or ot is None:
         return {"ok": False, "error": "both resources must be installed"}
     conn = db.connect()
     rr = canon.parse_ref(ref, nt.v11n or "KJV")
     if rr is None:
         return {"ok": False, "error": f"cannot read {ref!r} as a reference"}
-    vref = next(iter(rr.refs()), None)
+    vref = next(iter(rr.refs(nt.v11n or "KJV")), None)
     if vref is None:
         return {"ok": False, "error": "no verse in that reference"}
     row = conn.execute(
@@ -316,7 +286,7 @@ def for_verse(module_id: str, ref: str, ot_module: str,
     ot_verses = _fetch(conn, ot.id, book=_books_for(ot.id, "old"))
     index, df, _sets, _total = _build_index(ot_verses)
     ot_map = {k: (lbl, t) for k, lbl, t in ot_verses}
-    cand = _score(toks, index, df)
+    cand = _score(toks, index)
     scored = []
     for d, e in cand.items():
         if e["hits"] < min_hits:
@@ -336,7 +306,8 @@ def for_verse(module_id: str, ref: str, ot_module: str,
         "ok": True, "ref": row["ref_label"] or row["key"],
         "module": nt.name, "ot_module": ot.name,
         "text": (row["text"] or "").strip(), "words": len(toks),
-        "matches": matches, "count": len(matches),
+        "matches": matches, "count": len(scored),
+        "more": len(scored) > len(matches),
         "notes": ["Each match shows the Old Testament text, so the quotation "
                   "can be read rather than taken on trust."],
     }
@@ -390,7 +361,8 @@ QUOTATIONS: tuple[tuple[str, str, str], ...] = (
     ("Matt 24:29", "Isa 13:6", "allusion"),
     ("Matt 26:52", "Zech 11:12", "quotation"),
     ("Mark 1:15", "Isa 61:1", "allusion"),
-    # ("Mark 2:18", "Jo 16:32", "allusion"),  -- dropped: not an Old Testament reference\n    ("Mark 7:6", "Isa 29:13", "quotation"),
+    # ("Mark 2:18", "Jo 16:32", "allusion"),  -- dropped: not an Old Testament reference
+        ("Mark 7:6", "Isa 29:13", "quotation"),
     ("Mark 9:12", "Isa 53:1", "allusion"),
     ("Mark 10:27", "Gen 18:14", "allusion"),
     ("Mark 10:45", "Isa 53:10", "allusion"),
@@ -411,12 +383,14 @@ QUOTATIONS: tuple[tuple[str, str, str], ...] = (
     ("Luke 9:31", "Exod 33:18", "allusion"),
     ("Luke 11:46", "Isa 6:3", "allusion"),
     ("Luke 12:8-9", "Isa 6:2", "quotation"),
-    # ("Luke 13:11", "Jo 1:18", "allusion"),  -- dropped: not an Old Testament reference\n    ("Luke 18:20", "Exod 20:8-10", "allusion"),
+    # ("Luke 13:11", "Jo 1:18", "allusion"),  -- dropped: not an Old Testament reference
+        ("Luke 18:20", "Exod 20:8-10", "allusion"),
     ("Luke 20:46", "Gen 49:10", "allusion"),
     ("John 1:1", "Gen 1:1", "allusion"),
     ("John 2:16", "Ps 69:4", "quotation"),
     ("John 2:19", "Hos 11:1", "allusion"),
-    # ("John 4:24", "John 4:34", "allusion"),  -- dropped: not an Old Testament reference\n    ("John 5:17", "Exod 40:8-14", "allusion"),
+    # ("John 4:24", "John 4:34", "allusion"),  -- dropped: not an Old Testament reference
+        ("John 5:17", "Exod 40:8-14", "allusion"),
     ("John 6:31", "Exod 16:4", "quotation"),
     ("John 6:45", "Isa 54:10", "quotation"),
     ("John 7:23", "Lev 23:7", "allusion"),
@@ -426,7 +400,9 @@ QUOTATIONS: tuple[tuple[str, str, str], ...] = (
     ("John 10:22-23", "1Kgs 8:10", "quotation"),
     ("John 12:3", "Ps 133:2", "allusion"),
     ("John 12:25", "Ps 41:9", "quotation"),
-    # ("John 15:4-5", "John 7:38", "allusion"),  -- dropped: not an Old Testament reference\n    # ("John 17:4", "Gl 1:16", "allusion"),  -- dropped: not an Old Testament reference\n    ("John 19:5", "Zech 6:11", "allusion"),
+    # ("John 15:4-5", "John 7:38", "allusion"),  -- dropped: not an Old Testament reference
+        # ("John 17:4", "Gl 1:16", "allusion"),  -- dropped: not an Old Testament reference
+        ("John 19:5", "Zech 6:11", "allusion"),
     ("John 19:23-24", "Ps 22:18-19", "quotation"),
     ("John 19:28-30", "Exod 12:46", "quotation"),
     # Ps 34:20, not :21.  Written from memory as :21 and the verification pass
@@ -449,7 +425,8 @@ QUOTATIONS: tuple[tuple[str, str, str], ...] = (
     ("Acts 13:17", "Deut 1:8", "allusion"),
     ("Acts 13:35-37", "Ps 132:11", "quotation"),
     ("Acts 15:7-9", "Am 9:11", "quotation"),
-    # ("Acts 17:28", "Ar 4:24-25", "allusion"),  -- dropped: not an Old Testament reference\n    ("Rom 1:2", "Nah 1:1", "allusion"),
+    # ("Acts 17:28", "Ar 4:24-25", "allusion"),  -- dropped: not an Old Testament reference
+        ("Rom 1:2", "Nah 1:1", "allusion"),
     ("Rom 3:10-12", "Ps 14:1-3", "quotation"),
     ("Rom 3:12-18", "Isa 59:7-12", "quotation"),
     ("Rom 3:23", "Gen 3:17", "allusion"),
@@ -465,10 +442,11 @@ QUOTATIONS: tuple[tuple[str, str, str], ...] = (
     ("Rom 15:4-5", "Ps 69:4", "quotation"),
     ("Rom 15:9-12", "Isa 11:10", "quotation"),
     ("1Cor 1:19", "Isa 29:14", "quotation"),
-    ("1Cor 1:31-32", "Jer 9:24", "quotation"),
+    ("1Cor 1:31", "Jer 9:24", "quotation"),
     ("1Cor 2:9", "Isa 64:4", "quotation"),
     ("1Cor 3:6", "Hos 11:1", "allusion"),
-    # ("1Cor 5:6", "1Cor 1:21", "allusion"),  -- dropped: not an Old Testament reference\n    ("1Cor 6:19-20", "Lev 19:2", "allusion"),
+    # ("1Cor 5:6", "1Cor 1:21", "allusion"),  -- dropped: not an Old Testament reference
+        ("1Cor 6:19-20", "Lev 19:2", "allusion"),
     ("1Cor 9:9", "Deut 25:4", "quotation"),
     ("1Cor 9:20", "Exod 21:2", "allusion"),
     ("1Cor 10:1-10", "Exod 12-16", "allusion"),
@@ -491,7 +469,8 @@ QUOTATIONS: tuple[tuple[str, str, str], ...] = (
     ("Col 1:11-12", "1Kgs 8:10", "allusion"),
     ("1Thess 5:5-8", "Zech 14:5-10", "allusion"),
     ("1Thess 5:16-18", "Deut 16:10-15", "allusion"),
-    # ("1Tim 3:16", "Pis 9:6-7", "quotation"),  -- dropped: not an Old Testament reference\n    ("2Tim 3:16-17", "Num 24:17", "allusion"),
+    # ("1Tim 3:16", "Pis 9:6-7", "quotation"),  -- dropped: not an Old Testament reference
+        ("2Tim 3:16-17", "Num 24:17", "allusion"),
     ("Heb 1:5", "Ps 2:7", "quotation"),
     ("Heb 1:6", "Deut 32:8-9", "quotation"),
     ("Heb 1:9-10", "Ps 45:6-7", "quotation"),
@@ -510,14 +489,16 @@ QUOTATIONS: tuple[tuple[str, str, str], ...] = (
     ("Heb 8:8-12", "Jer 31:31-34", "quotation"),
     ("Heb 9:3-4", "Exod 40:1-2", "allusion"),
     ("Heb 10:11-12", "Hag 2:21", "allusion"),
-    # ("Heb 10:19-20", "4:6", "allusion"),  -- dropped: not an Old Testament reference\n    ("Heb 10:36-39", "Hab 2:3", "allusion"),
+    # ("Heb 10:19-20", "4:6", "allusion"),  -- dropped: not an Old Testament reference
+        ("Heb 10:36-39", "Hab 2:3", "allusion"),
     ("Heb 11:3-5", "Gen 1:1-3", "quotation"),
     ("Heb 11:7", "Gen 6:14-16", "allusion"),
     ("Heb 11:12-22", "Gen 15:4-6", "allusion"),
     ("Heb 12:1-3", "Isa 40:27", "allusion"),
     ("Heb 12:5-6", "Prov 3:11-12", "allusion"),
     ("Heb 12:7", "Deut 8:5", "allusion"),
-    # ("Heb 12:11", "Jas 1:17", "allusion"),  -- dropped: not an Old Testament reference\n    ("Heb 12:20", "Exod 19:12", "quotation"),
+    # ("Heb 12:11", "Jas 1:17", "allusion"),  -- dropped: not an Old Testament reference
+        ("Heb 12:20", "Exod 19:12", "quotation"),
     ("Heb 13:1-2", "Gen 18:3-4", "allusion"),
     ("Jas 1:1", "Deut 8:3", "allusion"),
     ("Jas 1:17", "Num 23:4", "allusion"),
@@ -532,17 +513,24 @@ QUOTATIONS: tuple[tuple[str, str, str], ...] = (
     ("1Pet 3:6", "Gen 3:15", "allusion"),
     ("1Pet 3:14-15", "Isa 8:14", "quotation"),
     ("1Pet 3:20-21", "Gen 7:21-23", "allusion"),
-    # ("2Pet 1:4", "2Cor 4:18", "allusion"),  -- dropped: not an Old Testament reference\n    # ("2Pet 2:4", "Jude 6", "allusion"),  -- dropped: not an Old Testament reference\n    ("2Pet 3:2-4", "Isa 52:8", "quotation"),
+    # ("2Pet 1:4", "2Cor 4:18", "allusion"),  -- dropped: not an Old Testament reference
+        # ("2Pet 2:4", "Jude 6", "allusion"),  -- dropped: not an Old Testament reference
+        ("2Pet 3:2-4", "Isa 52:8", "quotation"),
     ("1John 2:3", "Deut 7:12", "allusion"),
-    # ("1John 2:17", "1Cor 7:1", "allusion"),  -- dropped: not an Old Testament reference\n    ("1John 3:15", "Gen 4:8", "allusion"),
-    # ("1John 3:22", "1John 2:24", "allusion"),  -- dropped: not an Old Testament reference\n    # ("1John 4:9", "1John 2:16", "allusion"),  -- dropped: not an Old Testament reference\n    # ("Jude 5", "Jude 4", "allusion"),  -- dropped: not an Old Testament reference\n    ("Jude 14-15", "Num 31:15-16", "quotation"),
+    # ("1John 2:17", "1Cor 7:1", "allusion"),  -- dropped: not an Old Testament reference
+        ("1John 3:15", "Gen 4:8", "allusion"),
+    # ("1John 3:22", "1John 2:24", "allusion"),  -- dropped: not an Old Testament reference
+        # ("1John 4:9", "1John 2:16", "allusion"),  -- dropped: not an Old Testament reference
+        # ("Jude 5", "Jude 4", "allusion"),  -- dropped: not an Old Testament reference
+        ("Jude 1:14-15", "Num 31:15-16", "quotation"),
     ("Rev 3:19", "Ps 80:17", "allusion"),
     ("Rev 4:4", "Ezek 1:16", "allusion"),
     ("Rev 5:5", "Gen 49:10", "allusion"),
     ("Rev 8:3", "Zech 14:20", "allusion"),
     ("Rev 11:19", "1Kgs 8:10", "allusion"),
     ("Rev 13:10", "Isa 14:14", "allusion"),
-    # ("Rev 14:7-11", "Rev 14:1-3", "allusion"),  -- dropped: not an Old Testament reference\n    ("Rev 19:11", "Deut 10:17", "allusion"),
+    # ("Rev 14:7-11", "Rev 14:1-3", "allusion"),  -- dropped: not an Old Testament reference
+        ("Rev 19:11", "Deut 10:17", "allusion"),
     ("Rev 21:1", "Zech 14:9", "allusion"),
     ("Rev 21:3-5", "Exod 40:34-38", "allusion"),
     ("Rev 21:4", "Isa 66:24", "quotation"),
@@ -562,27 +550,32 @@ QUOTATIONS: tuple[tuple[str, str, str], ...] = (
 def _resolve(conn, module_id: str, ref: str, testament: str):
     """(label, text, tokens) for a reference, or None if it is not there."""
     from . import canon as _c
-    m = library.get(module_id)
+    m = library.get_installed(module_id)
     if m is None:
         return None
     rr = _c.parse_ref(ref, m.v11n or "KJV")
     if rr is None:
         return None
-    refs = list(rr.refs())
+    refs = list(rr.refs(m.v11n or "KJV"))
     if not refs:
         return None
     parts = []
-    for v in refs[:12]:
+    first = last = None
+    # Every verse in the cited range is compared. The old [:12] cap silently
+    # compared only the first dozen while the label claimed the whole range.
+    for v in refs:
         row = conn.execute(
             "SELECT text FROM unit WHERE module_id=? AND book=? AND chapter=? "
             "AND verse=? LIMIT 1",
             (module_id, v.book, v.chapter, v.verse)).fetchone()
         if row and (row["text"] or "").strip():
             parts.append(_tokens(row["text"]))
+            if first is None:
+                first = v
+            last = v
     if not parts:
         return None
-    label = (refs[0].label if len(refs) == 1
-             else f"{refs[0].label}\u2013{refs[-1].label}")
+    label = first.label if first == last else f"{first.label}\u2013{last.label}"
     return (label, " ".join(" ".join(p) for p in parts))
 
 
@@ -612,8 +605,8 @@ def classify(nt_module: str, ot_module: str, *, size: int = WINDOW) -> dict:
     silently hidden.
     """
     conn = db.connect()
-    nt = library.get(nt_module)
-    ot = library.get(ot_module)
+    nt = library.get_installed(nt_module)
+    ot = library.get_installed(ot_module)
     if nt is None or ot is None:
         return {"ok": False, "error": "both resources must be installed"}
 
@@ -622,7 +615,7 @@ def classify(nt_module: str, ot_module: str, *, size: int = WINDOW) -> dict:
     for ntref, otref, kind in QUOTATIONS:
         # The New Testament side must resolve *and* be a New Testament book.
         # Checking the other way round -- rejecting an NT book on the NT side --
-        # threw out all 203 entries, which is what it did.
+        # threw out 13 real entries, which is what it did.
         nr = _c_first_book(conn, ntref, nt_module)
         if nr is None:
             unverified.append({"nt": ntref, "ot": otref,
@@ -694,7 +687,7 @@ def classify(nt_module: str, ot_module: str, *, size: int = WINDOW) -> dict:
 
 
 def _c_first_book(conn, ref: str, module_id: str) -> str | None:
-    m = library.get(module_id)
+    m = library.get_installed(module_id)
     rr = canon.parse_ref(ref, (m.v11n if m else None) or "KJV")
     if rr is None:
         return None

@@ -179,24 +179,34 @@ def create_layout(name: str, *, arrangement: str = "2 Columns",
 def save_layout(layout_id: str, name: str, tiles: list[list[float]],
                 panes: list[dict]) -> dict:
     c = _conn()
-    c.execute("UPDATE layout SET name=?, tiles=? WHERE id=?",
-              (name, json.dumps(tiles), layout_id))
-    c.execute("DELETE FROM pane WHERE layout_id=?", (layout_id,))
+    if get_layout(layout_id) is None:
+        return {"ok": False, "error": "No such layout"}
+    seen: set[str] = set()
     rows = []
-    for i, p in enumerate(panes):
-        rows.append((p.get("id") or new_id(), layout_id, p.get("tile_id", ""),
+    for p in panes:
+        pid = p.get("id") or new_id()
+        if pid in seen:                     # client duplicates must not abort mid-write
+            pid = new_id()
+        seen.add(pid)
+        try:
+            size = max(50, min(300, int(p.get("text_size") or 100)))
+        except (TypeError, ValueError):
+            size = 100
+        rows.append((pid, layout_id, p.get("tile_id", ""),
                      p.get("module_id", ""), p.get("link_set") or None,
                      int(bool(p.get("follow_only"))),
-                     int(bool(p.get("follow_active"))),
-                     int(p.get("text_size") or 100),
+                     int(bool(p.get("follow_active"))), size,
                      json.dumps(p.get("cursor") or {}), p.get("view") or "normal",
                      json.dumps(p.get("options") or {}),
                      int(bool(p.get("is_focus")))))
-    c.executemany(
-        "INSERT INTO pane(id,layout_id,tile_id,module_id,link_set,follow_only,"
-        "follow_active,text_size,cursor,view,options,is_focus) "
-        "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", rows)
-    c.commit()
+    with c:      # rollback on any failure, never leave a partial transaction
+        c.execute("UPDATE layout SET name=?, tiles=? WHERE id=?",
+                  (name, json.dumps(tiles), layout_id))
+        c.execute("DELETE FROM pane WHERE layout_id=?", (layout_id,))
+        c.executemany(
+            "INSERT INTO pane(id,layout_id,tile_id,module_id,link_set,follow_only,"
+            "follow_active,text_size,cursor,view,options,is_focus) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", rows)
     return get_layout(layout_id) or {}
 
 
@@ -226,6 +236,8 @@ def delete_layout(layout_id: str, *, force: bool = False) -> dict:
 
 def use_layout(layout_id: str) -> dict:
     c = _conn()
+    if get_layout(layout_id) is None:
+        return {"ok": False, "error": "No such layout"}
     c.execute("UPDATE layout SET is_current=0")
     c.execute("UPDATE layout SET is_current=1 WHERE id=?", (layout_id,))
     c.commit()
@@ -325,7 +337,7 @@ def sync(pane_id: str, cursor: dict, opts: dict | None = None
     p = get_pane(pane_id)
     if p is None:
         return []
-    src = library.get(p.module_id)
+    src = library.get_installed(p.module_id)
     if src is None:
         return []
     conn = db.connect()
@@ -333,7 +345,8 @@ def sync(pane_id: str, cursor: dict, opts: dict | None = None
     for other in link_group(p.layout_id, p.link_set):
         if other.id == pane_id:
             continue
-        if other.follow_only and not p.follow_only:
+        # A follow-only pane receives cursors but does not drive others.
+        if p.follow_only and not other.follow_only:
             continue
         # A passage-guide pane carries no module, so it has no milestone types
         # of its own.  It is treated as a consumer of bibleVerse: when a linked
@@ -367,7 +380,7 @@ def sync(pane_id: str, cursor: dict, opts: dict | None = None
                 # Try to pick the first Strong's from the verse's spans.
                 try:
                     from . import study as _study
-                    src_mod = library.get(p.module_id)
+                    src_mod = library.get_installed(p.module_id)
                     if src_mod and src_mod.reader == "verse":
                         row = conn.execute(
                             "SELECT key FROM unit WHERE module_id=? AND book=? "
@@ -389,7 +402,7 @@ def sync(pane_id: str, cursor: dict, opts: dict | None = None
             continue
         if not other.module_id:
             continue
-        dst = library.get(other.module_id)
+        dst = library.get_installed(other.module_id)
         if dst is None:
             continue
         shared = sorted(src.link_types() & dst.link_types())
@@ -452,11 +465,11 @@ def _map_cursor(src: Module, dst: Module, cursor: dict,
 def nearest_verse(module_id: str, ref: str) -> str:
     """The closest verse a resource actually has to a requested one."""
     c = _conn()
-    rr = canon.parse_ref(ref)
-    if rr is None:
-        return ref
-    m = library.get(module_id)
+    m = library.get_installed(module_id)
     if m is None:
+        return ref
+    rr = canon.parse_ref(ref, m.v11n or "KJV")
+    if rr is None:
         return ref
     key = rr.start.osis_id()
     r = c.execute("SELECT key FROM unit WHERE module_id=? AND key=?",
@@ -488,7 +501,7 @@ def nearest_verse(module_id: str, ref: str) -> str:
 def bootstrap() -> dict:
     """Create a usable default workspace from whatever is installed."""
     lay = current()
-    if lay and len(lay.get("panes") or []) > 1:
+    if lay is not None:      # a one-pane workspace is legitimate, not a failure
         return lay
     return build_study_layout()
 
@@ -664,7 +677,7 @@ def get_top_bible() -> str:
 
 def set_top_bible(module_id: str) -> dict:
     from . import db as _db
-    m = library.get(module_id) if module_id else None
+    m = library.get_installed(module_id) if module_id else None
     if module_id and m is None:
         return {"ok": False, "error": "Not installed"}
     if module_id and not getattr(m, "is_bible", False):
@@ -724,7 +737,7 @@ def copy_location(pane_id: str) -> dict:
     p = get_pane(pane_id)
     if p is None:
         return {"ok": False, "error": "No such pane"}
-    m = library.get(p.module_id) if p.module_id else None
+    m = library.get_installed(p.module_id) if p.module_id else None
     cur = p.cursor or {}
     ref = (cur.get("ref") or cur.get("date") or cur.get("key")
            or cur.get("headword") or cur.get("topic") or "")
@@ -750,7 +763,7 @@ def set_prioritize_rules(rules: list[dict]) -> dict:
     for r in rules or []:
         if not isinstance(r, dict) or not r.get("module_id"):
             continue
-        if library.get(r["module_id"]) is None:
+        if library.get_installed(r["module_id"]) is None:
             continue
         clean.append({"module_id": r["module_id"],
                       "ptype": (r.get("ptype") or "").strip(),
@@ -783,7 +796,7 @@ def resolve_priority(req_type: str = "", ref: str = "") -> list[str]:
     first, rest = [], []
     rule_ids = set()
     for r in rules:
-        m = library.get(r["module_id"])
+        m = library.get_installed(r["module_id"])
         if m is None:
             continue
         if _rule_applies(r, m, ref=ref, req_type=req_type):
@@ -806,14 +819,19 @@ def parallel_group(module_id: str, collection_id: str = "") -> dict:
         except Exception:  # noqa: BLE001
             ids = []
         if ids:
-            return {"ok": True, "members": ids}
-    m = library.get(module_id)
+            members = [mid for mid in ids if library.get_installed(mid) is not None]
+            if not members:
+                return {"ok": False, "error": "none of those resources is installed"}
+            return {"ok": True, "members": members}
+    m = library.get_installed(module_id)
     if m is None:
         return {"ok": False, "error": "Not installed"}
     order = resolve_priority(req_type=m.type)
-    same = [mid for mid in order
-            if (library.get(mid) is not None
-                and library.get(mid).type == m.type)]
+    same = []
+    for mid in order:
+        other = library.get_installed(mid)
+        if other is not None and other.type == m.type:
+            same.append(mid)
     if module_id not in same:
         same.insert(0, module_id)
     return {"ok": True, "members": same}
@@ -830,9 +848,11 @@ def parallel_step(module_id: str, direction: int = 1,
     except ValueError:
         return {"ok": False, "error": "Not in set"}
     nxt = members[(i + direction) % len(members)] if members else module_id
-    mod = library.get(nxt)
+    mod = library.get_installed(nxt)
+    if mod is None:
+        return {"ok": False, "error": "that resource is no longer installed"}
     return {"ok": True, "module_id": nxt,
-            "name": mod.name if mod else nxt, "members": members}
+            "name": mod.name, "members": members}
 
 
 # -- Reading progress: one lightweight record per module. --
@@ -981,7 +1001,10 @@ def build_quickstart(name: str) -> dict:
         if commentary and bible and library.can_link(bible.id, commentary.id):
             plan.append((commentary, "t0_1", "A",
                          {"ref": "John 1", "span": "chapter"}))
-    plan = [p for p in plan if p[0] is not None]
+    # Guide and word-study panes intentionally have no module. Dropping every
+    # None entry removed the second pane from all four of those quickstarts.
+    plan = [p for p in plan if p[0] is not None
+            or (p[3] or {}).get("view") in ("guide", "wordstudy")]
     if not plan:
         return build_study_layout(name)
     lay = create_layout(name if name in QUICKSTARTS else "Study",

@@ -28,9 +28,11 @@ def _today() -> tuple[str, str, str]:
 
 
 def _devotional(day: str) -> list[dict]:
-    """Today's entry from every devotional installed."""
+    """The entry for `day` (YYYY-MM-DD) from every devotional installed."""
     conn = db.connect()
-    key = f"{time.localtime().tm_mon:02d}.{time.localtime().tm_mday:02d}"
+    # Reading the clock again here could cross midnight between computing the
+    # label and choosing the readings, so the caller passes the one date.
+    key = f"{day[5:7]}.{day[8:10]}"
     out = []
     for m in library.list_all():
         if m.type != "Devotional":
@@ -42,7 +44,7 @@ def _devotional(day: str) -> list[dict]:
         meta = m.raw_meta or {}
         generated = meta.get("generated_by") == "devotion-creator"
         out.append({"module_id": m.id, "module": m.name, "title": r["title"] or day,
-                    "text": (r["text"] or "")[:2400],
+                    "key": r["key"], "text": (r["text"] or "")[:2400],
                     "plan_id": (f"dev:{m.id}" if generated else ""),
                     "source_id": (meta.get("source_id", "") if generated else ""),
                     "source_name": (meta.get("source_name", "") if generated else "")})
@@ -61,7 +63,9 @@ def _where_you_left_off() -> list[dict]:
         return []
     out = []
     for p in lay.get("panes", []):
-        m = library.get(p.get("module_id") or "")
+        # A soft-removed module still has a row, but there is nothing to open.
+        # The saved pane and its cursor stay untouched in the layout.
+        m = library.get_installed(p.get("module_id") or "")
         if m is None:
             continue
         cur = p.get("cursor") or {}

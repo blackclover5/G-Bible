@@ -28,8 +28,12 @@ const Outlines = {
    * and would carry no more of the outline than the HTML does.  The file is
    * downloaded, not displayed, so opening it does not navigate the app away. */
   async exportDoc() {
-    const book = this.book, chapter = this.chapter;
-    const ref = chapter ? this.name(book) + ' ' + chapter : this.name(book);
+    // Re-resolve the live box: typing a reference without pressing Enter used
+    // to export the previously loaded chapter.
+    const at = await this.split(($('#g-ref') || {}).value || '');
+    const book = at.book || this.book;
+    const chapter = at.chapter || this.chapter;
+    const ref = chapter ? book + ' ' + chapter : book;
     const r = await api('export/outline', { ref });
     if (!r.ok) { toast(r.error || 'No outline for that.', 'warn'); return; }
     const blob = new Blob([r.html || ''], { type: 'text/html;charset=utf-8' });
@@ -56,8 +60,17 @@ const Outlines = {
     if (!ref) return {};
     const g = await api('guides/chapter', { ref });
     if (!g.ok) return {};
-    const m = String(g.ref || '').match(/^(.+?)\s+(\d+)/);
-    return m ? { book: m[1], chapter: parseInt(m[2], 10) } : {};
+    const parsed = String(g.ref || '').trim();
+    const m = parsed.match(/^(.+?)\s+(\d+)/);
+    if (m) return { book: m[1], chapter: parseInt(m[2], 10) };
+    // A bare book name ("Job", "Exodus") is a valid request too.  The old
+    // chapter-only regex returned nothing, so typing a book did nothing and
+    // the outline stayed on Genesis 1.  Use the server's canonical book id.
+    if (g.whole_book && g.book) {
+      return { book: g.book, chapter: g.first_chapter || 1 };
+    }
+    if (parsed) return { book: parsed, chapter: 1 };
+    return {};
   },
 
   /* The full book name, from the server, which has the canon.
@@ -112,6 +125,8 @@ const Outlines = {
           + '</div>').join('') + '</div>';
     }
     body.innerHTML = h;
+    /* Without this every verse ref and chapter link painted above is inert. */
+    this.wire(body);
   },
 
   /* ------------------------------------------------ Eusebian canon tables
@@ -121,9 +136,10 @@ const Outlines = {
    * "what do the others have at this place" needs to see the blank cell, and a
    * list of verses cannot show it.
    *
-   * It opens on the health report rather than a table, because the module
-   * Crosswire ships under this name is not the canon table and the reader needs
-   * to know that before they spend five minutes reading one empty column.
+   * It opens on the health report so the reader can see the source and its
+   * coverage before reading the tables. The canon tables are bundled as a
+   * curated public-domain transcription; the installed CrossWire module is
+   * the per-Gospel section index, not the comparison tables.
    */
   async eusebian(body) {
     const want = ($('#g-eusec').value || '').trim();
@@ -146,6 +162,11 @@ const Outlines = {
     if (!health.usable) {
       h += '<div class="eu-warn">'
         + health.notes.map(esc).join('</p><p>') + '</div>';
+    }
+    if (health.source && health.source.source) {
+      h += '<div class="tiny muted" style="margin-bottom:6px">Source: '
+        + esc(health.source.source) + ' · ' + esc(health.source.license || '')
+        + '</div>';
     }
     h += '<div class="tiny muted">'
       + health.sections.toLocaleString() + ' numbered sections · '
@@ -219,9 +240,8 @@ const Outlines = {
       if (!c.rows.length) {
         h += '<div class="dash-card eu-empty"><div class="dash-h">Canon '
           + esc(c.roman) + ' — ' + esc(c.en) + '</div>'
-          + '<p class="muted">No sections for this table are in the installed '
-          + 'module. The table is described above; the data for it is not '
-          + 'here.</p></div>';
+          + '<p class="muted">No sections for this table are in the bundled '
+          + 'data. The table is described above; no rows can be shown here.</p></div>';
         return;
       }
       h += '<div class="dash-card"><div class="dash-h">Canon '

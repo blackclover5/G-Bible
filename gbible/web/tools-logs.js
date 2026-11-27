@@ -1,19 +1,28 @@
-/* Logs — the app's own error log.  Nothing leaves this machine unless the
- * reader presses Report on one entry, which opens a pre-filled GitHub issue
- * in their browser — they read it and press submit themselves. */
+/* Logs — the app's own error log. Nothing leaves this machine unless the
+ * reader presses Report on one entry; after a one-time GitHub device-flow
+ * authorization the app files the issue server-to-server and shows the URL. */
 const Logs = {
   async load() {
+    const seq = ++this._loadSeq;
     const host = $('#logs-body');
     host.innerHTML = '<div class="loading">Loading…</div>';
+    // Bind the static footer buttons once, before the empty-log early return.
+    this._wireFooter();
     const r = await api('logs/list', { limit: 200 });
+    if (seq !== this._loadSeq) return;
+    if (!r || r.ok === false) {
+      host.innerHTML = '<div class="warn">' + esc((r && r.error) || 'Could not load the log.') + '</div>';
+      return;
+    }
     const entries = (r && r.entries) || [];
     const count = entries.length;
-    setStatusErrors(count);
+    if (typeof refreshErrorPill === 'function') refreshErrorPill();
     if (!count) {
       host.innerHTML = '<div class="empty">Nothing logged. If something breaks, it shows up here.</div>';
       return;
     }
     const gh = await api('logs/report/status');
+    if (seq !== this._loadSeq) return;
     let h = '<div class="tiny muted" style="margin:8px 0">' + count
       + ' entr' + (count === 1 ? 'y' : 'ies') + ' — newest last. '
       + (gh && gh.authorized
@@ -39,28 +48,48 @@ const Logs = {
     host.querySelectorAll('[data-report]').forEach(btn => {
       btn.onclick = () => this.report(entries[Number(btn.dataset.report)]);
     });
-    const clear = $('#logs-clear');
-    if (clear) clear.onclick = async () => {
-      if (!confirm('Clear the error log? This can not be undone.')) return;
-      const r2 = await post('logs/clear', {});
-      toast('Logs cleared.');
-      this.load();
-    };
-    const close = $('#logs-close');
-    if (close) close.onclick = () => App.show('today');
     const forget = $('#logs-gh-forget');
     if (forget) forget.onclick = async (e) => {
       e.preventDefault();
       if (!confirm('Forget G-Bible\u2019s GitHub authorization? You can re-authorize anytime.')) return;
-      await post('logs/report/forget', {});
-      toast('Signed out of GitHub.');
-      this.load();
+      const r = await post('logs/report/forget', {});
+      toast(!r || r.ok === false
+        ? ((r && r.error) || 'Could not sign out.')
+        : 'Signed out of GitHub.', (!r || r.ok === false) ? 'err' : '');
+      if (r && r.ok !== false) this.load();
     };
+  },
+
+  _loadSeq: 0,
+  _pollStop: false,
+  _filingInFlight: false,
+  _fromView: '',
+
+  _wireFooter() {
+    const clear = $('#logs-clear');
+    if (clear && !clear.onclick) clear.onclick = async () => {
+      if (!confirm('Clear the error log? This can not be undone.')) return;
+      this._pollStop = true;
+      const r = await post('logs/clear', {});
+      toast(!r || r.ok === false
+        ? ((r && r.error) || 'Could not clear the log.')
+        : 'Logs cleared.', (!r || r.ok === false) ? 'err' : '');
+      if (r && r.ok !== false) this.load();
+    };
+    const close = $('#logs-close');
+    if (close && !close.onclick) close.onclick = () =>
+      App.show(this._fromView || 'today');
+  },
+
+  async open() {
+    this._fromView = S.view === 'logs' ? '' : S.view;
+    App.show('logs');
   },
 
   _ghBody(e) {
     const version = (document.querySelector('meta[name="gbible-version"]') || {}).content || 'unknown';
-    const when = new Date((Number(e.t) || Date.now() / 1000) * 1000);
+    let when = new Date((Number(e.t) || Date.now() / 1000) * 1000);
+    if (isNaN(when.getTime())) when = new Date();
     return [
       '**G-Bible ' + version + '**',
       'Source: ' + (e.source || 'unknown'),
@@ -75,8 +104,8 @@ const Logs = {
   },
 
   async report(e) {
+    if (this._filingInFlight) { toast('A report is already being filed.', 'warn'); return; }
     const body = this._ghBody(e);
-    const version = (document.querySelector('meta[name="gbible-version"]') || {}).content || '';
     const title = 'Bug: ' + String(e.message || 'unknown error').slice(0, 70);
     // If this machine is already authorised, no ceremony — file directly.
     const status = await api('logs/report/status');
@@ -98,20 +127,21 @@ const Logs = {
       + 'G-Bible will file this issue as you on <b>blackclover5/G-Bible</b>. '
       + 'Authorize G-Bible for <code>Issues: write</code> at:'
       + '</p>'
-      + '<p><a href="' + esc(r.verification_uri) + '" target="_blank" rel="noopener">'
+      + '<p><a href="' + esc(safeUrl(r.verification_uri)) + '" target="_blank" rel="noopener">'
       + esc(r.verification_uri) + '</a></p>'
       + '<div class="gh-auth-code">' + esc(r.user_code) + '</div>'
       + '<p class="tiny muted">Code expires in ~15 minutes.</p>'
       + '<p class="tiny muted" id="gh-status">Waiting for you to authorize G-Bible in your browser…</p>';
     const buttons = [
-      { label: 'Cancel', cls: 'btn' },
+      { label: 'Cancel', cls: 'btn', fn: () => { this._pollStop = true; } },
       { label: "I've entered the code", cls: 'btn primary', close: false,
         fn: () => this._fileWhenReady(e, body, title, deviceCode) },
     ];
     modal('Authorize G-Bible to file issues', html, buttons);
-    this._pollForGitHub(deviceCode, this._ghInterval, async () => {
-      await this._fileWhenReady(e, body, title, deviceCode);
-    });
+    // Stop polling when this dialog is closed by Escape, backdrop or Cancel.
+    _modalCleanup = () => { this._pollStop = true; };
+    this._pollStop = false;
+    this._pollForGitHub(deviceCode, this._ghInterval, title, body);
   },
 
   async _fileWhenReady(e, body, title, deviceCode) {
@@ -130,19 +160,22 @@ const Logs = {
     if (s) s.textContent = 'Not authorized yet — enter the code at github.com/login/device, then press the button again.';
   },
 
-  async _pollForGitHub(deviceCode, interval, done) {
+  async _pollForGitHub(deviceCode, interval, title, body) {
     let tries = 0;
     const tick = async () => {
-      if (this._pollStop) return;
+      if (this._pollStop || this._filingInFlight) return;
       const r = await post('logs/report/poll', { device_code: deviceCode });
+      if (this._pollStop) return;
       if (r && r.authorized) {
         const s = $('#gh-status'); if (s) { s.textContent = 'Authorized — filing…'; }
+        this._pollStop = true;
         await this._fileIssue(title, body);
         return;
       }
       if (r && r.ok === false) {
+        this._pollStop = true;
         const s = $('#gh-status');
-        if (s) s.textContent = 'GitHub said: ' + esc(r.error || 'authorization failed') + '.';
+        if (s) s.textContent = 'GitHub said: ' + (r.error || 'authorization failed') + '.';
         return;
       }
       tries += 1;
@@ -163,14 +196,20 @@ const Logs = {
   },
 
   async _fileIssue(title, body) {
+    if (this._filingInFlight) return;
+    this._filingInFlight = true;
+    this._pollStop = true;
     const r = await post('logs/report/file', { title, body });
+    this._filingInFlight = false;
     if (!r || r.ok === false) {
       toast((r && r.error) || 'Could not file the issue.', 'err');
       return;
     }
     closeModal();
-    toast('Filed as issue #' + r.number, 'ok');
-    window.open(r.url, '_blank', 'noopener');
+    toast(r.number ? 'Filed as issue #' + r.number
+      : (r.url ? 'Issue filed.' : 'Filed.'), 'ok');
+    const url = safeUrl(r.url);
+    if (url) window.open(url, '_blank', 'noopener');
   },
 
   async clientError(message, stack, src) {

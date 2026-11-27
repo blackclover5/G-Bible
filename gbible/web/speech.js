@@ -59,12 +59,6 @@ const Speech = {
     else this._mode = null;
   },
 
-  engineLabel(engine) {
-    if (engine === 'server') return 'Installed local voice';
-    if (engine === 'browser') return 'Browser / computer voice';
-    return 'Auto (local if available, browser otherwise)';
-  },
-
   async showSettings() {
     /* Fetch the voice choices before opening the dialog.  tts/status reports
      * available installed voices, and browser voices come from the browser. */
@@ -74,11 +68,15 @@ const Speech = {
     let voiceReason = '';
     try {
       const st = await api('tts/status');
+      if (!st || st.ok === false) {
+        voiceReason = (st && st.error) || 'Could not check the installed voice.';
+      } else {
       serverVoices = st.voices || [];
       serverVoice = st.voice || '';
       voiceAvailable = !!(st && st.available);
       voiceReason = (st && st.reason) || '';
-    } catch (e) {}
+      }
+    } catch (e) { voiceReason = 'Could not check the installed voice.'; }
 
     let browserVoices = [];
     try {
@@ -112,17 +110,17 @@ const Speech = {
       '<div class="st-body" style="margin-bottom:6px">Choose how the app reads aloud and how fast it speaks.</div>'
       + '<label class="st-lbl">Engine</label>'
       + '<select id="rs-engine">' + engOpts.map(o =>
-          '<option value="' + o[0] + '"' + (o[0] === (s.engine || 'auto') ? ' selected' : '') + '>' + o[1] + '</option>'
+          '<option value="' + esc(o[0]) + '"' + (o[0] === (s.engine || 'auto') ? ' selected' : '') + '>' + esc(o[1]) + '</option>'
         ).join('') + '</select>'
 
       + '<label class="st-lbl">Installed voice</label>'
       + '<select id="rs-local">' + localOpts.map(o =>
-          '<option value="' + o[0] + '"' + (o[0] === (s.localVoice || localOpts[0][0]) ? ' selected' : '') + '>' + (o[1] || 'Default voice') + '</option>'
+          '<option value="' + esc(o[0]) + '"' + (o[0] === (s.localVoice || localOpts[0][0]) ? ' selected' : '') + '>' + esc(o[1] || 'Default voice') + '</option>'
         ).join('') + '</select>'
 
       + '<label class="st-lbl">Computer / browser voice</label>'
       + '<select id="rs-browser">' + browserOpts.map(v =>
-          '<option value="' + v + '"' + ((v || '') === (s.browserVoice || '') ? ' selected' : '') + '>' + (v || 'System default') + '</option>'
+          '<option value="' + esc(v) + '"' + ((v || '') === (s.browserVoice || '') ? ' selected' : '') + '>' + esc(v || 'System default') + '</option>'
         ).join('') + '</select>'
 
       + '<label class="st-lbl">Speed: <span id="rs-val">' + (s.speed || 1) + 'x</span></label>'
@@ -131,7 +129,7 @@ const Speech = {
       + '<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line)">'
       + '<button id="rs-install-voice" class="btn" ' + (voiceAvailable ? 'disabled' : '') + '>Install voice model</button>'
       + ' <span id="rs-install-status" class="tiny muted">' + (voiceAvailable ? 'Voice is installed.' : (voiceReason || 'Voice not installed.')) + '</span>'
-      + '<div class="tiny muted" style="margin-top:4px">Installs the read-aloud voice (~300 MB). Takes a few minutes.</div>'
+      + '<div class="tiny muted" style="margin-top:4px">Needs an internet connection: installs Python packages and a ~300 MB voice model. Takes a few minutes.</div>'
       + '</div>',
       [{ label: 'Save', cls: 'primary', fn: () => {
         const settings = {
@@ -161,9 +159,21 @@ const Speech = {
           return;
         }
         const jid = r.job;
+        let tries = 0;
         const poll = async () => {
+          if (!statusEl || !statusEl.isConnected) return;   // dialog closed
+          if (++tries > 300) {
+            if (statusEl) statusEl.textContent = 'Install is taking too long. Check Transfers.';
+            installBtn.disabled = false;
+            return;
+          }
           const j = await api('store/job', { job: jid });
-          const job = (j && j.job) || {};
+          if (!j || j.ok === false) {
+            if (statusEl) statusEl.textContent = (j && j.error) || 'Could not read the install job.';
+            installBtn.disabled = false;
+            return;
+          }
+          const job = j.job || {};
           if (statusEl) statusEl.textContent = job.message || 'Installing…';
           if (job.state === 'done') {
             if (statusEl) {
@@ -184,7 +194,16 @@ const Speech = {
     }
   },
 
-  supported() { return 'speechSynthesis' in window || this._mode === 'server'; },
+  supported() {
+    if ('speechSynthesis' in window || this._mode === 'server') return true;
+    // The engine is read from storage before the settings dialog has been
+    // opened.  A saved server voice must not be refused on this first click.
+    try {
+      const s = JSON.parse(localStorage.getItem(this.settingsKey) || '{}');
+      if (s.engine === 'server') return true;
+    } catch (e) { /* no saved settings */ }
+    return false;
+  },
 
   /* Ask once which voice to read with.  On a machine with nothing installed
    * this is the difference between offering a voice and promising one. */
@@ -322,7 +341,6 @@ const Speech = {
         // this, being seeded already-awaited, so the chapter got exactly one
         // verse out before stopping.
         const blob = ahead ? await ahead : await this._fetch(parts[i], ctrl.signal);
-    this.rate = Number(this.rate || 1);
         ahead = null;
         this._markVerse(i + startIdx);
         if (i + 1 < parts.length) {
@@ -340,7 +358,7 @@ const Speech = {
     }
   },
 
-  /* One verse, as a WAV.  No voice name is sent: the server picks its own. */
+  /* One verse, as a WAV. The chosen local voice is sent when one is set. */
   async _fetch(text, signal) {
     const r = await fetch('/tts', {
       method: 'POST',
@@ -411,8 +429,12 @@ const Speech = {
     speechSynthesis.cancel();
     const seq = this._seq;
     let i = 0;
+    let busy = false;   // an utterance is starting or still playing
     const next = () => {
-      if (seq !== this._seq || !this.on || i >= parts.length) { this.stop(); return; }
+      if (busy || seq !== this._seq || !this.on || i >= parts.length) {
+        if (!busy && (seq !== this._seq || !this.on || i >= parts.length)) this.stop();
+        return;
+      }
       this._markVerse(i + startIdx);
       const u = new SpeechSynthesisUtterance(parts[i++]);
       u.rate = this.rate;
@@ -421,13 +443,16 @@ const Speech = {
         const v = voices.find(x => x.name === this._browserVoice);
         if (v) u.voice = v;
       }
-      u.onend = () => setTimeout(next, 120);
-      u.onerror = () => this.stop();
+      busy = true;
+      // Keep `busy` set through the 120 ms pause: the watchdog would
+      // otherwise advance once in the gap and the timer would advance again.
+      u.onend = () => { setTimeout(() => { busy = false; next(); }, 120); };
+      u.onerror = () => { busy = false; this.stop(); };
       speechSynthesis.speak(u);
     };
     next();
     this._watch = setInterval(() => {
-      if (!speechSynthesis.speaking && !speechSynthesis.pending) next();
+      if (!busy && !speechSynthesis.speaking && !speechSynthesis.pending) next();
     }, 1000);
   },
 };

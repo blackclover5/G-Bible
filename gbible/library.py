@@ -17,7 +17,6 @@ import json
 import re
 import time
 import unicodedata
-import uuid
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Any, Iterable
@@ -157,6 +156,23 @@ def get(module_id: str) -> Module | None:
     return Module.from_row(r) if r else None
 
 
+def get_installed(module_id: str) -> Module | None:
+    """A module the reader can actually open.
+
+    Removing a module soft-deletes its row (installed_at=0) and drops its
+    content, but deliberately keeps the row and every personal record tied to
+    it.  `get()` still finds that row, so using it as an "is available" test
+    made notes, collections and workflow steps present a removed module as
+    though it were installed.  Callers that *display* or *act on* a module
+    should use this instead; callers that need the stored metadata (licence,
+    attribution, restore) should use `get()`.
+
+    Deletes nothing: a user's data is never a candidate for cleanup.
+    """
+    m = get(module_id)
+    return m if m and m.installed_at else None
+
+
 def module_dir(module_id: str) -> Path | None:
     """Where a module's files actually are, as opposed to where they were.
 
@@ -176,9 +192,15 @@ def module_dir(module_id: str) -> Path | None:
     if m is None:
         return None
     if m.folder:
-        p = db.app_dir() / "modules" / m.folder
-        if p.exists():
-            return p
+        # The folder comes from the database, which a restore can rewrite.  A
+        # single relative component is the only safe shape here.
+        folder = str(m.folder)
+        if (folder not in (".", "..") and not Path(folder).is_absolute()
+                and "/" not in folder and "\\" not in folder
+                and ".." not in folder):
+            p = db.app_dir() / "modules" / folder
+            if p.exists():
+                return p
     if m.path:
         p = Path(m.path)
         if p.exists():
@@ -247,6 +269,14 @@ def list_all(*, type_: str | None = None, lang: str | None = None,
     if search:
         q += " AND (name LIKE ? OR abbrev LIKE ? OR description LIKE ? OR author LIKE ?)"
         a += [f"%{search}%"] * 4
+    # ORDER BY cannot be a bound parameter, so whitelist it.  Taking the query
+    # value verbatim let a caller append arbitrary SQL to this statement.
+    allowed = {
+        "priority DESC, name ASC", "name ASC", "name DESC",
+        "year DESC", "year ASC", "installed_at DESC",
+    }
+    if order not in allowed:
+        order = "priority DESC, name ASC"
     q += f" ORDER BY {order}"
     return [Module.from_row(r) for r in conn.execute(q, a)]
 
@@ -357,6 +387,17 @@ def _segs_of(item) -> list[Seg]:
     lose, and a span table pointing into text that has moved is worse than none.
     """
     text = item.text
+    # SWORD outline dictionaries (Nave, Torrey) carry no span table; their text
+    # is a flattened list of "→ Heading  refs" lines.  Render it as a list rather
+    # than raw whitespace.  The stored text is never changed.
+    if (text.lstrip().startswith(("→", "•"))
+            or "\n→ " in text or "\n • " in text or "\n• " in text):
+        segs = markup.segs_from_outline(text)
+        mid = item.extra.get("_mid", "")
+        for s in segs:
+            if s.kind == "entryref":
+                s.attrs["module"] = mid
+        return segs
     if "{{" in text or "[[" in text:
         ck = (item.extra.get("_mid", ""), item.key)
         got = _WIKI_CACHE.get(ck)
@@ -378,7 +419,7 @@ def _segs_of(item) -> list[Seg]:
 def read(module_id: str, cursor: dict | None = None, opts: dict | None = None,
          span: str = "chapter", context: int = 1) -> Content:
     """Read content at a cursor.  This is the only function a pane calls."""
-    m = get(module_id)
+    m = get_installed(module_id)
     if m is None:
         raise KeyError(module_id)
     cursor = dict(cursor or {})
@@ -513,11 +554,25 @@ def _read_bible(m: Module, cursor: dict, o: RenderOpts, span: str, context: int)
             c.notices.append("No text was found for this devotional reading.")
         return c
     rr = _cursor_to_range(m, cursor, span)
-    rows = conn.execute(
-        "SELECT * FROM unit WHERE module_id=? AND book=? AND chapter=? "
-        "ORDER BY verse", (m.id, rr.start.book, rr.start.chapter)).fetchall()
+    # span='verse' means one verse, not the whole chapter.  Bound the query by
+    # the resolved verse so read() answers the question it was asked: callers
+    # such as Copy Bible verses join these items straight into the clipboard.
+    sql = ("SELECT * FROM unit WHERE module_id=? AND book=? AND chapter=? ")
+    args: list = [m.id, rr.start.book, rr.start.chapter]
+    if span == "verse" and rr.start.verse:
+        sql += "AND verse=? "
+        args.append(rr.start.verse)
+    elif (span == "range" and rr.end > rr.start
+          and rr.start.book == rr.end.book and rr.start.chapter == rr.end.chapter):
+        sql += "AND verse BETWEEN ? AND ? "
+        args.extend([rr.start.verse or 1, rr.end.verse or 999])
+    sql += "ORDER BY verse"
+    rows = conn.execute(sql, args).fetchall()
     c = Content(m.id, m.name, "verse", cursor={"ref": canon.format_ref(rr.start),
                                               "span": span}, ref_label=canon.format_ref(rr.start))
+    requested = (cursor.get("ref") or "").strip()
+    if requested and canon.parse_ref(requested, m.v11n or "KJV") is None:
+        c.notices.append(f"Could not read {requested!r}; showing Genesis 1.")
     if not rows:
         # A verse-keyed module with nothing anchored to this chapter.  Some
         # real modules are verse-*numbered* but carry no book name at all --
@@ -538,6 +593,9 @@ def _read_bible(m: Module, cursor: dict, o: RenderOpts, span: str, context: int)
                     "so they cannot be opened by reference. They are listed "
                     "here and are fully searchable.")
                 c.items = [_mk_item(r, o) for r in listed]
+        else:
+            c.notices.append(f"{m.name} has no text for "
+                             f"{canon.format_ref(rr.start)}.")
         return c
     bk = canon.BOOK_BY_OSIS.get(rows[0]["book"])
     c.section_title = (bk.name if bk else rows[0]["book"]) + " " + str(rows[0]["chapter"])
@@ -811,21 +869,61 @@ def _read_book(m: Module, cursor: dict, o: RenderOpts) -> Content:
 
 
 def _read_topic(m: Module, cursor: dict, o: RenderOpts, context: int) -> Content:
-    """FactBooks are indexed by topic; the unit table holds the articles."""
+    """FactBooks are indexed by topic; the unit table holds the articles.
+
+    A link into a topic book rarely knows the module's exact key.  A guide says
+    "JOHN", a search says "John", and the stored key may be "JOHN, THE APOSTLE".
+    Three passes -- exact/prefix key, then heading, then anywhere in the key --
+    land the reader on the entry they meant.  A single prefix match used to
+    fall through to `ORDER BY ord LIMIT 1` whenever the spelling differed,
+    which is why following a link to Thompson opened the front of the book.
+    """
     conn = db.connect()
-    key = cursor.get("key") or cursor.get("topic") or ""
+    key = (cursor.get("key") or cursor.get("topic") or "").strip()
+
+    def _like(s: str) -> str:
+        # A topic can contain LIKE wildcards of its own; they are text here.
+        return (s.replace("\\", "\\\\").replace("%", "\\%")
+                 .replace("_", "\\_"))
+
     rows = []
+    tier = 0
     if key:
+        pat = _like(key)
         rows = conn.execute(
-            "SELECT * FROM unit WHERE module_id=? AND (key=? OR key LIKE ?) ORDER BY ord",
-            (m.id, key, key + "%")).fetchall()
+            "SELECT * FROM unit WHERE module_id=? "
+            "AND (key=? OR key LIKE ? ESCAPE '\\') ORDER BY ord LIMIT 200",
+            (m.id, key, pat + "%")).fetchall()
+        tier = 1 if rows else 0
+        if not rows:
+            rows = conn.execute(
+                "SELECT * FROM unit WHERE module_id=? "
+                "AND title LIKE ? ESCAPE '\\' ORDER BY ord LIMIT 200",
+                (m.id, "%" + pat + "%")).fetchall()
+            tier = 2 if rows else 0
+        if not rows:
+            rows = conn.execute(
+                "SELECT * FROM unit WHERE module_id=? "
+                "AND key LIKE ? ESCAPE '\\' ORDER BY ord LIMIT 200",
+                (m.id, "%" + pat + "%")).fetchall()
+            tier = 3 if rows else 0
+    found = bool(rows)
     if not rows:
-        rows = conn.execute("SELECT * FROM unit WHERE module_id=? ORDER BY ord LIMIT 1",
-                            (m.id,)).fetchall()
+        rows = conn.execute(
+            "SELECT * FROM unit WHERE module_id=? ORDER BY ord LIMIT 1",
+            (m.id,)).fetchall()
     c = Content(m.id, m.name, "topic", cursor={"key": key})
     c.items = [_mk_item(r, o) for r in rows[:200]]
-    c.ref_label = key or (rows[0]["key"] if rows else "")
+    # A heading or mid-key match found the entry, but the searched text is not
+    # its address.  Anchor the pane to the key that actually matched so it does
+    # not re-run the fuzzy search on every redraw.  A prefix match keeps the
+    # typed key: it is already a valid address and still shows sibling entries.
+    label = rows[0]["key"] if rows and tier in (2, 3) else key
+    c.ref_label = label or (rows[0]["key"] if rows else "")
     c.cursor = {"key": c.ref_label}
+    if key and not found:
+        c.notices.append(
+            f'No entry named "{key}" in {m.name}; showing the first entry.')
     return c
 
 
@@ -1004,10 +1102,12 @@ def article_index(m: Module, bucket: str = "", limit: int = 400) -> dict:
                            if chosen == "#"
                            else (r["key"] or "")[:1].upper() == chosen)]
             entries = entries[:limit]
+    bucket_total = buckets.get(chosen, 0) if chosen else len(rows)
     return {"ok": True, "kind": kind, "total": len(rows),
             "buckets": [{"b": b, "n": buckets[b]} for b in keys],
             "bucket": chosen, "entries": entries,
-            "truncated": len(entries) >= limit}
+            "bucket_total": bucket_total,
+            "truncated": len(entries) < bucket_total}
 
 
 # --------------------------------------------------------------------------
@@ -1129,11 +1229,12 @@ def register(conn, **kw) -> str:
 
 def mark_removed(conn, module_id: str) -> None:
     """Soft-remove a module: the row stays so the Store can still say it was
-    installed, but all content is dropped.  unit_fts has no module_id column
-    (it is a contentless FTS5 table), so its rows are cleared by rowid first."""
+    installed, but all content is dropped.  unit_fts is a self-contained FTS5
+    table with an unindexed module_id, so it can be filtered directly."""
     conn.execute("UPDATE module SET installed_at=0, error=NULL WHERE id=?", (module_id,))
     conn.execute("DELETE FROM unit_fts WHERE module_id=?", (module_id,))
-    for tbl in ("unit", "marker", "versification", "xref"):
+    for tbl in ("unit", "marker", "versification", "xref", "syntax_role"
+                ):
         conn.execute(f"DELETE FROM {tbl} WHERE module_id=?", (module_id,))
     # `strongs.modules` is a JSON list of module ids, so no DELETE can reach it
     # and nothing else was pruning it.  Removing the King James left its id in
@@ -1162,12 +1263,17 @@ def mark_removed(conn, module_id: str) -> None:
         if len(kept) != len(ids):
             conn.execute("UPDATE strongs SET modules=? WHERE rowid=?",
                          (json.dumps(kept), row["rowid"]))
+    # Every in-process cache is keyed on this generation, including the
+    # morphology vocabularies and the vector matrix.  Deleting content without
+    # bumping it would leave those caches describing books that are gone.
+    db.bump_generation()
 
 
 def remove_module(module_id: str, *, delete_files: bool = True) -> dict:
     conn = db.connect()
-    m = get(module_id)
+    m = get_installed(module_id)
     if m is None:
+        # A second remove must not re-log "Removed X" and report success.
         return {"ok": False, "error": "Not installed"}
     # Close the read transaction `get()` opened so the write below does not
     # have to upgrade a held read lock (which fails with "database is locked"
@@ -1210,9 +1316,20 @@ def remove_module(module_id: str, *, delete_files: bool = True) -> dict:
                     f"{module_id}: files not found, module row removed and "
                     f"the folder left where it is")
             elif p.is_dir():
-                import shutil
-                shutil.rmtree(p)
-                removed_files = 1
+                # Never delete outside this app's own data directory, whatever
+                # a restored database claims the module folder was.
+                try:
+                    inside = p.resolve().is_relative_to(db.app_dir().resolve())
+                except (OSError, ValueError):
+                    inside = False
+                if not inside:
+                    db.log_history(
+                        "remove",
+                        f"{module_id}: folder is outside the library; left alone")
+                else:
+                    import shutil
+                    shutil.rmtree(p)
+                    removed_files = 1
             elif p.is_file():
                 p.unlink()
                 removed_files = 1
@@ -1222,6 +1339,14 @@ def remove_module(module_id: str, *, delete_files: bool = True) -> dict:
         conn.execute("UPDATE store_item SET module_id=NULL WHERE module_id=?", (module_id,))
         conn.commit()
     db.log_history("remove", f"Removed {m.name}", {"module_id": module_id, "units": n_units})
+    # Sync otherwise has no way to know this deletion was deliberate and can
+    # bring the module straight back from another device.
+    from . import sync
+    try:
+        sync.tombstone(module_id, "module")
+    except Exception:   # a sync failure must not undo a local removal
+        pass
+    return {"ok": True, "module_id": module_id, "name": m.name, "units": n_units}
     return {"ok": True, "module_id": module_id, "name": m.name, "units": n_units,
             "files_removed": removed_files}
 

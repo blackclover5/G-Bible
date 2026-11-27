@@ -55,6 +55,11 @@ class Progress:
 
 
 def _open(url: str, timeout: int = 60):
+    # A catalogue is trusted curated data, but a custom repo can still name a
+    # cleartext URL. Refuse it: a module is code-like content and must not be
+    # fetched over a connection anyone on the path can rewrite.
+    if not str(url).lower().startswith(("https://", "http://localhost", "http://127.0.0.1")):
+        raise ValueError("only HTTPS download URLs are accepted")
     req = urllib.request.Request(url, headers={
         "User-Agent": UA,
         "Accept": "*/*",
@@ -183,12 +188,6 @@ class InstallErrorFailed(Exception):
     pass
 
 
-# Set only for repositories whose entire catalogue is known to be public domain
-# (currently eBible.org and Wikimedia Commons, both of which publish only
-# dedicated freely-licensed texts under those terms).
-_UNSTATED_IS_PD = "Public Domain"
-
-
 class InstallErrorIncomplete(InstallErrorFailed):
     """The upstream source is itself a stub, not a failed download.
 
@@ -305,6 +304,18 @@ def _install_impl(repo_id: str, item_id: str, *, fmt: str = "",
                 db.log_history("install-cleanup-failed",
                                f"{it.get('title')}: {table}: {cleanup_error}",
                                {"repo": repo_id, "item": item_id})
+        # The loop above cannot prune strongs.modules: that table keys on a
+        # JSON list, not module_id.  mark_removed() does it (and bumps the
+        # library generation), so a failed install leaves no stale claims that
+        # the module still has Strong's tags.
+        try:
+            # `library` is imported at module scope; a local import here would
+            # shadow it for the whole function and break the slugify/get calls
+            # earlier in this very function with UnboundLocalError.
+            library.mark_removed(conn, mid)
+        except Exception as cleanup_error:  # noqa: BLE001
+            db.log_history("install-cleanup-failed",
+                           f"{it.get('title')}: strongs.modules: {cleanup_error}")
         try:
             conn.execute("DELETE FROM module WHERE id=?", (mid,))
             conn.commit()
@@ -405,12 +416,28 @@ def _install_one(repo_id: str, it: dict, mid: str, fmt: str, prog: Progress,
             base_fields["raw_meta"] = raw
         for k, v in extra.items():
             base_fields.setdefault(k, v)
+        # Rights are a fact about the *file*, not about the catalogue entry:
+        # a SWORD conf's DistributionLicense/CopyrightNotes or an EPUB's
+        # dc:rights must win over the Store's (often empty) metadata.
+        for key in ("license", "rights", "author"):
+            value = extra.get(key)
+            if value:
+                base_fields[key] = (
+                    taxonomy.normalise_license(value) if key == "license"
+                    else str(value)[:600])
         base_fields["folder"] = mid
         base_fields["path"] = str(workdir)
         base_fields["size_bytes"] = _dir_size(workdir)
         stats = indexer.run_import(mid, units, **base_fields)
-    finally:
-        pass
+    except Exception:
+        # A failed download or parse left the downloaded tree behind: remove it
+        # so a retry starts clean and does not accumulate junk on disk.
+        import shutil
+        try:
+            shutil.rmtree(workdir)
+        except OSError:
+            pass
+        raise
     return stats
 
 
@@ -429,7 +456,7 @@ _HANDLERS: dict[str, Callable] = {}
 
 # Tables whose rows belong to one installed module, for install rollback.
 _MODULE_SCOPED_TABLES = ("unit", "marker", "xref", "versification",
-                         "unit_fts", "strongs")
+                         "unit_fts", "strongs", "syntax_role")
 
 
 def _has_column(conn, table: str, column: str) -> bool:
@@ -716,13 +743,11 @@ def _install_open_bibles(it, mid, prog, workdir, fmt):
                          title=f"{v['book']} {v['chapter']}", book=v["book"],
                          chapter=v["chapter"], verse=v["verse"],
                          markup=v["markup"])
-    # An explicit, named default for this repository rather than a silent one.
-    # normalise_license() treats an absent licence as "Copyrighted" -- an
-    # unstated licence is not a permission -- so a curated all-PD source has to
-    # say so here, in the open, rather than relying on that function to guess.
-    # If this ever widens to a source that is not wholly public domain, this
-    # line is the thing that has to change.
-    lic = taxonomy.normalise_license(it.get("license") or _UNSTATED_IS_PD)
+    # The redistribution gate above has already checked this licence.  An
+    # earlier version fell back to "Public Domain" for a blank catalogue entry,
+    # but the gate refuses a blank licence before we get here, so that fallback
+    # was never reached and only made the policy look looser than it is.
+    lic = taxonomy.normalise_license(it.get("license"))
     if not taxonomy.license_ok(lic):
         raise InstallErrorFailed(f"licence '{lic}' is not offerable")
     if extra.pop("truncated", False):
@@ -1729,8 +1754,10 @@ def _import_local_bytes(data: bytes, *, path: Path, it: dict,
         extra.update({
             "v11n": conf.get("Versification") or "KJV",
             "abbrev": (conf.get("Abbreviation") or "")[:32],
-            "license": taxonomy.normalise_license(
-                conf.get("DistributionLicense") or "Public Domain"),
+            # An unstated licence is not a grant of public-domain status.
+            # Local imports skip the redistribution gate (the file is already
+            # on the reader's disk), but the metadata must still say the truth.
+            "license": taxonomy.normalise_license(conf.get("DistributionLicense")),
             "rights": (conf.get("CopyrightNotes") or conf.get("Copyright") or "")[:600],
             "about": conf.get("About", "")[:2000],
             "raw_meta_sword": {k: v for k, v in meta.items()

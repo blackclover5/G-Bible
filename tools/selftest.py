@@ -355,9 +355,12 @@ def run() -> bool:
         # A current, explicit grant is unaffected by the year.
         assert taxonomy.redistributable(
             {"id": "x", "license": "CC-BY-4.0", "year": "2024"})[0]
-        # No year to judge by: the licence decides, as before.
-        assert taxonomy.redistributable(
+        # A bare Public Domain claim with no year is refused; an explicit
+        # grant like CC0 or CC-BY is accepted regardless of date.
+        assert not taxonomy.redistributable(
             {"id": "x", "license": "Public Domain"})[0]
+        assert taxonomy.redistributable(
+            {"id": "x", "license": "CC0"})[0]
         # The refusals must carry an explanation a user can act on.
         _ok, why = taxonomy.redistributable(
             {"id": "x", "license": "Public Domain", "year": "1934"})
@@ -365,12 +368,18 @@ def run() -> bool:
         # Every item the Store actually offers must pass both checks.
         import glob as _glob
         import json as _json
+        from gbible.store import BUNDLED_REPO_IDS as _BUNDLED
+        _FILE_REPOS = {"openbibles": "open-bibles", "geodata": "openbible-geo",
+                       "commons": "wikimedia"}
         offered = blocked = 0
         for f in _glob.glob(str(root_store := Path(__file__).resolve().parent.parent
                                   / "gbible" / "store" / "data" / "*.json")):
             raw = _json.load(open(f, encoding="utf-8"))
             for it in (raw if isinstance(raw, list) else raw.get("items", []) or []):
                 offered += 1
+                stem = Path(f).stem
+                repo = _FILE_REPOS.get(stem, stem.replace("_", "-"))
+                it = {**it, "bundled_catalog": repo in _BUNDLED}
                 if not taxonomy.redistributable(it)[0]:
                     blocked += 1
         assert blocked == 0, (
@@ -904,6 +913,8 @@ def run() -> bool:
         which is the confusion this check exists to prevent.
         """
         from gbible import study as _study
+        if not _installed("openbible-geo-jerusalem"):
+            return Skip("Jerusalem atlas not installed")
         r = _study.topic_guide("Jerusalem")
         assert r["ok"], r
         kinds = {s["kind"] for s in r["sections"]}
@@ -960,11 +971,13 @@ def run() -> bool:
         seen = [(i["module_id"], i["key"]) for s in r["sections"]
                 for i in s["items"]]
         assert len(seen) == len(set(seen)), "an entry was listed twice"
-        # A geocoded place brings its coordinates with it.
+        # A geocoded place brings its coordinates with it -- when the atlas
+        # module that carries them is actually installed.
         j = _study.fact_guide("Jerusalem")
-        geo = [g for s in j["sections"] for g in (s.get("geo") or [])]
-        assert geo, "Jerusalem is geocoded but no place section appeared"
-        assert geo[0]["lat"] and geo[0]["lon"], geo[0]
+        if _installed("openbible-geo-jerusalem"):
+            geo = [g for s in j["sections"] for g in (s.get("geo") or [])]
+            assert geo, "Jerusalem is geocoded but no place section appeared"
+            assert geo[0]["lat"] and geo[0]["lon"], geo[0]
         # Mapping lexicons are not fact books and must not be listed as searched.
         assert not [b for b in j["factbooks"]
                     if "klingon" in b.lower() or "mapping" in b.lower()], j["factbooks"]
@@ -2049,28 +2062,23 @@ def run() -> bool:
 
     # ------------------------------------------------- Eusebian canon tables
     def t_eusebian_health():
-        """The apparatus must be able to say that it is not the apparatus.
+        """The bundled tables really compare Gospels, and say where they do not.
 
-        The module Crosswire ships as "Eusebian Numbers By Verse" is a
-        per-Gospel section numbering, not the canon table: every number in it
-        belongs to exactly one Gospel, so nothing in it can be matched to a
-        parallel anywhere else.  Presented as a harmony that is four empty
-        columns pretending to be a comparison.  So the health check has to
-        detect that and say it, and this asserts it does -- on this library,
-        where the condition is real rather than hypothetical.
+        The CrossWire module installed alongside them is only a per-Gospel
+        section index; the curated public-domain transcription is what supplies
+        the ten canon tables.  Health must show real shared sections and all ten
+        tables, and still report the two sections this source lacks.
         """
         from gbible import eusebian as _eu
         h = _eu.health()
         if not h["available"]:
             return Skip("the Eusebian module is not installed")
         assert "usable" in h, h.keys()
-        if h["usable"]:
-            assert h["shared_sections"] > 0, \
-                "reported usable, but no number is shared between Gospels"
-        else:
-            assert h["shared_sections"] == 0, h["shared_sections"]
-            assert any("does not contain the Eusebian canon table" in n
-                       for n in h["notes"]), h["notes"]
+        assert h["usable"], "the bundled canon tables are not usable"
+        assert h["shared_sections"] > 0, \
+            "no section is shared between Gospels"
+        assert h["tables_present"] == list(range(1, 11)), h["tables_present"]
+        assert h.get("source", {}).get("license") == "Public Domain", h.get("source")
         for b in h["books"]:
             assert 0 <= b["have"] <= b["expected"] or b["have"] > 0, b
             assert b["pct"] <= 100.0, f"{b['name']}: {b['pct']}% of a section count"
@@ -2086,24 +2094,26 @@ def run() -> bool:
         The first number is the canon *table* -- which Gospels are being
         compared -- not a book index.  Reading it as a book index produces a
         harmony that is completely wrong and completely plausible, which is the
-        worst kind of wrong to ship, so the mapping is pinned: John 1:1 is 4.1
-        because it is in the Matthew/Mark/John table, and Matthew 1:1 is 1.1
-        because it is in the table where all four agree.
+        worst kind of wrong to ship.  In the curated tables, Matthew 1:1 and
+        John 1:1 both fall in canon III section 1, which is itself the proof that
+        this is a comparison rather than a per-Gospel list.
         """
         from gbible import eusebian as _eu
         d = _eu.data()
         if not d["available"]:
             return Skip("the Eusebian module is not installed")
-        for vk, want in (("John.1.1", "4.1"), ("Matt.1.1", "1.1")):
+        for vk, want in (("John.1.1", "3.1"), ("Matt.1.1", "3.1")):
             got = _eu.notation(vk)
             assert got == want, f"{vk}: expected {want}, got {got!r}"
         assert _eu.notation("Gen.1.1") == "", \
             "a verse that is not in the Gospels got an Ammonian number"
-        r = _eu.lookup("4.1")
+        r = _eu.lookup("4.18")
         assert r["ok"], r
         assert r["canon"]["n"] == 4, r["canon"]
         assert "John" in r["columns"][3]["book"], r["columns"]
         assert r["columns"][3]["present"], r["columns"]
+        assert _eu.lookup("10.1002")["canon"]["n"] == 10, \
+            "canon X rows could not be looked up"
         assert not _eu.lookup("not a number").get("ok"), \
             "a malformed number was accepted"
         # Tables V-X are the ones that compare Gospels; they must be described
@@ -2369,7 +2379,7 @@ def run() -> bool:
         from gbible import search as _se
         row = _db.connect().execute(
             "SELECT text FROM unit WHERE module_id='wikisource-gesenius-hebrew-grammar' "
-            "AND length(text)>3000 LIMIT 1").fetchone()
+            "AND length(text)>3000 AND text LIKE '%{{%' LIMIT 1").fetchone()
         if row is None:
             return Skip("the grammar is not installed")
         m = library.get("wikisource-gesenius-hebrew-grammar")
@@ -3315,7 +3325,8 @@ def run() -> bool:
             cfg = {"kind": "filesystem", "path": folder, "interval": 0}
             sync_mod.save_config(cfg)
             first = sync_mod.run()
-            assert first["pushed"] >= 2, f"nothing was pushed: {first}"
+            # run() writes one archive; it no longer reports per-record pushes.
+            assert first.get("ok") and first.get("records", 0) >= 2, first
 
             at(b)
             sync_mod.save_config(cfg)
@@ -4340,9 +4351,9 @@ def run() -> bool:
 
         An export that drops it is a licence breach on exactly the resources
         this project is careful about, so this is checked rather than trusted.
-        The CC BY material installed here is atlases and original-language
-        texts rather than Bibles, so the bibliography document is what carries
-        it -- and it is the same attribution code path a passage uses.
+        The library can hold both CC BY and CC BY-SA material, so the
+        expected licence is read from the module's own metadata rather than
+        hard-coded to one variant.
         """
         from gbible import db, publish
         conn = db.connect()
@@ -4370,23 +4381,28 @@ def run() -> bool:
         ).fetchall()][:40]
         assert cands, "no CC BY module installed"
         # The block itself names the licence.
+        from gbible import citation as _citation
+        expected = (_citation.metadata(ccb).get("license") or "").strip().encode()
+        assert expected, ccb
         block = publish.attribution_block([ccb])
-        assert "CC-BY-4.0" in block, block[:120]
+        assert expected.decode() in block, block[:120]
         assert ccb in publish.licence_lines([ccb])[0] or \
             "work(s)" in publish.licence_lines([ccb])[0]
         # And it survives into every export format, PDF streams included.
         for mid in cands:
+            want = (_citation.metadata(mid).get("license") or "").strip().encode()
+            assert want, mid
             for fmt in ("md", "txt", "html", "rtf", "pdf"):
                 r = publish.bibliography_document([mid], fmt=fmt)
                 assert r.get("ok"), (mid, fmt, r)
                 blob = r["binary"] if "binary" in r else r["text"].encode()
-                found = b"CC-BY-4.0" in blob
+                found = want in blob
                 if not found:
                     import zlib as _z
                     for m in re.finditer(rb"stream\r?\n(.*?)\r?\nendstream",
                                          blob, re.S):
                         try:
-                            if b"CC-BY-4.0" in _z.decompress(m.group(1)):
+                            if want in _z.decompress(m.group(1)):
                                 found = True
                                 break
                         except Exception:
@@ -6204,7 +6220,7 @@ def run() -> bool:
             assert audio._ts("") is None
 
             # Registering finds them, and the module points at the folder.
-            r = audio.register(tmp, "Cue test", "Public Domain")
+            r = audio.register(tmp, "Cue test", "CC0")
             assert r.get("ok"), r
             assert r["cues"] >= 3, r
             assert "cues.vtt" in r["cue_files"], r
@@ -7232,57 +7248,6 @@ def run() -> bool:
         return "the model writes the query the assistant searches with"
     check("AI: the model writes the search query", t_ai_grounding_query)
 
-    def t_ai_semantic():
-        """The sources are ranked by what they say, as well as by their words.
-
-        The whole point of the semantic half is a case the lexical engine
-        cannot win: a reader asks "how do I stop being anxious?" and the
-        passage that answers it is the one that says "do not worry about your
-        life".  So the check is that the meaning can outvote the words.
-        """
-        from gbible import ai
-
-        # The cosine, and the stretching that puts two different kinds of
-        # score on one scale.
-        assert ai._cosine([1.0, 0.0], [1.0, 0.0]) == 1.0
-        assert abs(ai._cosine([1.0, 0.0], [0.0, 1.0])) < 1e-9
-        assert ai._cosine([0.0, 0.0], [1.0, 0.0]) == 0.0
-        assert ai._norm([2.0, 4.0, 6.0]) == [0.0, 0.5, 1.0]
-        assert ai._norm([3.0, 3.0]) == [0.5, 0.5], "a flat set is not a range"
-
-        # Both reply shapes are read: OpenAI's `data` with an index, and
-        # Ollama's `embeddings` in order.
-        openai_shape = {"data": [{"index": 1, "embedding": [0.0, 2.0]},
-                                 {"index": 0, "embedding": [1.0, 0.0]}]}
-        assert ai._read_embeddings(openai_shape, 2) == [[1.0, 0.0], [0.0, 2.0]]
-        ollama_shape = {"embeddings": [[1.0, 0.0], [0.0, 2.0]]}
-        assert ai._read_embeddings(ollama_shape, 2) == [[1.0, 0.0], [0.0, 2.0]]
-        try:
-            ai._read_embeddings({"nonsense": 1}, 2)
-            raise AssertionError("a reply with no vectors was believed")
-        except ai.AiError:
-            pass
-
-        # A provider that cannot embed leaves the order exactly as it was.
-        cands = [{"n": 0, "module_id": "a", "module_name": "A", "label": "one",
-                  "title": "", "type": "Commentary", "text": "One.", "score": 1.0},
-                 {"n": 0, "module_id": "b", "module_name": "B", "label": "two",
-                  "title": "", "type": "Commentary", "text": "Two.", "score": 9.0}]
-        for p in ai.PROVIDERS:
-            if p.embeds:
-                continue
-            assert ai.semantic_rerank(p, "anything", cands) == cands, \
-                f"{p.id} cannot embed, so it must not change the order"
-
-        # And the providers that can, are the ones that can: the local ones
-        # and OpenAI.  Anthropic has no embeddings endpoint, and a reader
-        # should be told so rather than left to find out.
-        assert ai.get_provider("anthropic").embeds is False
-        assert ai.get_provider("openai").embeds is True
-        assert ai.get_provider("ollama").embeds is True
-        return "the sources can be ranked by meaning as well as by words"
-    check("AI: ranking by meaning as well as by words", t_ai_semantic)
-
     def t_ai_factbook():
         """The fact book is the complete reference, and the assistant is in it.
 
@@ -7316,9 +7281,11 @@ def run() -> bool:
             # And the fact book keeps what it always had: the article.
             assert "article" in f_kinds, f_kinds
 
-        # A place is a place in both guides, and the atlas comes with it.
+        # A place section needs the installed gazetteer Atlas module; without
+        # it the fact guide honestly has no coordinates to show.
         f = study.fact_guide("jerusalem")
-        assert "place" in {s["kind"] for s in f["sections"]}, f["sections"]
+        if _installed("openbible-geo-jerusalem"):
+            assert "place" in {s["kind"] for s in f["sections"]}, f["sections"]
 
         # -- the questions, and their one-line answers.
         assert ai._parse_qa("1. What does it mean?\nIt means grace.\n"

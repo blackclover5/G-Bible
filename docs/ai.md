@@ -1,6 +1,6 @@
 # AI Assistant — Specification
 
-Status: **Phase 4 implemented.** Retrieval-grounded chat with streaming, a
+Status: **Phase 4 implemented, with retrieval-quality upgrades.** Retrieval-grounded chat with streaming, a
 provider switcher (local Ollama / LM Studio / llama.cpp, a cloud API, or one of
 the three **free tiers** — Groq, Google AI Studio, OpenRouter), per-provider
 keys, live model discovery with a one-click reachability test, clickable
@@ -26,8 +26,9 @@ it was: fully usable, entirely offline, and it never makes an outbound request.
 1. **The assistant retrieves; it does not remember.** Every answer is composed
    from passages already installed in the local library, and from the reader's
    own notes, highlights and clips. The language model is the reasoning
-   step over a supplied corpus — it is not the corpus. This is the whole reason
-   the result can be trusted where a plain chatbot cannot be.
+   step over a supplied corpus — it is not the corpus. The source links make
+   its claims checkable; retrieval and review reduce errors but cannot guarantee
+   that every interpretation is correct.
 2. **Sources are shown before the answer.** The first event on the stream
    carries the citation list, before a single token is generated, so the sources
    cannot be reconstructed after the fact to fit a reply the model already wrote.
@@ -56,13 +57,37 @@ it was: fully usable, entirely offline, and it never makes an outbound request.
    so that "what does Paul mean by this?" is answered about *this*. See *A
    passage in front of the assistant*, below.
 9. **The sources are ranked by meaning as well as by words**, where the
-   provider can turn text into a vector. Nothing is indexed: the vectors are
-   made for the candidates of that one question and thrown away. See *Ranking
-   by meaning, not just by words*, below.
+   provider can turn text into a vector. By default nothing is indexed: the
+   vectors are made for the candidates of that one question and thrown away.
+   An optional persistent index can also be built — see *Retrieval-quality
+   upgrades*, above.
 10. **The conversation is kept.** It is written down as it happens, with its
     citations, titled with the reader's own question, and picked up again when
     the app is opened. It stays on this machine and is not synced. See
     *Conversations*, below.
+
+### Retrieval-quality upgrades
+
+Three additions address the main way a grounded answer still goes wrong: the
+right passage is never retrieved because its wording shares almost nothing with
+the question ("Moses" is in one verse, the reason in another).
+
+1. **Reference resolution.** Before searching, `gbible/refresolve.py` turns the
+   question into likely references: ones the reader typed explicitly, and
+   chapters where a named subject and the event words co-occur. Those chapters
+   are fetched in full as anchored sources, so a person and the explanation a
+   few verses later both reach the model. No reference is invented; every
+   candidate comes from the reader's library.
+2. **Multi-hop retrieval.** If the first source set barely covers the subject,
+   one sharper query is tried and its new hits are merged before drafting. The
+   model only ever sees the sources, never the retry question.
+3. **Independent review.** A configured API can audit the answering provider's
+   draft rather than the model grading its own work (`review_backend`). No
+   request is sent to a provider the reader has not configured.
+5. **Deep research** (opt-in). A per-question switch beside "Use my library",
+   or a saved setting, reads the maximum source budget, always takes the
+   second retrieval pass and always resolves names to passages. It costs time,
+   not an extra provider call, and never changes where the text goes.
 
 ---
 
@@ -90,6 +115,10 @@ question. The library is never uploaded, and neither is a key for any other
 service. The UI states the current provider's behaviour under the input box, so
 the reader is never guessing.
 
+**The reviewer uses a configured provider.** With `review_backend=auto`, a
+configured provider can audit the answering provider's draft. That is a switch
+under Settings → AI; no request is sent to a provider the reader has not set up.
+
 **The reader's own material travels with it, and that is worth being explicit
 about.** When *Use my own material* is on, the notes, highlights and clips
 that bear on the question are sent to the provider just as the library's
@@ -109,13 +138,6 @@ words to search with before it searches, so the question is sent once for that
 and once for the answer. It is the reader's own question and nothing more,
 and it goes to the same provider either way.
 
-**And the same is true of the semantic re-ordering.** When the provider can
-embed, the passages that bear on the question are sent to it to be turned
-into vectors — the question and a few dozen candidates. That is a *second*
-sending of the same passages, and it goes to the same provider, so the
-privacy note above covers it: with a local provider nothing leaves the
-machine, and with a cloud provider the passages for the question go there
-twice rather than once.
 
 Keys follow the codebase's existing credential rule: they live in
 `api-credentials.json` (mode `0600`) **beside** the database, not inside it, so a
@@ -148,10 +170,18 @@ question ──► own material ────────────────
                     system prompt + sources + history + question
                                     │
                                     ▼
-                          provider adapter (streaming)
+                                    provider adapter
                                     │
                                     ▼
-                   SSE: sources ─► deltas ─► done   (rendered as it arrives)
+                         private answer draft
+                                    │
+                                    ▼
+                    source check + question-fit review
+                          │                 │
+                       revise once      accept / decline
+                          └────────┬────────┘
+                                   ▼
+                         SSE: sources ─► final
 ```
 
 * **Retrieval** reuses the app's own search engine (`gbible/search.py`). The
@@ -162,12 +192,36 @@ question ──► own material ────────────────
   search; see *The query the assistant searches with*, below.
 * **The reader's own material** is retrieved separately (`gbible/mine.py`) and
   merged in afterwards. See *The reader's own material*, below.
-* **The candidate pool is wide, and is re-ordered by meaning** where the
-  provider can embed. See *Ranking by meaning, not just by words*, below.
+* **The candidate pool is wide and unrelated single-word matches are removed.**
+  Prior assistant answers are not sent back as evidence; only earlier user
+  questions remain as follow-up context.
+* **Bible narratives can span verses.** When a matching verse connects a
+  named subject to the event but the answer is in a nearby verse that omits
+  the subject's name, chat searches Bible terms separately, finds chapters
+  that connect them, and retrieves a small verse window around the match.
+  These contextual passages are ranked ahead of broad word matches.
 * **Lookup-shaped resources are excluded** from grounding — a lexicon headword,
   an atlas caption or a concordance entry is not a passage *about* the subject.
-  Bible translations are capped so they cannot fill every slot, leaving room for
-  commentaries and study guides.
+  Bible translations are capped per verse, so they cannot crowd out other
+  passages, commentaries and study guides.
+* **Chat answers are reviewed before they appear.** A draft stays private while
+  the app checks its citations and explicit Bible references, then asks the
+  configured model to judge whether the draft answers the exact question,
+  covers its parts, stays on topic and is supported by the supplied evidence.
+  A failed review gets one revision and another check; a draft that still fails
+  is replaced by a notice. This bounded review is a quality check, not proof of
+  correctness, and it does not expose private reasoning. The model is asked to answer each part,
+  cite supported claims, distinguish Scripture from commentary, identify
+  uncertainty, and label inference. Pages in the answer's website list are
+  split into cited pages and pages checked but not cited. Earlier assistant
+  answers are not fed back as evidence; earlier user questions remain only to
+  resolve follow-ups. When a reader approves web research, pages that pass the
+  relevance check are sent as a separate untrusted source section and shown in
+  the answer's website list.
+* **Corrections keep their conversational context.** A correction is checked
+  against the current sources, and a short excerpt of the prior assistant reply
+  is included only to identify what is being corrected. That excerpt is
+  explicitly marked unverified and cannot be used as evidence.
 * **Transport** is one generator (`gbible/ai.py: stream`) over three adapters:
   `openai` (also covers any OpenAI-compatible endpoint, including LM Studio and
   llama.cpp), `anthropic`, and `ollama`. Adding a vendor that speaks one of these
@@ -182,8 +236,8 @@ question ──► own material ────────────────
 
 ## The query the assistant searches with
 
-This is the half of the hybrid search that is not about ranking, and it is the
-half that matters most.
+This is the part of retrieval that is not about ranking, and it is the part
+that matters most.
 
 **The stripped question is a poor search.** "How do I stop being anxious?"
 becomes *"stop being anxious"*, and "stop" and "being" are both **more common
@@ -194,8 +248,9 @@ enters the pool at all.
 
 The engine cannot know that a text about **worry** is a text about
 **anxiety**. It matches words; it has never been told what the words mean.
-**The model can**, and that is the whole of the semantic half of the hybrid:
-*the model supplies the meaning, the engine does the arithmetic.*
+**The model can**, so the assistant asks it for the words a source on the
+subject would use: *the model supplies the meaning, the engine does the
+arithmetic.*
 
 So before searching, the assistant asks the model which words a source on the
 subject would use, and the model writes them in the engine's own query
@@ -220,88 +275,17 @@ each:
 | the stripped question | **3 of 5** |
 | the model's query | **5 of 5** |
 
-The question is not "is it first" but "is it in the pool at all", because the
-re-ordering can only choose from what the search found. With the passage in
-the pool, the semantic re-ranking has something to work with; without it, the
-re-ranking is rearranging the wrong eight.
+The question is not "is it first" but "is it in the pool at all": an answer
+cannot be grounded in a passage the search never found.
 
 **It costs one extra call per question** — a short one, whose answer is a
 single line of query. It is a switch in **Settings → AI** (*Let the model
 choose the search words*), and it works with **every** provider, including
-Anthropic, which has no embeddings endpoint. The expansion is cached by
-question, so a question asked twice is searched for once.
+every provider. The expansion is cached by question, so a question asked twice is searched for once.
 
 **Where it does not apply.** Sermon research is anchored to a *passage* — a
 location, not a question — so its grounding is already precise and it does
 not pay for an extra call.
-
-## Ranking by meaning, not just by words
-
-The search engine finds passages by their **words**. It is very good at that,
-and it is very good at it because the work is arithmetic — BM25, proximity,
-coverage — and arithmetic does not know that *anxious* and *worry* are the
-same thing.
-
-That is a real gap, and it is the gap semantic search closes with
-semantic search. A reader asks *"how do I stop being anxious?"* and the
-lexical engine finds the passages that **use the word**. The passage that
-answers the question is the one that says *"do not worry about your life"* —
-and no amount of stemming, proximity or coverage will find it, because the
-two share nothing.
-
-So the candidates the search engine found are **re-ordered by what they
-say** as well as by what they are made of.
-
-### Nothing is indexed
-
-This is the part that makes it affordable, and it is deliberate.
-
-The library holds **more than a million units**. There is no way to embed
-them all, and an index of a million vectors would be a thing to keep fresh,
-to store, and to move between machines. So **nothing is indexed**. The
-vectors are made at the moment of the question, for the few dozen candidates
-the search engine already found, and thrown away afterwards.
-
-The cost is a handful of extra calls per question. The benefit is that there
-is no index to go stale, no background job to run, and nothing new to sync.
-
-### The three steps, in order
-
-The order matters, and it is the opposite of what it looks like.
-
-| Step | What happens | Why here |
-| --- | --- | --- |
-| **Find** | the search engine returns a wide pool of candidates | the engine recalls better than the model does, and a passage that answers the question without repeating any of its words is not in the top few |
-| **Re-order** | the pool is ranked by meaning as well as by words | this is the step that moves "how do I stop being anxious?" from the passages that use the word to the passage that says "do not worry about your life" |
-| **Trim** | the diversity rules are applied: two units per commentary, three translations of a verse | applying them earlier would throw away candidates the re-ordering might have put at the top |
-
-The two scores are **normalised over the candidate set** before they are
-combined. A BM25 score and a cosine similarity are not on the same scale, and
-adding them raw would mean the larger one decided everything.
-
-### Not every provider can do this
-
-Turning text into a vector is a separate capability from answering with one,
-and **not every provider has it**:
-
-| Provider | Embeddings? |
-| --- | --- |
-| **Ollama** | yes — `nomic-embed-text` (pull it first) |
-| **LM Studio, llama.cpp** | yes — whichever model the server has loaded |
-| **OpenAI** | yes — `text-embedding-3-small` |
-| **Anthropic** | **no** — there is no embeddings endpoint |
-| **Groq, Google AI Studio, OpenRouter** | **no** — they proxy chat models, not embedding ones |
-
-**A provider that cannot embed is not a worse provider.** The retrieval is
-lexical, the answer is the same, and only the ordering of the sources is not
-improved. Settings → AI says which case the reader is in, and the switch is
-disabled rather than pretending.
-
-The switch is on by default wherever the provider can do it, and it can be
-turned off — it costs a few extra calls, and a reader on a free tier may
-prefer not to spend them.
-
----
 
 ## A passage in front of the assistant
 
@@ -765,10 +749,10 @@ is not the whole library, and answering from the whole library would answer a
 question the reader deliberately narrowed — which is the one thing the scope
 exists to prevent.
 
-The scope applies to the chat and to the **Explain** action, which grounds in
-the library. It does not apply to the **topic guide**, whose corpus is the
-guide's own material by design, nor to the reader's own material, which is
-already on a switch of its own.
+The scope applies to the chat, to the **Explain** action, and to the **topic
+guide** — the guide still reads its own sections, but the scope decides which
+installed resources those sections may be gathered from. It does not apply to
+the reader's own material, which is already on a switch of its own.
 
 ---
 
@@ -956,16 +940,16 @@ The optional arguments are for the cases that are not the common one:
 
 | Piece | Where |
 | --- | --- |
-| Providers, grounding, transport, discovery, actions, smart search, the two guides and their questions, scope, embeddings and the semantic re-order, sermon research, usage, settings | `gbible/ai.py` |
+| Providers, grounding, transport, discovery, actions, smart search, the two guides and their questions, scope, sermon research, usage, settings | `gbible/ai.py` |
 | The reader's own material: notes, highlights, clips, and their retrieval | `gbible/mine.py` |
 | The conversations the reader has had, and the Markdown export | `gbible/aichat.py` |
 | Which words of a source carried a claim | `gbible/ai.py` (`fragments`, `_fragment`, `_sentences`) |
 | JSON endpoints + SSE stream | `gbible/server/app.py` (`ai/*`, `/api/ai/stream`) |
 | Chat panel, actions, scope picker, recent conversations, the passage you are reading, settings screen, usage card | `gbible/web/ai.js`, `#v-ai`, `#v-aisettings` |
 | Selection-card actions | `gbible/web/tools-selcard.js` (`SelCard`) |
-| Passage AI section | `gbible/web/app-core.js` (`Study.openGuidePane`) |
+| Passage AI section | `gbible/web/study.js` (`Study.openGuidePane`) |
 | Smart Search button | `gbible/web/workspace.js` (`Search.smart`), `#s-smart` |
-| Topics AI section, its questions, and the follow-up bridge | `gbible/web/app-core.js` (`Study.openTopic`, `Study.openFact`, `Study.guideAi`), `#st-sec-ai` |
+| Topics AI section, its questions, and the follow-up bridge | `gbible/web/study.js` (`Study.openFact`, `Study.guideAi`), `gbible/web/ai.js` (`Ai.adoptTopic`), `#st-sec-ai` |
 | What the two guides share: the topic entries and the verses, glosses, concordance, maps and Strong's | `gbible/study.py` (`_fact_rows`, `_extra_sections`) |
 | Sermon research buttons | `gbible/web/tools-sermon.js` (`SermonBuilder`), `#sb-research` |
 | Keys | `api-credentials.json`, ids `ai-<provider>` (`gbible/api/registry.py`) |

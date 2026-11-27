@@ -63,10 +63,13 @@ const Plans = {
     });
     main.querySelectorAll('[data-plskip]').forEach(a => a.onclick = async (e) => {
       e.preventDefault();
+      if (!confirm('Jump to the current day? Earlier days will be ticked off '
+        + 'as read. G-Bible does not keep a separate “skipped” state, so they '
+        + 'will look the same as days you studied.')) return;
       const s = await post('plans/manager', { action: 'skip', plan: a.dataset.plskip });
-      if (!s.ok) { toast(s.error || 'Could not skip.', 'err'); return; }
+      if (!s || s.ok === false) { toast((s && s.error) || 'Could not skip.', 'err'); return; }
       toast('Skipped ' + s.skipped + ' day' + (s.skipped === 1 ? '' : 's')
-        + ' — now at day ' + s.day + '.');
+        + ' (marked read) — now at day ' + s.day + '.');
       this.load();
     });
     main.querySelectorAll('[data-plarch]').forEach(a => a.onclick = async (e) => {
@@ -75,8 +78,9 @@ const Plans = {
        * from the link's text, so the same handler archives and restores
        * correctly and neither direction depends on being in a named group. */
       const to = a.dataset.arch !== '0';
-      await post('plans/manager', { action: 'archive', plan: a.dataset.plarch,
-        archived: to });
+      const r = await post('plans/manager', { action: 'archive',
+        plan: a.dataset.plarch, archived: to });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not change the plan.', 'err'); return; }
       this.load();
     });
     main.querySelectorAll('[data-pldelete]').forEach(a => a.onclick = async (e) => {
@@ -98,6 +102,7 @@ const Plans = {
       + '<div class="org-new" style="margin-top:8px">'
       + '<input id="pl-pv" placeholder="15min, finish:2026-12-31, or open"'
       + ' style="flex:1">'
+      + '<button class="btn" id="pl-pdate" title="Pick a finish date">📅</button>'
       + '<button class="btn primary" id="pl-psave">Set</button>'
       + '<button class="btn" id="pl-pclear" title="Back to scheduled">Clear</button>'
       + '</div>'
@@ -105,19 +110,29 @@ const Plans = {
       + 'Today screen.<br><b>finish:2026-12-31</b> — spread over a date.<br>'
       + '<b>open</b> — self-paced, no schedule.<br><b>Clear</b> — back to '
       + 'scheduled.</div>', [{ label: 'Close', cls: 'btn' }]);
+    $('#pl-pdate').onclick = () => {
+      DatePicker.open({ anchor: $('#pl-pdate'), label: 'Finish by',
+        onPick: (iso) => { $('#pl-pv').value = iso ? ('finish:' + iso) : ''; } });
+    };
     $('#pl-psave').onclick = async () => {
-      await post('plans/manager', { action: 'pace', plan: planId,
-        pace: $('#pl-pv').value.trim() });
+      const pace = $('#pl-pv').value.trim();
+      if (pace && !/^(15|30|45|60)min$|^finish:\d{4}-\d{2}-\d{2}$|^open$/.test(pace)) {
+        toast('Use 15min, finish:YYYY-MM-DD, or open.', 'warn'); return;
+      }
+      const r = await post('plans/manager', { action: 'pace', plan: planId, pace });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not set the pace.', 'err'); return; }
       closeModal(); this.load();
     };
     $('#pl-pclear').onclick = async () => {
-      await post('plans/manager', { action: 'pace', plan: planId, pace: '' });
+      const r = await post('plans/manager', { action: 'pace', plan: planId, pace: '' });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not clear the pace.', 'err'); return; }
       closeModal(); this.load();
     };
   },
 
   exportJSON() {
     api('plans/manager', { action: 'export' }).then((r) => {
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not export progress.', 'err'); return; }
       const text = JSON.stringify({ progress: r.progress || {},
         paces: r.paces || {} }, null, 2);
       modal('Reading plan progress',
@@ -147,7 +162,8 @@ const Plans = {
          catch (err) { toast('That is not JSON.', 'err'); return; }
          const r = await post('plans/manager', { action: 'import', payload });
          closeModal();
-         toast(r.ok ? 'Imported ' + (r.plans || 0) + ' plan(s).'
+         toast(r.ok ? 'Imported progress for ' + (r.plans || 0) + ' plan(s)'
+             + ' and ' + (r.paces || 0) + ' pace(s).'
            : (r.error || 'Failed.'), r.ok ? '' : 'err');
          Plans.load();
        } }]);
@@ -187,6 +203,7 @@ const Plans = {
 
   lectionary() {
     api('plans/manager', { action: 'lectionary' }).then((r) => {
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not load the lectionary.', 'err'); return; }
       const rows = r.readings || [];
       modal('The built-in lectionary',
         '<div class="tiny muted" style="margin-bottom:8px">' + esc(r.note) + ' '

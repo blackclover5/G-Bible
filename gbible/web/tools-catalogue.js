@@ -22,51 +22,34 @@ const Catalogue = {
       + '<div class="dash-h" style="margin-top:14px">Make one</div>'
       + '<div class="st-tools" style="gap:6px;flex-wrap:wrap">'
       + '<label>Grouped <select id="ct-g">'
-      + '<option value="type">by kind</option>'
-      + '<option value="lang">by language</option>'
-      + '<option value="source">by source</option>'
-      + '<option value="author">by author</option>'
+      + (s.groups || []).map(g => '<option value="' + esc(g) + '">'
+        + esc(g) + '</option>').join('')
       + '</select></label>'
       + '<label>Format <select id="ct-f">'
-      + '<option value="pdf">PDF — for handing to someone</option>'
-      + '<option value="csv">CSV — a spreadsheet</option>'
-      + '<option value="html">HTML</option>'
-      + '<option value="txt">Plain text</option>'
-      + '<option value="md">Markdown</option>'
+      + (s.formats || []).map(f => '<option value="' + esc(f) + '">'
+        + esc(f) + '</option>').join('')
       + '</select></label>'
       + '<label><input type="checkbox" id="ct-d" checked> every column</label>'
       + '</div>'
       + '<div class="ct-exports" id="ct-go"></div>'
-      + '<div class="tiny muted">A PDF prints one resource per line with its '
-      + 'licence, which is the column that matters.</div>';
+      + '<div class="tiny muted">With “every column” on, each row carries its '
+      + 'licence. Turned off, a PDF prints only titles, types and abbreviations.</div>';
 
     const url = (f) => '/file/catalog?fmt=' + encodeURIComponent(f)
       + '&group=' + encodeURIComponent($('#ct-g').value)
       + '&detail=' + ($('#ct-d').checked ? '1' : '0');
 
     const build = () => {
-      const f = $('#ct-f').value;
+      // Read the format when the button is clicked: changing only the format
+      // select used to leave the download on the old value and extension.
       $('#ct-go').innerHTML = '<button class="ct-fmt" id="ct-dl">Download</button>';
-      $('#ct-dl').onclick = () => {
-        Cite._save(url(f), 'library-catalogue.' + f);
-        toast('Saved library-catalogue.' + f + '.');
+      $('#ct-dl').onclick = async () => {
+        const f = $('#ct-f').value;
+        const ok = await Cite.download(url(f), 'library-catalogue.' + f);
+        if (ok) toast('Saved library-catalogue.' + f + '.');
       };
-
     };
-    $('#ct-g').onchange = build;
-    $('#ct-d').onchange = build;
+    ['#ct-g', '#ct-d', '#ct-f'].forEach(id => { const e = $(id); if (e) e.onchange = build; });
     build();
   },
 };
-
-/* ==================================================================== Sync
- *
- * Annotations, moved between installs.  The folder layout, the manifest and the
- * merge rules are the server's (see docs/sync.md); what lives here is the door
- * into them: pick a target, pick how often, see what happened.
- *
- * Two things it deliberately does not do.  It does not show a password back
- * once saved, and it does not let a target be chosen that cannot be reached --
- * the server probes before it stores, so a mistyped path is found here rather
- * than at 3am when the app quietly fails to sync.
- */

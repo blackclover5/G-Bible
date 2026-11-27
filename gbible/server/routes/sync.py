@@ -8,6 +8,15 @@ def _sync_status(parts, q):
         return _ok(ok=False, error=str(e))
 
 
+@endpoint("sync/scope")
+def _sync_scope(parts, q):
+    """What travels on sync, read from the same lists that drive the backups."""
+    try:
+        return _ok(**sync.scope())
+    except Exception as e:
+        return _ok(ok=False, error=str(e))
+
+
 @endpoint("sync/configure")
 def _sync_configure(parts, q):
     """Save a target, its interval and its network policy.
@@ -20,7 +29,7 @@ def _sync_configure(parts, q):
     try:
         if not kind:
             sync.disable()
-            return _ok(**{"layout": None}, ok=True, disabled=True)
+            return _ok(disabled=True)
         cfg = sync.save_config({
             "kind": kind,
             "name": q.get("name") or "",
@@ -82,6 +91,7 @@ def _sync_missing_modules(parts, q):
         ("tag_item", "module_id"), ("collection_item", "module_id"),
         ("passage_item", "module_id"), ("pane", "module_id"),
         ("srs_card", "module_id"), ("word_list_item", "module_id"),
+        ("workflow_step", "module_id"), ("citation_meta", "module_id"),
     ]
     conn = db.connect()
     referenced: set[str] = set()
@@ -99,6 +109,53 @@ def _sync_missing_modules(parts, q):
     except Exception:
         installed = set()
     return _ok(missing=sorted(referenced - installed))
+
+
+@endpoint("sync/install_missing_modules")
+def _sync_install_missing(parts, q):
+    """Install the resources a restore said were missing.
+
+    Store items remember the module id only once they have been installed on
+    this device, so also reproduce the id a fresh catalogue item would get
+    (``repo-item``, slugified the same way the importer does).
+    """
+    import json
+    from ... import library as _library, store
+    wanted = q.get("modules") or q.get("module_ids") or []
+    if isinstance(wanted, str):
+        try:
+            wanted = json.loads(wanted)
+        except (ValueError, TypeError):
+            wanted = [x for x in wanted.split("|") if x]
+    wanted = [str(x) for x in wanted if str(x)]
+    if not wanted:
+        return _ok(installed=[], already=[], not_found=[], failed=[])
+
+    conn = db.connect()
+    pairs: dict[str, tuple[str, str]] = {}
+    for mid in wanted:
+        row = conn.execute(
+            "SELECT repo_id, item_id FROM store_item WHERE module_id=? LIMIT 1",
+            (mid,)).fetchone()
+        if row:
+            pairs[mid] = (row["repo_id"], row["item_id"])
+            continue
+        for item in conn.execute("SELECT repo_id, item_id FROM store_item"):
+            if _library.slugify(f"{item['repo_id']}-{item['item_id']}") == mid:
+                pairs[mid] = (item["repo_id"], item["item_id"])
+                break
+
+    installed, already, failed = [], [], []
+    for mid, (repo, item) in pairs.items():
+        try:
+            res = store.install(repo, item)
+            (already if res.get("already") else installed).append(mid)
+        except Exception as e:                            # noqa: BLE001
+            failed.append({"module_id": mid, "error": f"{type(e).__name__}: {e}"[:200]})
+    return _ok(installed=installed, already=already,
+               not_found=[m for m in wanted if m not in pairs], failed=failed)
+
+
 @endpoint("sync/restore")
 def _sync_restore(parts, q):
     """Restore from the .gbz sitting on the configured target — the same
@@ -119,7 +176,9 @@ def _sync_restore(parts, q):
             return _ok(ok=False,
                        error="This backup is encrypted. Enter the passphrase "
                              "to restore it.")
-        out = gbz.restore_gbz(data, include_ai=False, passphrase=pw)
+        apply_deletes = str(q.get("apply_deletes", "")).lower() in ("1", "true", "yes")
+        out = gbz.restore_gbz(data, include_ai=False, passphrase=pw,
+                              apply_deletes=apply_deletes)
     except Exception as e:
         return _ok(ok=False, error=str(e))
     return _ok(**out)

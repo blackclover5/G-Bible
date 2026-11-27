@@ -37,11 +37,11 @@ BATCH = 2000
 
 
 def disagreements(only_modules: list[str] | None = None) -> list[dict]:
-    """Modules whose FTS rows do not match their unit text, by length."""
+    """Modules whose FTS rows do not match their unit text."""
     conn = db.connect()
     sql = (
         "SELECT f.module_id AS m, COUNT(*) AS n, "
-        "  SUM(CASE WHEN length(u.text) <> length(f.text) THEN 1 ELSE 0 END) AS mism, "
+        "  SUM(CASE WHEN u.text IS NOT f.text THEN 1 ELSE 0 END) AS mism, "
         "  SUM(CASE WHEN u.rowid IS NULL THEN 1 ELSE 0 END) AS orphan "
         "FROM unit_fts f LEFT JOIN unit u "
         "  ON u.module_id = f.module_id AND u.key = f.unit_key "

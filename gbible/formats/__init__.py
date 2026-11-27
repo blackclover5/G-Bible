@@ -8,6 +8,7 @@ plain book.
 
 from __future__ import annotations
 
+import atexit
 import io
 import re
 import shutil
@@ -38,19 +39,19 @@ def sniff(data: bytes | None = None, path: Path | None = None,
     if ext in (".bblx", ".cmtx", ".dctx", ".devx", ".mapx", ".harx", ".brpx",
                ".notx", ".topx", ".refx", ".lstx", ".memx", ".prlx", ".ovlx"):
         return "esword9"
-    if ext in (".bbl", ".cmt", ".dct", ".dev", ".bmap", ".mybible", ".bzz", ".bzs"):
+    if ext in (".bbl", ".cmt", ".dct", ".dev", ".bmap", ".mybible", ".bzz", ".bzs", ".bzz2"):
         return "esword-legacy"
     if ext in (".bzu",):
         return "esword-legacy"
     if ext in (".epub",):
         return "epub"
-    if ext in (".zip", ".bzz2"):
-        pass
     if ext in (".usfm",):
         return "usfm"
     if ext in (".usfx",):
         return "usfx"
-    if ext in (".osis", ".osis.xml"):
+    # Path.suffix() sees only ".xml" for "bible.osis.xml", so check the whole
+    # name as well or that format is silently misdetected.
+    if ext == ".osis" or name.endswith(".osis.xml"):
         return "osis"
     if ext in (".txt", ".text", ".md", ".utf-8", ".utf8", ".utf-16"):
         return "text"
@@ -442,12 +443,30 @@ class _ZPath:
         return getattr(self.path, k)
 
 
+#: Every scratch directory made while reading a zip, cleaned at process exit.
+#: Callers only unlink the extracted file, so the directories used to accumulate
+#: on every SWORD import and reindex.
+_SCRATCH: set[Path] = set()
+
+
+def _scratch_dir() -> Path:
+    p = Path(tempfile.mkdtemp(prefix="gbible-"))
+    _SCRATCH.add(p)
+    return p
+
+
+@atexit.register
+def _cleanup_scratch() -> None:
+    for p in list(_SCRATCH):
+        shutil.rmtree(p, ignore_errors=True)
+
+
 def _zpath(zf, name):
-    return _ZPath(zf, name, Path(tempfile.mkdtemp(prefix="gbible-")))
+    return _ZPath(zf, name, _scratch_dir())
 
 
 def _extract(zf: zipfile.ZipFile, name: str) -> Path:
-    p = Path(tempfile.mkdtemp(prefix="gbible-")) / Path(name).name
+    p = _scratch_dir() / Path(name).name
     p.write_bytes(zf.read(name))
     return p
 

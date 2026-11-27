@@ -9,12 +9,11 @@ review screen can show the verse text.
 
 from __future__ import annotations
 
-import sqlite3
 import time
 import uuid
 from datetime import date, timedelta
 
-from . import db
+from . import canon, db
 
 
 def _today() -> str:
@@ -29,13 +28,28 @@ def _row(r) -> dict:
             "created_at": r["created_at"], "last_reviewed": r["last_reviewed"]}
 
 
+def _ref_key(ref: str) -> str:
+    rr = canon.parse_ref(ref or "")
+    return rr.start.osis_id() if rr else " ".join((ref or "").lower().split())
+
+
 def add(ref: str, *, module_id: str = "", unit_key: str = "") -> dict:
     conn = db.connect()
     ref = (ref or "").strip()
     if not ref:
         return {"ok": False, "error": "reference required"}
-    existing = conn.execute("SELECT id FROM srs_card WHERE ref=?", (ref,)).fetchone()
-    if existing:
+    # "Jn 3:16" and "John 3:16" are one verse, not two cards.  Compare the
+    # canonical reference, and fill in a missing module pointer when the card
+    # was added from plain text and is later added from a Bible pane.
+    key = _ref_key(ref)
+    for existing in conn.execute(
+            "SELECT id, ref, module_id, unit_key FROM srs_card").fetchall():
+        if _ref_key(existing["ref"]) != key:
+            continue
+        if module_id and not existing["module_id"]:
+            conn.execute("UPDATE srs_card SET module_id=?, unit_key=? WHERE id=?",
+                         (module_id, unit_key, existing["id"]))
+            conn.commit()
         return {"ok": True, "id": existing["id"], "already": True}
     cid = uuid.uuid4().hex[:12]
     conn.execute(

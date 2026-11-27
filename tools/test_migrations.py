@@ -33,6 +33,7 @@ def _legacy_schema() -> str:
         "highlight": ("updated_at", "label", "book", "chapter", "verse"),
         "store_item": ("year_from", "year_to", "checksum"),
         "repo": ("item_count",),
+        "canvas_node": ("module_id", "data"),
     }
     for table, names in columns.items():
         pattern = re.compile(
@@ -80,8 +81,7 @@ def main() -> int:
             actual_columns = {
                 table: {row["name"] for row in upgraded.execute(
                     f"PRAGMA table_info({table})")}
-                for table in ("module", "unit", "marker", "highlight",
-                              "store_item", "repo")
+                for table in db._ADDED_COLUMNS
             }
             for table, required in db._ADDED_COLUMNS.items():
                 assert {name for name, _ in required} <= actual_columns[table], table

@@ -116,7 +116,7 @@ def counsel_guide(topic: str, limit: int = 8) -> dict:
     books = []
     try:
         opts = _search.SearchOpts(scope="books", limit=20, snippets=False,
-                                  smart=False, fast=True)
+                                  smart=False)
         res = _search.search(key, opts)
         for h in (res.get("hits") or [])[:limit]:
             if not isinstance(h, dict):
@@ -130,7 +130,7 @@ def counsel_guide(topic: str, limit: int = 8) -> dict:
     verses = []
     try:
         opts = _search.SearchOpts(scope="bible", limit=12, snippets=False,
-                                  smart=False, fast=True)
+                                  smart=False)
         res = _search.search(key, opts)
         for h in (res.get("hits") or [])[:limit]:
             if isinstance(h, dict):

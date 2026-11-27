@@ -48,10 +48,12 @@ with a message and are not harmed — they can only be reinstalled via the Store
 
 **My Store catalogue shows nothing installable.**
 
-Check the connection to the Store server from inside G-Bible. The
-catalogues are downloaded from the Store and cached; if the very first
-request happens on a machine with no internet access, nothing is listed.
-Load G-Bible once with internet access, then everything shows up.
+The built-in catalogues are bundled with the app and are completely offline —
+there is no Store server to connect to. If the list is empty, the catalogue
+JSON under `gbible/store/data/` is missing or was not loaded; a repository you
+added yourself is the only kind that is fetched over the network. `run.py
+--sync` only refreshes the local SQLite copy of the bundled JSON, it does not
+download anything.
 
 ## Performance
 
@@ -73,9 +75,12 @@ About → Reset G-Bible, and take a copy of `data/` first.
 
 ## Synchronisation
 
-**Sync is not finished.** The sync engine works for what it knows — a folder,
-or WebDAV/Nextcloud — and it does multi-way merge. But regular consumers will
-be disappointed by anything beyond that:
+**Sync is still settling.** The engine writes one complete `.gbz` snapshot to a
+folder or WebDAV/Nextcloud target; restore merges it additively, with an opt-in
+choice to apply deletes. It is not a two-way record-by-record merge: the last
+device to write the file wins the snapshot. Backups are checked against a
+manifest digest before a restore, and conflicting records are named in the
+summary rather than silently overwritten.
 
 - **AI credentials are never included in ordinary sync backups.** Encryption
   protects the rest of the backup when enabled and requires a passphrase on
@@ -91,9 +96,10 @@ be disappointed by anything beyond that:
 
 **Nothing happens when I ask the assistant anything.**
 
-Correct. The Assistant is off until you configure your own provider key
-(Settings → AI). G-Bible does not ship a provider and does not send your data
-anywhere on its own.
+The Assistant is off until you enable it in Settings → AI Assistant and choose
+a provider. Point it at a local server (Ollama/LM Studio/llama.cpp) or supply a
+cloud key. G-Bible ships no provider, downloads no model, and sends nothing
+anywhere until you switch one on yourself.
 
 **The answer feels wrong.**
 

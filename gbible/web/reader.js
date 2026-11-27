@@ -10,6 +10,14 @@ const Reader = {
   },
 
   async render(p, m, body, tools) {
+    // A pane can be re-rendered while an earlier read is still in flight
+    // (rapid chapter stepping, linked panes).  Without a token the older read
+    // finishes last and writes its stale cursor back onto the shared pane, so
+    // the saved position and the visible passage disagree after a restart.
+    const seq = (p._renderSeq || 0) + 1;
+    p._renderSeq = seq;
+    // Drop find highlights from the previous text before repainting.
+    if (typeof PaneFind !== 'undefined') PaneFind.clear(body);
     body.innerHTML = '<div class="loading">Loading…</div>';
     const opts = Object.assign({}, p.options || {});
     /* Multiple Book Display: when a parallel resource is chosen for this pane,
@@ -31,6 +39,7 @@ const Reader = {
     const r = await api('read', {
       id: m.id, cursor: p.cursor, options: opts,
       span: p.cursor.span || 'chapter', context: wantCtx });
+    if (seq !== p._renderSeq) return;            // a newer render superseded this one
     if (!r.ok) { body.innerHTML = '<div class="empty">' + esc(r.error) + '</div>'; return; }
     p.cursor = r.cursor || p.cursor;
     p._content = r;
@@ -44,6 +53,7 @@ const Reader = {
       const sample = r.items.slice(0, 4).map(it => it.text || '').join(' ');
       if (sample.trim().length > 2) {
         api('study/tags', { text: sample, n: 30 }).then(t => {
+          if (seq !== p._renderSeq || !body.isConnected) return;
           if (t && t.ok && t.tags && t.tags.length) Reader.applyTags(body, t.tags);
         }).catch(() => {});
       }
@@ -55,11 +65,20 @@ const Reader = {
   },
 
   async renderParallel(p, m, pm, body, tools, opts) {
+    const seq = (p._renderSeq || 0) + 1;
+    p._renderSeq = seq;
     const r1 = await api('read', { id: m.id, cursor: p.cursor, options: opts,
       span: p.cursor.span || 'chapter', context: 0 });
+    if (seq !== p._renderSeq) return;
     const r2 = await api('read', { id: pm.id, cursor: p.cursor, options: opts,
       span: p.cursor.span || 'chapter', context: 0 });
+    if (seq !== p._renderSeq) return;
     if (!r1.ok) { body.innerHTML = '<div class="empty">' + esc(r1.error) + '</div>'; return; }
+    if (!r2 || r2.ok === false) {
+      body.innerHTML = '<div class="empty">Parallel resource could not be read: '
+        + esc((r2 && r2.error) || 'unknown error') + '</div>';
+      return;
+    }
     p.cursor = r1.cursor || p.cursor;
     p._content = r1;
     body.className = 'pane-body';
@@ -130,7 +149,7 @@ const Reader = {
           + esc(it.label.split(' ').pop()) + '</a>' + it.html;
         sp.querySelector('.vnum').onclick = (e) => {
           e.stopPropagation();
-          Popup.ref(m, it.key);
+          Popup.ref(m, it.key, e.clientX, e.clientY);
         };
         /* Click anywhere in the verse (except on the verse number, which opens
          * the popup) to select this verse for Study, Info, Compare, Visual Copy,
@@ -149,6 +168,10 @@ const Reader = {
          * original, full menu). */
         sp.oncontextmenu = (e) => {
           e.preventDefault();
+          // Without this the event bubbles to the pane's own context-menu
+          // handler, which paints a second, poorer menu over this one and
+          // removes the word-study and note-on-word items.
+          e.stopPropagation();
           Reader.wordMenu(e, sp, m, it);
         };
         Reader.decorate(sp, m, it);
@@ -173,6 +196,7 @@ const Reader = {
        * whole pane rather than one per verse: a chapter is 31 requests on
        * every repaint otherwise, and this pane repaints on every step. */
       Reader.markNotes(v, m, r.items);
+      Reader.markWordNotes(v, m, r.items);
     } else if (r.kind === 'merge' || (r.versions && r.versions.length)) {
       Reader.merged(r, m, body);
     } else if (m.type === 'Audio' || m.reader === 'audio') {
@@ -210,11 +234,13 @@ const Reader = {
     if (r.context && r.context.strongs && r.context.strongs.length) {
       const d = el('div', 'notice');
       d.innerHTML = '<b>Strong’s in this passage:</b> ' +
-        r.context.strongs.map(s => '<a href="#" data-s="' + s.strongs + '">'
-          + s.strongs + '</a>').join(' · ');
+        r.context.strongs
+          .filter(s => /^[GH]\d{1,5}$/.test(s.strongs || ''))
+          .map(s => '<a href="#" data-s="' + esc(s.strongs) + '">'
+            + esc(s.strongs) + '</a>').join(' · ');
       d.onclick = (e) => {
         const a = e.target.closest('a[data-s]');
-        if (a) { e.preventDefault(); Popup.strongs(a.dataset.s); }
+        if (a) { e.preventDefault(); Popup.strongs(a.dataset.s, e.clientX, e.clientY); }
       };
       body.appendChild(d);
     }
@@ -256,7 +282,11 @@ const Reader = {
     body.appendChild(a);
 
     const goto = (key) => {
-      const p = S.layout.panes.find(x => x.is_focus) || S.layout.panes[0];
+      // Navigate the pane that owns this module, not an arbitrary first pane.
+      const p = S.layout.panes.find(x => x.module_id === m.id && x.is_focus)
+        || S.layout.panes.find(x => x.module_id === m.id)
+        || S.layout.panes.find(x => x.is_focus)
+        || S.layout.panes[0];
       if (!p) return;
       p.cursor = { key };
       Reader.reload(p, m);
@@ -596,10 +626,56 @@ const Reader = {
       });
     } catch (err) { /* a missing marker is not a broken pane */ }
   },
+
+  /* Notes anchored to an original-language word, marked on every translation
+   * that tags the same word.  One request for the whole pane, as above. */
+  async markWordNotes(host, m, items) {
+    try {
+      const keys = (items || []).map(it => it.key).filter(Boolean).slice(0, 60);
+      if (!keys.length || !m) return;
+      const r = await api('notes/wordmarks', { id: m.id, keys });
+      const marks = (r && r.marks) || {};
+      Object.keys(marks).forEach(key => {
+        const verse = host.querySelector('.verse[data-k="'
+          + (window.CSS && CSS.escape ? CSS.escape(key)
+            : String(key).replace(/["\\]/g, '\\$&')) + '"]');
+        if (!verse) return;
+        (marks[key] || []).forEach(note => {
+          const escSel = (v) => window.CSS && CSS.escape ? CSS.escape(String(v))
+            : String(v).replace(/["\\]/g, '\\$&');
+          // When the note names a word ordinal, mark only that occurrence.
+          // Older word notes carried only the Strong's number and still mark
+          // every occurrence in the verse.
+          const selector = '.tword[data-s="' + escSel(note.strongs) + '"]'
+            + (note.word_pos ? '[data-p="' + escSel(note.word_pos) + '"]' : '');
+          verse.querySelectorAll(selector).forEach(word => {
+            const tag = el('button', 'wnotemark', '✎');
+            tag.title = note.title || note.body || 'Word note';
+            tag.onclick = (e) => {
+              e.stopPropagation();
+              Notes.showAt(note.ref_label || '', [note]);
+            };
+            word.appendChild(tag);
+          });
+        });
+      });
+    } catch (err) { /* a missing marker is not a broken pane */ }
+  },
+
   decorate(host, m, it) {
-    /* Strong's numbers -> lexicon popup */
+    /* Strong's numbers -> definition popup (lexicons AND headword dictionaries) */
     $$('.snum', host).forEach(a => {
-      a.onclick = (e) => { e.stopPropagation(); Popup.strongs(a.dataset.s); };
+      a.onclick = (e) => {
+        e.stopPropagation();
+        const tw = a.closest('.tword');
+        let word = '';
+        if (tw) {
+          const copy = tw.cloneNode(true);
+          copy.querySelectorAll('.snum, .morphs').forEach(x => x.remove());
+          word = (copy.textContent || '').trim();
+        }
+        Popup.strongs(a.dataset.s, e.clientX, e.clientY, word);
+      };
     });
     /* footnote markers -> popup */
     $$('a.fn', host).forEach(a => {
@@ -686,11 +762,26 @@ const Reader = {
     else toast('No Bible is installed to follow that reference with.', 'warn');
   },
 
+  /* The cursor a link needs depends on how the module is keyed.  A Bible is
+   * addressed by a verse reference; a FactBook, dictionary, book or devotional
+   * is addressed by an entry key.  Sending an entry key as a `ref` made
+   * library._read_topic find no matching unit and fall back to the first one,
+   * so "Open in a pane" on Thompson's JOHN entry opened the book at the front
+   * and the AI's citation chips looked dead. */
+  cursorFor(m, value, previous) {
+    if (m && m.reader && m.reader !== 'verse' && m.reader !== 'audio') {
+      return { key: value };
+    }
+    return { ref: value, span: (previous && previous.span) || 'chapter' };
+  },
+
   async focusRef(m, ref) {
+    if (!m) return;                 // a removed module has no pane to focus
     const lay = S.layout || { panes: [] };
     const p = lay.panes.find(x => x.module_id === m.id);
+    const cursor = this.cursorFor(m, ref, p && p.cursor);
     if (p) {
-      p.cursor = { ref, span: (p.cursor && p.cursor.span) || 'chapter' };
+      p.cursor = cursor;
       const pane = $('.pane[data-pane="' + p.id + '"]');
       if (pane) {
         // the pane may not be the active one in its tile
@@ -698,13 +789,13 @@ const Reader = {
         await App.fillPane(pane, p);
       } else {
         // its tile is not on screen at all: open the module where it can be seen
-        await Workspace.openModule(m.id, { ref, span: 'chapter' });
+        await Workspace.openModule(m.id, cursor);
         return;
       }
       this.save(p);
       return;
     }
-    await Workspace.openModule(m.id, { ref, span: 'chapter' });
+    await Workspace.openModule(m.id, cursor);
   },
 
   async reload(p, m) {
@@ -760,6 +851,10 @@ const Reader = {
   async step(p, action) {
     const m = modById(p.module_id);
     const r = await api('read/around', { id: m.id, ref: p.cursor.ref, action });
+    if (!r || r.ok === false || !r.ref) {
+      toast((r && r.error) || 'Could not move there.', 'warn');
+      return;
+    }
     p.cursor = Object.assign({}, p.cursor, { ref: r.ref });
     await this.reload(p, m);
     this.save(p);
@@ -777,7 +872,9 @@ const Reader = {
       const paneEl = document.querySelector('.pane[data-pane="' + p.id + '"]');
       if (!paneEl) continue;
       const body = paneEl.querySelector('.pane-body');
-      if (body) await this.render(p, modById(p.module_id), body, null);
+      const m = modById(p.module_id);
+      if (!m) continue;   // guide/wordstudy/factbook panes have no module
+      if (body) await this.render(p, m, body, null);
     }
   },
 
@@ -938,7 +1035,11 @@ const Reader = {
         const a = e.target.closest('a[data-k]');
         if (a) {
           e.preventDefault();
-          const p = S.layout.panes.find(x => x.is_focus) || S.layout.panes[0];
+          const p = S.layout.panes.find(x => x.module_id === m.id && x.is_focus)
+            || S.layout.panes.find(x => x.module_id === m.id)
+            || S.layout.panes.find(x => x.is_focus)
+            || S.layout.panes[0];
+          if (!p) return;
           p.cursor = { ref: a.dataset.k.replace('.', ' ').replace('.', ':'), span: 'chapter' };
           Reader.reload(p, modById(p.module_id));
         }
@@ -975,13 +1076,25 @@ const Reader = {
   wordMenu(e, sp, m, it) {
     /* Find the word under the pointer using character position, and look up
      * its Strong's number from the verse's span table. */
-    let word = '', strongs = '', offset = 0;
+    const selection = window.getSelection ? String(window.getSelection() || '') : '';
+    const selectedText = selection.replace(/\s+/g, ' ').trim();
+    const targetEl = e.target && e.target.nodeType === Node.TEXT_NODE
+      ? e.target.parentElement : e.target;
+    const clickedWord = targetEl && targetEl.closest
+      ? targetEl.closest('.tword, .fb-tag') : null;
+    let word = '', strongs = '', offset = 0, pos = 0;
     try {
-      const range = document.caretRangeFromPoint(e.clientX, e.clientY);
+      // Chromium and Firefox expose different caret APIs; older or embedded
+      // engines may expose neither.  Fall back to the clicked word or the
+      // selection so word tools never vanish from the menu.
+      const range = document.caretRangeFromPoint
+        ? document.caretRangeFromPoint(e.clientX, e.clientY)
+        : (document.caretPositionFromPoint
+            ? document.caretPositionFromPoint(e.clientX, e.clientY) : null);
       if (range && range.startContainer && range.startContainer.nodeType === 3) {
         const text = range.startContainer.textContent || '';
         let i = range.startOffset;
-        const isW = (c) => /[\p{L}\p{N}'\u0591-\u05FF\u0370-\u03FF\u1F00-\u1FFF]'/u.test(c || '');
+        const isW = (c) => /[\p{L}\p{N}'\u0591-\u05FF\u0370-\u03FF\u1F00-\u1FFF]/u.test(c || '');
         let a = i, b = i;
         while (a > 0 && isW(text[a - 1])) a--;
         while (b < text.length && isW(text[b])) b++;
@@ -989,55 +1102,81 @@ const Reader = {
         offset = a;
       }
     } catch (err) { word = ''; }
-    /* Look up Strong's from the span table at the pointer's character offset. */
-    try {
-      const markup = it.extra && it.extra.markup ? JSON.parse(it.extra.markup) : null;
-      const spans = (markup && markup.s) || [];
-      for (const sp2 of spans) {
-        const start = Number(sp2[0]), ln = Number(sp2[1]);
-        if (start <= offset && offset < start + ln) {
-          strongs = (sp2[3] || '').split(' ').filter(Boolean).join(' ');
-          break;
+    if (!word && clickedWord) word = (clickedWord.textContent || '').trim();
+    if (!word && selectedText && selectedText.length <= 40) word = selectedText;
+    if (clickedWord && !strongs) strongs = clickedWord.dataset.s || '';
+    if (clickedWord && !pos) pos = parseInt(clickedWord.dataset.p || '0', 10) || 0;
+    /* The span table is indexed over the whole verse, but `offset` is an
+     * offset inside one text node.  Only use it when the clicked word did not
+     * carry a tag; otherwise it overwrites a correct tag with a wrong one. */
+    if (!strongs) {
+      try {
+        const markup = it.extra && it.extra.markup ? JSON.parse(it.extra.markup) : null;
+        const spans = (markup && markup.s) || [];
+        for (const sp2 of spans) {
+          const start = Number(sp2[0]), ln = Number(sp2[1]);
+          if (start <= offset && offset < start + ln) {
+            strongs = (sp2[3] || '').split(' ').filter(Boolean).join(' ');
+            break;
+          }
         }
-      }
-    } catch (err) { /* best effort */ }
+      } catch (err) { /* best effort */ }
+    }
+    /* Word ordinal of the occurrence under the pointer.  Tagged words carry
+     * it in data-p; repeated Strong's numbers in one verse need this to tell
+     * the occurrences apart. */
+    if (!pos) {
+      try {
+        const tagged = Array.from(sp.querySelectorAll('.tword'));
+        // Prefer the element under the pointer: matching on surface text alone
+        // always picks the first occurrence of a repeated word.
+        const hit = (clickedWord && tagged.includes(clickedWord))
+          ? clickedWord
+          : tagged.find(w => (w.textContent || '').trim() === word);
+        if (hit) pos = parseInt(hit.dataset.p || '0', 10)
+          || tagged.indexOf(hit) + 1;
+      } catch (err) { pos = 0; }
+    }
     const unitKey = it.key || '';
     const ref = it.label || '';
-    /* Capture the selection before Study.wordMenu builds and focuses its
-     * context-menu buttons. Focusing a button can collapse the browser's live
-     * selection; passing an empty string here made Highlights.add() see no
-     * quote, so the action appeared to do nothing. */
-    const selection = window.getSelection ? String(window.getSelection() || '') : '';
-    const selectedText = selection.replace(/\s+/g, ' ').trim();
-    Study.wordMenu(e.clientX, e.clientY, word, m, unitKey, ref, selectedText, strongs);
+    /* The selection was captured before Study.wordMenu builds and focuses its
+     * context-menu buttons: focusing a button can collapse the live selection. */
+    Study.wordMenu(e.clientX, e.clientY, word, m, unitKey, ref, selectedText,
+      strongs, pos);
   },
 
   /* Open a Word Study pane for a Strong's number, in the workspace. */
-  openWordStudyPane(number) {
+  async openWordStudyPane(number) {
     const lay = S.layout;
     if (!lay) { toast('No workspace open.'); return; }
     const ids = App.leafTileIds(lay.tiles || [[1.0]]);
     const tile = ids[0] || 't0_0';
-    post('workspace/pane', {
+    const r = await post('workspace/pane', {
       action: 'add', layout: lay.id, module: '', tile: tile,
       cursor: { number: number || '' }, view: 'wordstudy',
-      options: {}, link_set: '' }).then(r => {
-      if (r && r.pane) { App.loadWorkspace(); App.showPane(tile, r.pane.id); }
-    });
+      options: {}, link_set: '' });
+    if (!r || r.ok === false || !r.pane) {
+      toast((r && r.error) || 'Could not open the study pane.', 'err'); return;
+    }
+    await App.loadWorkspace();
+    App.showPane(tile, r.pane.id);
   },
 
   /* Open a Passage or Exegetical Guide pane for a reference. */
-  openGuidePane(ref, guideType) {
+  async openGuidePane(ref, guideType) {
     const lay = S.layout;
     if (!lay) { toast('No workspace open.'); return; }
     const ids = App.leafTileIds(lay.tiles || [[1.0]]);
     const tile = ids[0] || 't0_0';
-    post('workspace/pane', {
+    const r = await post('workspace/pane', {
       action: 'add', layout: lay.id, module: '', tile: tile,
       cursor: { ref: ref || '', guide: guideType || 'passage' }, view: 'guide',
-      options: {}, link_set: '' }).then(r => {
-      if (r && r.pane) { App.loadWorkspace(); App.showPane(tile, r.pane.id); }
-    });
+      options: {}, link_set: '' });
+    if (!r || r.ok === false || !r.pane) {
+      toast((r && r.error) || 'Could not open the study pane.', 'err'); return;
+    }
+    await App.loadWorkspace();
+    App.showPane(tile, r.pane.id);
   },
 };
 

@@ -15,7 +15,7 @@ def _apis_key(parts, q):
 
 @endpoint("apis/enable")
 def _apis_enable(parts, q):
-    return _ok(**apireg.set_enabled(q.get("id", ""), bool(q.get("enabled"))))
+    return _ok(**apireg.set_enabled(q.get("id", ""), _flag(q.get("enabled"))))
 
 
 @endpoint("apis/call")
@@ -127,8 +127,9 @@ def _wordlist(parts, q):
 @endpoint("wordlist/occurrences")
 def _wordlist_occurrences(parts, q):
     return wordlist.occurrences(q.get("id", ""),
-                                limit=int(q.get("limit") or 2000),
-                                offset=int(q.get("offset") or 0))
+                                limit=_bounded_int(q.get("limit"), 2000),
+                                offset=max(0, _bounded_int(q.get("offset"), 0,
+                                                           low=0, high=10 ** 7)))
 
 
 # ---------------------------------------------------------------- workflows
@@ -136,11 +137,14 @@ def _wordlist_occurrences(parts, q):
 def _workflow(parts, q):
     action = q.get("action", "")
     if action == "save":
-        return _ok(**{"workflow": wordflow.save({
+        saved = wordflow.save({
             "id": q.get("id", ""), "name": q.get("name", ""),
             "note": q.get("note", ""), "ref": q.get("ref", ""),
             "layout_id": q.get("layout", "")},
-            steps=_obj(q.get("steps")))})
+            steps=_obj(q.get("steps")))
+        if saved.get("ok") is False:
+            return saved
+        return _ok(workflow=saved)
     if action == "delete":
         return wordflow.remove(q.get("id", ""))
     if action == "capture":
@@ -165,8 +169,9 @@ def _clause_search(parts, q):
     out = clause.clause_search(
         q.get("a", ""), q.get("b", ""), relation=rel,
         module_id=q.get("module", ""), book=q.get("book", ""),
-        chapter=int(q.get("chapter") or 0), limit=int(q.get("limit") or 200),
-        scan=int(q.get("scan") or 0))
+        chapter=_bounded_int(q.get("chapter"), 0, low=0, high=150),
+        limit=_bounded_int(q.get("limit"), 200, low=1, high=2000),
+        scan=_bounded_int(q.get("scan"), 0, low=0, high=5000))
     out["parser"] = depparse.available()[0]
     out["parser_note"] = depparse.available()[1]
     out["relations"] = [{"value": v, "label": lab}
@@ -182,7 +187,8 @@ def _clause_tokens(parts, q):
 
 @endpoint("clause/diagram_export")
 def _clause_diagram_export(parts, q):
-    return _ok(**clause.diagram_export(q.get("ref", "")))
+    return _ok(**clause.diagram_export(q.get("ref", ""),
+                                            q.get("module") or ""))
 
 
 @endpoint("clause/parser")
@@ -200,7 +206,8 @@ def _clause_parser(parts, q):
         return {"ok": True, "available": False, "reason": why,
                 "relations": [{"value": v, "label": lab}
                               for v, lab in depparse.RELATIONS
-                              if v not in ("object", "subject")]}
+                              if v not in ("object", "subject",
+                                           "prepositional")]}
     st = depparse.stats()
     return {"ok": True, "available": True, "reason": "", "model": depparse.MODEL,
             "cached": st["cached"], "parsed": st["parsed"],
@@ -361,6 +368,12 @@ def _del_layout(parts, q):
 @endpoint("workspace/pane")
 def _pane(parts, q):
     if q.get("action") == "add":
+        mid = q.get("module", "")
+        # A removed module still has a database row, but nothing to read.  Do
+        # not create a pane that can never render; the user's saved panes are
+        # left exactly as they were.
+        if mid and library.get_installed(mid) is None:
+            return _ok(ok=False, error="That resource is no longer installed.")
         return _ok(**{"pane": _pane_dict(workspace.add_pane(
             q.get("layout", ""), q.get("module", ""), tile_id=q.get("tile", ""),
             link_set=q.get("link_set", ""), cursor=_obj(q.get("cursor"), {}) or {},

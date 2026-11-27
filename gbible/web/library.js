@@ -1,4 +1,15 @@
+/* Only http(s) links are safe to put in an href.  esc() neutralises markup
+ * but not the javascript: scheme, which executes on click. */
+function safeUrl(u) {
+  try {
+    const parsed = new URL(String(u || ''), location.href);
+    return (parsed.protocol === 'http:' || parsed.protocol === 'https:')
+      ? parsed.href : '';
+  } catch (e) { return ''; }
+}
+
 const Store = {
+  _fetchSeq: 0,
   /* What actually got downloaded, and what else the app has done.
    *
    * Both lists exist on the server already and neither was reachable, which is
@@ -90,33 +101,39 @@ const Store = {
     let msg = 'Remove the "' + pv.name + '" repository?\n\n'
       + '  • ' + pv.catalogue_items + ' catalogue entries are forgotten.'
       + ' They come back if you ever re-add or refresh the repository.';
+    let extra = '';
     if (installed.length) {
       msg += '\n\n' + installed.length + ' downloaded module(s) from it are still installed:'
-        + '\n' + installed.map(m => '  • ' + m.name).join('\n')
-        + '\n\nDeleting them frees the disk space, and you can install them again later.'
-        + '\n\nRemove the repository AND those modules?';
-    } else {
-      msg += '\n\nNothing is installed from it, so nothing else is deleted.';
+        + '\n' + installed.map(m => '  • ' + m.name).join('\n');
+      // Deleting installed modules is destructive and irreversible: make it an
+      // explicit opt-in instead of forcing it on anyone removing a repository.
+      extra = '<label style="display:flex;align-items:center;gap:6px;margin-top:8px">'
+        + '<input type="checkbox" id="rr-mods"> '
+        + '<span>Also delete those ' + installed.length
+        + ' installed module(s) and their files.</span></label>';
     }
     modal('Remove repository', '<div class="st-body" style="white-space:pre-wrap">'
-      + esc(msg) + '</div>'
+      + esc(msg) + '</div>' + extra
       + '<label style="display:flex;align-items:center;gap:6px;margin-top:10px">'
       + '<input type="checkbox" id="rr-perm"> '
       + '<span>Or permanently delete the repository (it will not come back on Refresh; '
       + 're-add it with the + button if you change your mind).</span></label>',
-      [{ label: 'Remove', cls: 'btn danger', fn: async () => {
+      [{ label: 'Remove', cls: 'btn danger', close: false, fn: async () => {
           const permanent = !!($('#rr-perm') && $('#rr-perm').checked);
+          const delModules = !!($('#rr-mods') && $('#rr-mods').checked);
           const btn = $('#f-repo-del');
-          if (btn) { btn.disabled = true; btn.textContent = '\u2026'; }
-          toast('Removing ' + pv.name + ' and its modules\u2026', 'warn');
+          if (btn) { btn.disabled = true; btn.textContent = '…'; }
+          toast('Removing ' + pv.name + (delModules ? ' and its modules' : '') + '…', 'warn');
           const r = await post('store/repo/remove', {
-            repo: id, modules: installed.length ? '1' : '',
+            repo: id, modules: delModules ? '1' : '',
             permanent: permanent ? '1' : '' });
-          if (btn) { btn.disabled = false; btn.textContent = '\u2212'; }
+          if (btn) { btn.disabled = false; btn.textContent = '−'; }
           if (!r.ok) { toast(r.error || 'Could not remove', 'err'); return; }
-          toast('Removed ' + r.name + ' (' + r.catalogue_items + ' entries, '
-            + (r.removed_modules || []).length + ' modules being deleted in the background)'
-            + (r.permanent ? ' \u2014 permanently.' : '.'));
+          const gone = (r.removed_modules || []).length;
+          toast('Removed ' + r.name + ' (' + r.catalogue_items + ' entries'
+            + (gone ? ', ' + gone + ' modules being deleted in the background'
+                    : ', installed modules kept') + ')'
+            + (r.permanent ? ' — permanently.' : '.'));
           $('#f-repo').value = '';
           this._repos = null;
           await this.repos();
@@ -159,11 +176,15 @@ const Store = {
     const host = $('#store-list');
     host.innerHTML = '<div class="loading">Loading…</div>';
     const slot = $('#f-slot').value;
+    // A fast filter change must not let an older, slower response paint over
+    // the newer result set.
+    const seq = ++this._fetchSeq;
     const r = await api('store/items', {
       repo: $('#f-repo').value, lang: $('#f-lang').value,
       category: $('#f-cat').value, subject: $('#f-subj').value,
       q: $('#f-q').value, installed_only: $('#f-inst').checked,
       sort: $('#f-sort').value, slot: slot, limit: 3000 });
+    if (seq !== this._fetchSeq) return;
     if (!r.ok) { host.innerHTML = '<div class="warn">' + esc(r.error) + ' <button class="btn tiny" id="store-retry">Retry</button></div>';
   const rb = $('#store-retry'); if (rb) rb.onclick = () => this.fetch(); return; }
     S.store.items = r.items; S.store.facets = r.facets; S.store.slots = r.slots || [];
@@ -214,7 +235,7 @@ const Store = {
         + '<span class="n">' + list.length + '</span>');
       if (meta && meta.note) head.title = meta.note;
       host.appendChild(head);
-      list.forEach(it => host.appendChild(this.row(it, slot)));
+      list.forEach(it => host.appendChild(this.row(it)));
     }
   },
 
@@ -245,11 +266,18 @@ const Store = {
       v => { $('#f-lang').value = v; this.fetch(); });
     block('Subject', f.subject, $('#f-subj').value,
       v => { $('#f-subj').value = v; this.fetch(); });
-    block('Licence', f.license, '', () => {});
+    // There is no licence filter endpoint/control. Showing clickable chips
+    // that do nothing was a dead affordance; keep the breakdown as plain text.
+    if ((f.license || []).length) {
+      const lic = el('div', 'tiny muted');
+      lic.textContent = 'Licences: ' + f.license.map(x =>
+        x.label + ' (' + x.n + ')').join(', ');
+      host.appendChild(lic);
+    }
   },
 
   /* Everything the user needs to decide before clicking Install. */
-  row(it, slot) {
+  row(it) {
     const p = it.placement || {};
     const n = el('div', 'item' + (it.installed ? ' installed' : ''));
 
@@ -353,12 +381,24 @@ const Store = {
       repo: it.repo_id || it.repo || $('#f-repo').value, item: it.item_id });
     if (!r.ok) { toast(r.error || 'Install failed', 'err'); btn.disabled = false; btn.textContent = 'Install';
       if (spin) spin.hidden = true; return; }
+    const refresh = async () => {
+      await App.loadLibrary(); await App.loadWorkspace();
+      this._repos = null; await this.repos(); this.fetch();
+    };
     if (r.already) { toast('Already installed.'); btn.textContent = 'Installed';
-      if (spin) spin.hidden = true; return; }
+      if (spin) spin.hidden = true; await refresh(); return; }
     const job = r.job;
+    let attempts = 0;
     const poll = async () => {
-      const j = (await api('store/job', { job: job })).job;
-      if (!j) return;
+      const res = await api('store/job', { job: job });
+      const j = res && res.job;
+      const fail = (msg) => {
+        if (spin) spin.hidden = true;
+        btn.disabled = false; btn.textContent = 'Install';
+        toast(msg, 'err');
+      };
+      if (!res || res.ok === false || !j) { fail((res && res.error) || 'Install job lost.'); return; }
+      if (++attempts > 300) { fail('Install timed out. Check Transfers.'); return; }
       btn.textContent = j.message ? j.message.slice(0, 18) : '…';
       btn.title = j.message || '';
       if (j.state === 'done') {
@@ -367,14 +407,11 @@ const Store = {
         const units = (j.result && j.result.stats && j.result.stats.units) || 0;
         toast('Installed ' + it.title + ' — ' + units + ' units'
           + (p ? ', into the ' + p.slot_label + ' pane' : '') + '.');
-        await App.loadLibrary(); await App.loadWorkspace();
-        this._repos = null; await this.repos();
-        this.fetch();
+        await refresh();
         return;
       }
-      if (j.state === 'error') {
-        if (spin) spin.hidden = true;
-        toast(j.message, 'err'); btn.disabled = false; btn.textContent = 'Install'; return; }
+      if (j.state === 'error' || j.state === 'cancelled') {
+        fail(j.message || j.error || 'The install failed.'); return; }
       setTimeout(poll, 400);
     };
     poll();
@@ -461,7 +498,8 @@ const Facets = {
         && (!q || (m.name + ' ' + (m.author || '') + ' ' + (m.description || ''))
           .toLowerCase().includes(q)));
     }
-    if (this._qcache && this._qcache.key === raw) return this._qcache.set;
+    if (this._qcache && this._qcache.key === raw
+        && this._qcache.gen === this._gen) return this._qcache.set;
     const r = await api('library/query', { q: raw });
     if (!r.ok) {
       // The server refused the query. Fall back to the local path rather than
@@ -479,7 +517,7 @@ const Facets = {
      * own panel under the list. */
     const ids = new Set((r.results || [])
       .filter(x => x.kind !== 'print').map(x => x.id));
-    this._qcache = { key: raw, set: (S.modules || []).filter(m =>
+    this._qcache = { key: raw, gen: this._gen, set: (S.modules || []).filter(m =>
       bySelect(m) && ids.has(m.id)) };
     return this._qcache.set;
   },
@@ -632,8 +670,10 @@ const Facets = {
 /* ============================================================== Library */
 const Library = {
   async load() {
+    this._gen = (this._gen || 0) + 1;   // invalidate field-query results
     const r = await api('library');
-    S.modules = r.modules;
+    if (!r || r.ok === false) { toast((r && r.error) || 'Could not load the library.', 'err'); return; }
+    S.modules = r.modules || [];
     const ts = $('#l-type'), ls = $('#l-lang'), ss = $('#l-src');
     // The markup ships each of these with a default "All ..." option, so
     // `!ts.options.length` was false and this block never ran -- the three
@@ -739,15 +779,6 @@ const Library = {
     return mods.sort(cmp);
   },
 
-  filtered() {
-    const q = ($('#l-q').value || '').toLowerCase();
-    const t = $('#l-type').value, lg = $('#l-lang').value, s = $('#l-src').value;
-    return S.modules.filter(m =>
-      (!t || m.type === t) && (!lg || m.lang === lg) && (!s || m.source === s)
-      && (!q || (m.name + ' ' + (m.author || '') + ' ' + (m.description || ''))
-        .toLowerCase().includes(q))
-      && Facets.accepts(m));
-  },
 
   paintList(mods, det) {
     const host = $('#library-list');
@@ -799,8 +830,11 @@ const Library = {
         star.onclick = async (e) => {
           e.stopPropagation();
           const want = !m.favorite;
-          await api('favorites', { action: 'set', id: m.id,
-                                   value: want ? '1' : '0' });
+          const r = await api('favorites', { action: 'set', id: m.id,
+                                             value: want ? '1' : '0' });
+          if (!r || r.ok === false) {
+            toast((r && r.error) || 'Could not change favourites.', 'err'); return;
+          }
           m.favorite = want;
           star.textContent = want ? '\u2605' : '\u2606';
           star.classList.toggle('on', want);
@@ -816,7 +850,13 @@ const Library = {
         a.appendChild(o);
         if (S.links[m.id] && S.links[m.id].length) {
           const l = el('button', 'btn', 'Linkable: ' + S.links[m.id].length);
-          l.title = S.links[m.id].map(x => (modById(x) || {}).name).join('\n');
+          l.title = S.links[m.id].map(x => modLabel(x)).join('\n');
+          l.onclick = (e) => {
+            e.stopPropagation();
+            modal('Linked resources', '<div class="st-body">'
+              + S.links[m.id].map(x => esc(modLabel(x))).join('<br>') + '</div>',
+              [{ label: 'Close', cls: 'btn' }]);
+          };
           a.appendChild(l);
         }
         const r = el('button', 'btn danger', 'Remove');
@@ -837,7 +877,6 @@ const Library = {
     const mine = r.tags || {};
     const tagged = Object.keys(mine);
     const names = [...new Set(tagged.flatMap(k => mine[k] || []))].sort();
-    const mod = S.modules.find(m => mine[m.id]);
     modal('Tags',
       '<div class="tiny muted" style="margin-bottom:8px">Label your own '
       + 'modules. Tags are yours alone — there is no community here to share '
@@ -952,7 +991,7 @@ const Library = {
        * quietly delete the reader's rules. */
       return '<div class="org-card" data-pmid="' + esc(rule.module_id || '') + '">'
         + '<div class="org-h"><b>' + esc(m ? m.name : rule.module_id) + '</b>'
-        + '<span class="org-a"><a href="#" class="pr-x" class="danger">'
+        + '<span class="org-a"><a href="#" class="pr-x danger">'
         + 'remove</a></span></div>'
         + '<div class="row wrap" style="gap:6px;margin-top:6px">'
         + '<select class="pr-type"><option value="">any resource</option>'
@@ -1026,6 +1065,14 @@ const Library = {
     $$('#modal-body .pm-up').forEach(a => a.onclick = move(-1));
     $$('#modal-body .pm-down').forEach(a => a.onclick = move(1));
 
+    // Wire every rule's remove link, including ones added after this dialog
+    // opened.  Before, new rows had no handler and clicking "remove" just
+    // followed href="#".
+    const wireRule = (card) => {
+      const a = card.querySelector('.pr-x');
+      if (a) a.onclick = (e) => { e.preventDefault(); card.remove(); };
+    };
+    const wireRules = () => $$('#modal-body #pm-rules .org-card').forEach(wireRule);
     $('#pm-newrule').onclick = () => {
       const id = $('#pm-newmod').value;
       const host = $('#pm-rules');
@@ -1034,15 +1081,14 @@ const Library = {
       const card = el('div', 'org-card');
       card.innerHTML = ruleRow({ module_id: id });
       host.appendChild(card);
+      wireRule(card);
     };
-    $$('#modal-body .pr-x').forEach(a => a.onclick = (e) => {
-      e.preventDefault();
-      e.target.closest('.org-card').remove();
-    });
+    wireRules();
   },
 
   async coverage() {
     const r = await api('library/availability');
+    if (!r || r.ok === false) { toast((r && r.error) || 'Could not load coverage.', 'err'); return; }
     const rows = r.availability || [];
     const installed = rows.filter(x => x.installed);
     const missing = installed.filter(x => x.files === 'missing');
@@ -1090,14 +1136,16 @@ const Library = {
 
   async attribution() {
     const r = await api('library/attribution');
-    let html = '<div class="legal">Everything installed here is public domain, CC0, CC-BY or '
-      + 'CC-BY-SA. Attribution is recorded per module and must be reproduced if you '
-      + 'redistribute the library.</div><table class="kv">';
+    let html = '<div class="legal">Catalogued resources are public domain, CC0, '
+      + 'CC-BY or CC-BY-SA; locally imported files may carry other terms, so '
+      + 'check the licence column rather than assuming. Attribution is recorded '
+      + 'per module and must be reproduced if you redistribute the library.</div>'
+      + '<table class="kv">';
     (r.entries || []).forEach(e => {
       html += '<tr><td>' + esc(e.license || '') + '</td><td><b>' + esc(e.name)
         + '</b>' + (e.author ? ' — ' + esc(e.author) : '')
         + (e.rights ? '<div class="tiny muted">' + esc(e.rights) + '</div>' : '')
-        + (e.source_url ? '<div class="tiny"><a href="' + esc(e.source_url)
+        + (safeUrl(e.source_url) ? '<div class="tiny"><a href="' + esc(safeUrl(e.source_url))
           + '" target="_blank" rel="noopener">' + esc(e.source_name || e.source_url)
           + '</a></div>' : '') + '</td></tr>';
     });
@@ -1108,16 +1156,26 @@ const Library = {
 
 /* ================================================================= Apis */
 const Apis = {
+  _seq: 0,
   async load() {
+    const seq = ++this._seq;
     const host = $('#api-list');
     host.innerHTML = '<div class="loading">Loading…</div>';
-    const r = await api('apis', { category: S.api.category });
-    S.api = r;
+    // The selection lives outside the server response: the API listing does
+    // not echo `category`, so assigning the whole response to S.api lost it.
+    S.apiCategory = S.apiCategory || '';
+    const r = await api('apis', { category: S.apiCategory });
+    if (seq !== this._seq) return;
+    if (!r || r.ok === false) {
+      host.innerHTML = '<div class="warn">' + esc((r && r.error) || 'Could not load API settings.') + '</div>';
+      return;
+    }
+    S.api = Object.assign(r, { category: S.apiCategory });
     const sm = r.summary || {};
     $('#api-summary').innerHTML =
-      sm.total + ' services listed · <b>' + sm.no_key_required
-      + ' need no API key</b> · ' + sm.needs_key + ' need a key · '
-      + sm.keys_set + ' key' + (sm.keys_set === 1 ? '' : 's') + ' saved. '
+      Number(sm.total || 0) + ' services listed · <b>' + Number(sm.no_key_required || 0)
+      + ' need no API key</b> · ' + Number(sm.needs_key || 0) + ' need a key · '
+      + Number(sm.keys_set || 0) + ' key' + (sm.keys_set === 1 ? '' : 's') + ' saved. '
       + 'Nothing here is required: the app works entirely offline on installed material.';
     host.innerHTML = '';
     const cats = [{ id: '', label: 'All' }].concat(
@@ -1125,8 +1183,8 @@ const Apis = {
     const bar = el('div', 'row wrap');
     bar.style.marginBottom = '10px';
     cats.forEach(c => {
-      const b = el('button', 'btn' + (S.api.category === c.id ? ' primary' : ''), c.label);
-      b.onclick = () => { S.api.category = c.id; Apis.load(); };
+      const b = el('button', 'btn' + (S.apiCategory === c.id ? ' primary' : ''), c.label);
+      b.onclick = () => { S.apiCategory = c.id; Apis.load(); };
       bar.appendChild(b);
     });
     host.appendChild(bar);
@@ -1155,10 +1213,10 @@ const Apis = {
     meta.innerHTML = parts.join(' · ');
     b.appendChild(meta);
     const links = [];
-    if (a.site_url) links.push('<a href="' + esc(a.site_url) + '" target="_blank" rel="noopener">Website</a>');
-    if (a.doc_url) links.push('<a href="' + esc(a.doc_url) + '" target="_blank" rel="noopener">Docs</a>');
-    if (a.base_url) links.push('<a href="' + esc(a.base_url) + '" target="_blank" rel="noopener">Endpoint</a>');
-    if (a.terms_url) links.push('<a href="' + esc(a.terms_url) + '" target="_blank" rel="noopener">Terms</a>');
+    if (safeUrl(a.site_url)) links.push('<a href="' + esc(safeUrl(a.site_url)) + '" target="_blank" rel="noopener">Website</a>');
+    if (safeUrl(a.doc_url)) links.push('<a href="' + esc(safeUrl(a.doc_url)) + '" target="_blank" rel="noopener">Docs</a>');
+    if (safeUrl(a.base_url)) links.push('<a href="' + esc(safeUrl(a.base_url)) + '" target="_blank" rel="noopener">Endpoint</a>');
+    if (safeUrl(a.terms_url)) links.push('<a href="' + esc(safeUrl(a.terms_url)) + '" target="_blank" rel="noopener">Terms</a>');
     if (links.length) {
       const l = el('div', 'meta'); l.innerHTML = links.join(' · '); b.appendChild(l);
     }
@@ -1178,7 +1236,8 @@ const Apis = {
       const save = el('button', 'btn', a.key_set ? 'Replace key' : 'Save key');
       save.onclick = async () => {
         if (!inp.value) { toast('Paste a key first'); return; }
-        await post('apis/key', { id: a.id, key: inp.value });
+        const res = await post('apis/key', { id: a.id, key: inp.value });
+        if (!res || res.ok === false) { toast((res && res.error) || 'Could not save the key.', 'err'); return; }
         inp.value = '';
         toast('Key saved for ' + a.name);
         Apis.load();
@@ -1188,7 +1247,8 @@ const Apis = {
         r.appendChild(el('div', 'tiny muted', 'A key is stored.'));
         const clear = el('button', 'btn danger', 'Clear');
         clear.onclick = async () => {
-          await post('apis/key', { id: a.id, key: '' });
+          const res = await post('apis/key', { id: a.id, key: '' });
+          if (!res || res.ok === false) { toast((res && res.error) || 'Could not clear the key.', 'err'); return; }
           inp.value = '';
           toast('Key cleared for ' + a.name);
           Apis.load();
@@ -1200,7 +1260,11 @@ const Apis = {
     }
     const t = el('button', 'btn' + (a.enabled ? ' primary' : ''),
       a.enabled ? 'Enabled' : 'Enable');
-    t.onclick = async () => { await post('apis/enable', { id: a.id, enabled: !a.enabled }); Apis.load(); };
+    t.onclick = async () => {
+      const res = await post('apis/enable', { id: a.id, enabled: !a.enabled });
+      if (!res || res.ok === false) { toast((res && res.error) || 'Could not change that service.', 'err'); return; }
+      Apis.load();
+    };
     r.appendChild(t);
     n.appendChild(r);
     return n;
@@ -1228,8 +1292,8 @@ const Apis = {
  * Geography) -- is drawn as pins on a canvas OpenStreetMap.  Clicking a pin
  * opens its card; hovering one names it; the basemap degrades to a
  * coordinate grid when there is no network; a straight-line measure tool
- * and a scale bar round out what Logos' Atlas has and eSword's map viewer
- * does not, without shipping a single tile ourselves.
+ * and a scale bar round out the viewer, without shipping a single tile
+ * ourselves.
  *
  * Three things live on the same screen, deliberately separate:
  *   1. the base map + pins (the default);
@@ -1380,6 +1444,18 @@ const MapsUI = {
       if (($('#mp-geo-q') || {}).value && $('#mp-geo-q').value.trim())
         MapsUI.geocode();
     });
+    /* Passage chips in the gazetteer list and in a place card look like links.
+     * They carry data-openref (not data-ref) because they are passages, so the
+     * global reference router never saw them. */
+    document.addEventListener('click', (e) => {
+      const a = e.target && e.target.closest
+        ? e.target.closest('a.mp-ref[data-openref]') : null;
+      if (!a) return;
+      e.preventDefault();
+      e.stopPropagation();
+      App.show('workspace');
+      Reader.openRefAnywhere(a.dataset.openref);
+    });
   },
 
   applyFilters() {
@@ -1514,12 +1590,13 @@ const MapsUI = {
       const a = el('a', 'mp-ref', esc(ref));
       a.href = '#';
       a.dataset.openref = ref;
-      a.addEventListener('click', (ev) => ev.stopPropagation());
       refs.appendChild(a);
     });
     if ((p.passages || []).length > 4) {
-      refs.appendChild(el('span', 'tiny muted',
-        '+' + (p.passages.length - 4) + ' more'));
+      const more = el('button', 'btn tiny', '+' + (p.passages.length - 4) + ' more');
+      more.title = 'Show every verse for this place';
+      more.onclick = (e) => { e.preventDefault(); e.stopPropagation(); MapsUI.openPlace(p); };
+      refs.appendChild(more);
     }
     if (refs.childNodes.length) row.appendChild(refs);
     const go = () => MapsUI.gotoPlace(p);
@@ -1622,7 +1699,7 @@ const MapsUI = {
     markers.unshift({
       lat: p.lat, lon: p.lon, label: p.name, color: '#3f8f4f', weight: 3,
       hint: 'modern location',
-      onPick: () => {},
+      onPick: () => toast('Modern location from OpenStreetMap — not a Bible place.'),
     });
     Atlas.mount(host, markers, { lat: p.lat, lon: p.lon, z: 8, height: '100%',
                                  basemap: 'standard' });
@@ -1661,6 +1738,10 @@ const MapsUI = {
     host.innerHTML = '<div class="tiny muted">Loading…</div>';
     const r = await api('maps/list');
     if (!r.ok) {
+      host.innerHTML = '<p class="tiny muted">Could not load the map list.</p>';
+      return;
+    }
+    if (!(r.maps || []).length) {
       host.innerHTML = '<p class="tiny muted">No historical maps installed.</p>';
       return;
     }
@@ -1704,9 +1785,13 @@ const MapsUI = {
 
   async showPlace(name) {
     const p = await MapsUI.findPlace(name);
-    if (!p) return;
+    if (!p) {
+      toast('No unique gazetteer match for “' + (name || '') + '”.', 'warn');
+      return false;
+    }
     App.show('maps');
     MapsUI.gotoPlace(p);
+    return true;
   },
 
   /* ---------------------------------------------------- the map list */
@@ -1715,7 +1800,12 @@ const MapsUI = {
     const stage = $('#mp-stage');
     stage.innerHTML = '<div class="loading">Loading…</div>';
     const d = await api('maps/get', { id });
-    if (!d.ok) { stage.innerHTML = '<p class="muted">' + esc(d.error || 'No such map.') + '</p>'; return; }
+    if (!d.ok) {
+      MapsUI.mode = 'atlas';
+      $('#mp-back').style.display = 'none';
+      stage.innerHTML = '<p class="muted">' + esc(d.error || 'No such map.') + '</p>';
+      return;
+    }
     MapsUI.mode = 'scan';
     $('#mp-back').style.display = '';
     MapsUI.cur = d;
@@ -1854,6 +1944,7 @@ const MapsUI = {
       dot.style.top = (pk.y / d.size.height * 100) + '%';
       dot.title = pk.name;
       dot.textContent = pk.label;
+      dot.style.pointerEvents = 'none';   // a placed mark is not a new click
       frame.appendChild(dot);
     });
     frame.onclick = (ev) => {
@@ -1916,6 +2007,7 @@ const MapsUI = {
     const inp = el('input', 'mp-inp');
     inp.placeholder = (want ? want.name : 'place name') + ' — name this point';
     const go = el('button', 'btn primary tiny', 'Use this point');
+    inp.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); go.click(); } };
     go.onclick = async () => {
       const nm = inp.value.trim();
       /* Looked up in the gazetteer, not in `cur.places`.  That list is the
@@ -2281,8 +2373,8 @@ const Media = {
             + 'src="' + esc(v.video_url) + '" style="width:100%;max-height:220px"></video>'
             + '<div class="md-title">' + esc(v.title) + '</div>'
             + '<div class="tiny muted">' + esc(v.description || '') + '</div>'
-            + '<div class="tiny"><a href="' + esc(v.page_url) + '" '
-            + 'target="_blank" rel="noopener noreferrer">Open on BibleProject</a></div>'
+            + (safeUrl(v.page_url) ? '<div class="tiny"><a href="' + esc(safeUrl(v.page_url)) + '" '
+            + 'target="_blank" rel="noopener noreferrer">Open on BibleProject</a></div>' : '')
             + '</div>').join('')
           + '</div>'
           + '<div class="tiny muted" style="margin-top:6px">' + esc(bp.credit || '') + '</div>'

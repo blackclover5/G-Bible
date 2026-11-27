@@ -20,15 +20,16 @@ const SelCard = {
     node.innerHTML = '<div class="quote">' + esc(text.length > 900
       ? text.slice(0, 900) + '…' : text) + '</div>'
       + '<div class="where"><b>' + esc(label || 'this passage') + '</b>'
-      + (this.moduleId ? '<span>' + esc((modById(this.moduleId) || {}).name || '') + '</span>' : '')
-      + '<span class="n">' + text.length.toLocaleString() + ' characters</span></div>'
+      + (this.moduleId ? '<span>' + esc(modLabel(this.moduleId)) + '</span>' : '')
+      + '<span class="n">' + text.length.toLocaleString() + ' characters'
+      + (text.length > 900 ? ' (excerpt shown)' : '') + '</span></div>'
       + '<div class="cite" id="sc-cite">Building the citation…</div>'
       + '<div class="acts">'
       + '<button class="primary" id="sc-copy">Copy quote + citation</button>'
       + '<button id="sc-quote">Quote only</button>'
       + '<button id="sc-note">Note</button>'
       + '<button id="sc-list">Word list</button>'
-      + '<button id="sc-ai">Explain</button>'
+      + (aiOff() ? '' : '<button id="sc-ai">Explain</button>')
       + '<button id="sc-more">More…</button>'
       + '</div>'
       + '<div class="note">The citation includes the licence, because a '
@@ -84,9 +85,10 @@ const SelCard = {
       : await api('cite/get', { id: this.moduleId, style: 'sbl', full: 1 });
     const a = await api('cite/attribution', { ids: this.moduleId });
     const text = ((c.citation || '') + '\n' + (a.text || '')).trim();
-    if (!text || c.error) {
+    if (!c || c.ok === false || !a || a.ok === false || !text) {
       out.innerHTML = '<span style="color:var(--fg-3)">'
-        + esc(c.error || 'this resource has no citation recorded') + '</span>';
+        + esc((c && c.error) || (a && a.error)
+              || 'this resource has no citation recorded') + '</span>';
       return;
     }
     out.textContent = text;
@@ -99,18 +101,19 @@ const SelCard = {
     on('sc-copy', () => this.copy(true));
     on('sc-quote', () => this.copy(false));
     on('sc-note', () => this.note(false));
-    on('sc-list', () => {
-      const w = WordLists.addOccurrence(this.text, this.label,
+    on('sc-list', async () => {
+      // addOccurrence is async: without awaiting it the toast read
+      // "Added to [object Promise]" and hid the card before the choice was made.
+      const w = await WordLists.addOccurrence(this.text, this.label,
         this.moduleId, this.key);
       this.hide();
-      toast(w ? 'Added to ' + w.name + '.' : 'Could not add it to a list.',
-            w ? '' : 'warn');
+      if (w) toast('Added to ' + w.name + '.');
     });
     on('sc-more', () => this.more());
     /* Explain / summarise / translate all land in the assistant panel, which
      * already knows how to stream, cite and stop -- so the selection card needs
      * no streaming of its own. */
-    on('sc-ai', () => { this.hide(); Ai.ask('explain', this.text, this.label); });
+    if (!aiOff()) on('sc-ai', () => { this.hide(); Ai.ask('explain', this.text, this.label); });
   },
 
   more() {
@@ -127,13 +130,13 @@ const SelCard = {
       + '<button class="btn" id="sc-notes">To the notes document</button>'
       + '<button class="btn" id="sc-pal" title="Named color sets for highlighting">Palettes</button>'
       + '</div>'
-      + '<div class="st-tools">'
+      + (aiOff() ? '' : '<div class="st-tools">'
       + '<span class="tiny muted" style="align-self:center">AI:</span>'
       + '<button class="btn" id="sc-ai-ask" title="Put this passage in front of the assistant and ask your own question about it">Ask…</button>'
       + '<button class="btn" id="sc-ai-explain">Explain this</button>'
       + '<button class="btn" id="sc-ai-summarize">Summarise this</button>'
       + '<button class="btn" id="sc-ai-translate">Translate this…</button>'
-      + '</div>'
+      + '</div>')
       + '<div class="ct-out" id="sc-cite2">'
       + esc(this.citeText || 'building…') + '</div>', [
       { label: 'Close', cls: 'btn' }]);
@@ -146,14 +149,16 @@ const SelCard = {
       sw.style.background = colors[sw.dataset.color] || '#f6e27a';
       sw.onclick = async () => {
         const color = sw.dataset.color || 'yellow';
-        await Highlights.add(this.moduleId, this.key, this.label, color,
-          this.text);
+        const r = await Highlights.add(this.moduleId, this.key, this.label,
+          color, this.text, '');
+        if (!r) return;
         closeModal(); toast('Highlighted.');
       };
     });
     $('#sc-hl').onclick = async () => {
-      await Highlights.add(this.moduleId, this.key, this.label, 'yellow',
-        this.text);
+      const r = await Highlights.add(this.moduleId, this.key, this.label,
+        'yellow', this.text, '');
+      if (!r) return;
       closeModal(); toast('Highlighted.');
     };
     $('#sc-pl').onclick = () => this.toPassageList();
@@ -211,8 +216,14 @@ const SelCard = {
         closeModal();
         if (!name) return;
         const made = await api('passagelist', { action: 'save', name });
-        await api('passagelist', { action: 'add', id: made.id, key: this.key,
-          ref: this.label, module: this.moduleId });
+        if (!made || made.ok === false || !made.id) {
+          toast((made && made.error) || 'Could not create the list.', 'err'); return;
+        }
+        const added = await api('passagelist', { action: 'add', id: made.id,
+          key: this.key, ref: this.label, module: this.moduleId });
+        if (!added || added.ok === false || added.error) {
+          toast((added && added.error) || 'Could not add the passage.', 'err'); return;
+        }
         toast('List created.');
       } }]);
     const host = $('#sc-pl');
@@ -230,6 +241,9 @@ const SelCard = {
         const r = await api('passagelist', { action: 'add', id: x.dataset.pl,
           key: this.key, ref: this.label, module: this.moduleId });
         closeModal();
+        if (!r || r.ok === false || r.error) {
+          toast((r && r.error) || 'Could not add the passage.', 'err'); return;
+        }
         toast(r.unchanged ? 'Already in that list.' : 'Added.');
       };
     });

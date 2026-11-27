@@ -10,6 +10,7 @@ what it is.
 
 from __future__ import annotations
 
+import html as _h
 import time
 import uuid
 
@@ -98,7 +99,7 @@ def quotations(term: str, limit: int = 8) -> dict:
     from . import search as _search
     try:
         opts = _search.SearchOpts(scope="books", limit=100, snippets=False,
-                                  smart=False, fast=True)
+                                  smart=False)
         res = _search.search(term, opts)
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "error": str(exc)}
@@ -143,10 +144,22 @@ def study_questions(ref: str) -> dict:
         "SELECT title FROM unit WHERE book=? AND chapter=? AND title<>'' "
         "LIMIT 5", (f.book, f.chapter or 0)).fetchone()
     head = (heads["title"] if heads else "")
+    # Tag the verse *text*, not its reference string: "Matt 2:1" contains no
+    # personal name, so the "name in the passage" question never appeared.
+    text = ""
+    try:
+        from . import canon
+        osis = canon.Ref(f.book, f.chapter or 0, f.verse or 1).osis_id()
+        row = conn.execute(
+            "SELECT u.text FROM unit u JOIN module m ON m.id=u.module_id "
+            "WHERE u.key=? AND m.type='Bible' AND m.installed_at>0 "
+            "ORDER BY m.priority DESC, m.name LIMIT 1", (osis,)).fetchone()
+        text = (row["text"] or "") if row else ""
+    except Exception:  # noqa: BLE001
+        text = ""
     try:
         names = [n.get("word") or n.get("name") or ""
-                 for n in (study.fact_tags(
-                     f"{f.book} {f.chapter}:{f.verse or 1}", limit=6) or [])]
+                 for n in (study.fact_tags(text, limit=6) or [])]
     except Exception:  # noqa: BLE001
         names = []
     names = [n for n in names if n][:4]
@@ -178,17 +191,24 @@ def study_questions(ref: str) -> dict:
 
 def prayer_templates() -> list[dict]:
     try:
-        v = db.get_setting("prayer_templates", [])
+        v = db.get_setting("prayer_templates", None)
     except Exception:  # noqa: BLE001
         return []
-    if v:
+    if v is not None:
+        # An empty list is a deliberate "no templates": the built-ins must not
+        # reappear after the reader deletes them.
         return v if isinstance(v, list) else []
-    return [
+    defaults = [
         {"id": "pt-daily", "name": "Daily", "body": "",
          "frequency_days": 1},
         {"id": "pt-weekly", "name": "Weekly", "body": "",
          "frequency_days": 7},
     ]
+    try:
+        db.set_setting("prayer_templates", defaults)
+    except Exception:  # noqa: BLE001
+        pass
+    return defaults
 
 
 def save_prayer_template(name: str, body: str = "", frequency_days: int = 1,
@@ -239,8 +259,22 @@ def prayer_due() -> dict:
             except Exception:  # noqa: BLE001
                 meta = {}
         t = tmpl.get(meta.get("template", ""), {})
-        freq = (meta.get("frequency_days") or t.get("frequency_days") or 1)
+        if meta.get("answered"):
+            continue
+        raw = meta.get("frequency_days")
+        if raw is None:
+            raw = t.get("frequency_days")
+        try:
+            freq = int(raw or 0)
+        except (TypeError, ValueError):  # noqa: BLE001
+            freq = 1
         last = d.get("updated_at") or d.get("created_at") or now
+        if freq <= 0:
+            # A manual prayer has no due date.  Collapsing 0 to one day made
+            # "manual" silently become "every day".
+            out.append({**d, "frequency_days": 0, "due_at": 0,
+                        "overdue": False, "manual": True})
+            continue
         due = last + freq * 86400
         out.append({**d, "frequency_days": freq, "due_at": due,
                     "overdue": due <= now})
@@ -281,7 +315,12 @@ def plan_manager() -> dict:
             nxt = None
         est = estimate_day(pid, nxt) if nxt else {}
         entry = {**p, "next_day": nxt,
-                 "minutes": (est.get("minutes") if est.get("ok") else None)}
+                 "minutes": (est.get("minutes") if est.get("ok") else None),
+                 "pace": pace}
+        if pace.startswith("finish:"):
+            entry["finish_by"] = pace.split(":", 1)[1]
+        elif pace.endswith("min") and pace[:-3].isdigit():
+            entry["daily_goal_minutes"] = int(pace[:-3])
         (groups["today"] if nxt else groups["later"]).append(entry)
     return {"ok": True, "groups": groups}
 
@@ -329,11 +368,15 @@ def estimate_day(plan_id: str, n: int = 0) -> dict:
     bibles = [m for m in library.list_all() if m.is_bible]
     if not bibles:
         return {"ok": False, "error": "No Bible installed"}
-    mid = bibles[0].id
+    # Reading time must be measured in the plan's own translation when it names
+    # one, not in whichever Bible happened to be first in the catalogue.
+    own = d.get("module_id") or d.get("module") or ""
+    chosen = next((m for m in bibles if m.id == own), bibles[0])
+    mid = chosen.id
     conn = db.connect()
     words = 0
     for ref in d.get("passages") or []:
-        rr = canon.parse_ref(ref, bibles[0].v11n)
+        rr = canon.parse_ref(ref, chosen.v11n)
         if rr is None:
             continue
         for r in rr.refs():
@@ -350,8 +393,11 @@ def estimate_day(plan_id: str, n: int = 0) -> dict:
 
 
 def skip_to_latest(plan_id: str) -> dict:
-    """Jump to the first unread day, marking skipped days read without
-    counting them as studied: they are checked off, matching the Skip feature.
+    """Jump to the first unread day.
+
+    Days before it are ticked off so the plan resumes there.  There is no
+    separate "skipped" state, so they are indistinguishable from read days;
+    the UI says so before asking the reader to do this.
     """
     from . import readingplan as _rp
     try:
@@ -395,7 +441,7 @@ def import_plans(payload: dict) -> dict:
         old = {}
     old.update(paces)
     db.set_setting("plan_paces", old)
-    return {"ok": True, "plans": len(prog)}
+    return {"ok": True, "plans": len(prog), "paces": len(paces)}
 
 
 # -------------------------------------------------- built-in lectionary
@@ -469,12 +515,39 @@ def sermon_calendar() -> dict:
 
 
 def sermon_schedule(date: str, note_id: str = "") -> dict:
+    """Schedule a sermon in the calendar *and* on its note.
+
+    The Manager used to write only the calendar setting and the Editor only
+    note.meta["scheduled"], so the same sermon could be scheduled in one view
+    and undated in the other.  Both views now read the same truth.
+    """
+    from . import notes as _notes
     cal = sermon_calendar()
-    if note_id:
+    if note_id and date:
+        # Rescheduling must move the note, not leave it under the old date as
+        # well: the calendar would show the same sermon twice.
+        for d, nid in list(cal.items()):
+            if nid == note_id and d != date:
+                del cal[d]
         cal[date] = note_id
+    elif note_id and not date:
+        # "Unschedule" sends an empty date with the note id.  Without this it
+        # wrote cal[''] = id, so the sermon stayed scheduled under a blank date.
+        for d, nid in list(cal.items()):
+            if nid == note_id:
+                del cal[d]
     elif date in cal:
         del cal[date]
     db.set_setting("sermon_calendar", cal)
+    if note_id:
+        n = _notes.get(note_id)
+        if n:
+            meta = _sermon_meta(n)
+            if date:
+                meta["scheduled"] = date
+            else:
+                meta.pop("scheduled", None)
+            _notes.save({"id": note_id, "meta": meta})
     return {"ok": True, "calendar": cal}
 
 
@@ -551,8 +624,9 @@ def sermon_builder_get(note_id: str) -> dict:
 def sermon_builder_save(note_id: str, structure: dict) -> dict:
     """Save the full structure of a sermon note.
 
-    Only the sermon-specific fields are updated; the note's title, body and
-    tags are left alone so the note list and sync are not disturbed.
+    The editor exposes the title, reference and manuscript text as well as the
+    structured fields, so all of them are saved.  Fields it does not carry are
+    left alone by notes.save's partial update.
     """
     from . import notes as _notes
     n = _notes.get(note_id)
@@ -568,7 +642,13 @@ def sermon_builder_save(note_id: str, structure: dict) -> dict:
             meta[field] = val.strip()
     if isinstance(structure.get("outline"), list):
         meta["outline"] = [str(s) for s in structure["outline"] if str(s).strip()]
-    _notes.save({"id": note_id, "meta": meta})
+    update = {"id": note_id, "meta": meta}
+    for field in ("title", "body", "ref_label"):
+        if isinstance(structure.get(field), str):
+            update[field] = structure[field]
+    _notes.save(update)
+    if "scheduled" in structure:
+        sermon_schedule(str(structure.get("scheduled") or ""), note_id)
     return {"ok": True, "id": note_id, "saved": True}
 
 
@@ -585,7 +665,8 @@ def sermon_import(text: str, title: str = "", series: str = "") -> dict:
     if not text:
         return {"ok": False, "error": "no text to import"}
     lines = [ln for ln in text.splitlines()]
-    if not title:
+    derived_title = not bool(title)
+    if derived_title:
         # first non-empty line
         for ln in lines:
             if ln.strip():
@@ -593,15 +674,21 @@ def sermon_import(text: str, title: str = "", series: str = "") -> dict:
                 break
         if not title:
             title = "Imported sermon"
-    # body = everything after the first non-empty line
+    else:
+        title = title.strip()
+    # Only drop the title line when it came from the text. An explicit title
+    # could otherwise delete an unrelated line of the manuscript.
     body_lines = []
-    seen = False
-    for ln in lines:
-        if not seen and ln.strip() == title:
-            seen = True
-            continue
-        body_lines.append(ln)
-    body = "\\n".join(body_lines).strip()
+    if derived_title:
+        seen = False
+        for ln in lines:
+            if not seen and ln.strip() == title:
+                seen = True
+                continue
+            body_lines.append(ln)
+    else:
+        body_lines = list(lines)
+    body = "\n".join(body_lines).strip()
     # If the whole text was one line, keep it as body too.
     if not body:
         body = text
@@ -640,7 +727,9 @@ def sermon_manager() -> dict:
         if series:
             series_set.add(series)
         nid = d.get("id") or ""
-        scheduled = date_of.get(nid, "")
+        # Older builder-set dates lived only in the note's meta.  Prefer the
+        # calendar (the canonical store now), but still honour those rows.
+        scheduled = date_of.get(nid, "") or str(meta.get("scheduled") or "")
         # A sermon built in the Sermon Builder keeps its content in `meta`, not
         # in `body` -- the body is only filled by the outline finder.  Judging
         # "has content" by the body alone therefore reported every builder-made
@@ -940,7 +1029,7 @@ def pronounce_guide(word: str) -> dict:
     aid, not a historical claim; the panel says which convention it follows.
     """
     import unicodedata as _u
-    from . import study as _study
+    from . import canon as _canon
     w = (word or "").strip()
     if not w:
         return {"ok": False, "error": "No word given"}
@@ -959,7 +1048,7 @@ def pronounce_guide(word: str) -> dict:
         sound = table.get(base, table.get(base.upper(), ""))
         letters.append({"letter": c, "sound": sound or "—"})
     try:
-        trans = _study.pronounce(w) if hasattr(_study, "pronounce") else {}
+        trans = _canon.transliterate(w)
     except Exception:  # noqa: BLE001
         trans = {}
     convention = ("Erasmian Greek — the classroom convention, not a claim "
@@ -989,18 +1078,35 @@ def export_outline_doc(ref: str) -> dict:
         if f.chapter else _outline.book_outline(f.book)
     if not data.get("ok"):
         return {"ok": False, "error": data.get("error", "no outline here")}
-    heads = data.get("headings") or data.get("chapters") or []
+    # outline.chapter() returns `sections`; outline.book_outline() returns a
+    # `chapters` count (an int) plus `index` rows. The old code looked for
+    # `headings`/`chapters` and produced an empty file while claiming success.
+    heads = (data.get("sections") or data.get("index")
+             or data.get("headings") or [])
+    if isinstance(heads, int):
+        heads = []
+    esc = lambda x: _h.escape(str(x or ""))
     lines = []
     for h in heads:
         if isinstance(h, dict):
-            t = h.get("title") or h.get("head") or ""
+            t = h.get("title") or h.get("head")
+            if not t and h.get("chapter") is not None:
+                t = f"Chapter {h['chapter']}"
+            t = t or ""
             r = h.get("ref") or h.get("osis") or ""
-            lines.append(f"<h3>{r} — {t}</h3>" if r else f"<h3>{t}</h3>")
+            lines.append(f"<h3>{esc(r)} — {esc(t)}</h3>" if r else f"<h3>{esc(t)}</h3>")
+            subs = h.get("sub") or h.get("points") or []
+            if isinstance(subs, (str, int)):
+                subs = [subs]
+            for sub in subs:
+                lines.append(f"<p class=\"ol-sub\">{esc(sub)}</p>")
         else:
-            lines.append(f"<p>{h}</p>")
-    body = (f"<h1>Outline: {ref}</h1>"
-            f"<p><em>Source: {data.get('source', '')} — "
-            f"{data.get('attribution', '')}</em></p>") + "\n".join(lines)
+            lines.append(f"<p>{esc(h)}</p>")
+    if not lines:
+        lines.append('<p class="empty">No headings were recorded for this passage.</p>')
+    body = (f"<h1>Outline: {esc(ref)}</h1>"
+            f"<p><em>Source: {esc(data.get('source', ''))} — "
+            f"{esc(data.get('attribution', ''))}</em></p>") + "\n".join(lines)
     page = _publish._html_page(f"Outline: {ref}", body,
                                _publish.attribution_block([]))
     fname = f"outline-{ref.replace(' ', '-').replace(':', '-')}.html"
@@ -1025,7 +1131,10 @@ def sermon_export(note_id: str, kind: str = "slides") -> dict:
             meta = _j.loads(meta)
         except Exception:  # noqa: BLE001
             meta = {}
-    outline = meta.get("outline") or []
+    outline = meta.get("outline") or meta.get("points") or []
+    if isinstance(outline, str):
+        outline = [x for x in (outline.splitlines() if "\n" in outline
+                               else outline.split("\n")) if x.strip()]
     title = n.get("title") or "Sermon"
     body = (n.get("body") or "").strip()
     if kind == "pptx":
@@ -1046,6 +1155,16 @@ def sermon_export(note_id: str, kind: str = "slides") -> dict:
         parts.append("<h2>Outline</h2><ol>")
         parts += [f"<li>{_h.escape(s)}<br><br>___</li>" for s in outline]
         parts.append("</ol>")
+        for key, label in (("intro", "Introduction"),
+                           ("illustrations", "Illustrations"),
+                           ("conclusion", "Conclusion"),
+                           ("delivery", "Delivery notes")):
+            vals = meta.get(key) or []
+            if isinstance(vals, str):
+                vals = [vals]
+            if vals:
+                parts.append(f"<h2>{label}</h2>"
+                             + "".join(f"<p>{_h.escape(str(v))}</p>" for v in vals))
         if body:
             parts.append(f"<h2>Notes</h2><p>{_h.escape(body)}</p>")
     else:

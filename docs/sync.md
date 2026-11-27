@@ -9,8 +9,10 @@
 > describe the inside of the `.gbz`. §2 (folder layout) and §8 (targets, still accurate
 > for WebDAV/Nextcloud authentication) describe the superseded v1 *layout*. Anyone
 > building against this should target `gbz.FORMAT` and `GBZ_NAME` instead of the folder
-> layout, and should expect additive-only restore semantics, not the v1 push/pull
-> merge. The mobile client is unaffected: it consumes the same `.gbz`.
+> layout, and should expect additive restore semantics with opt-in deletion
+> (`apply_deletes`), not the v1 push/pull merge. Tombstones are now recorded and
+> travel in the backup. The mobile client is unaffected: it consumes the same
+> `.gbz`.
 
 Status: **partly implemented.** The engine, the filesystem target, the WebDAV
 target (with the Nextcloud preset), the interval worker and the settings screen
@@ -456,9 +458,12 @@ Mirrors what the reader asked for, in the terms the codebase already has:
 - **HTTPS required** for WebDAV. No exceptions, no "allow insecure" toggle.
 - **No library content in the records.** A note's `body` is the user's own
   words; the module text it points at stays on the device.
-- **Optional later**: encrypt the payloads at rest on the target with a
-  passphrase the user holds. Deferred deliberately — it makes the mobile client
-  harder and most users' Nextcloud is already encrypted at rest on the server.
+- **Encryption at rest is available.** Turn it on for a sync target with a
+  passphrase of at least 12 characters (`sync-credentials.json`, `0600`); the
+  `.gbz` is then Fernet-encrypted (PBKDF2-HMAC-SHA256, 480,000 iterations).
+  Without it the archive is plaintext — readable by anyone who can read the
+  target. An AI-inclusive export is always encrypted, because it may contain
+  API keys; a plaintext archive cannot carry them.
 
 ---
 

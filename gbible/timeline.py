@@ -22,6 +22,8 @@ events appear because they are dated by secular history, and are marked as such.
 
 from __future__ import annotations
 
+from . import canon
+
 # (period, kind, approx, title, refs, note, confidence)
 #   kind        king | judge | prophet | event | patriarch | secular
 #   confidence  text | reconstructed
@@ -263,7 +265,6 @@ def _linkable(refs: str) -> str:
     verses ("Judg 3:9, 17") does not, and is shown as text rather than as a
     link that would do nothing.
     """
-    from . import canon
     first = (refs or "").split(";")[0].strip()
     if not first or first == "\u2014":
         return ""
@@ -278,6 +279,10 @@ def _linkable(refs: str) -> str:
         return f"{f.book} {f.chapter}:{f.verse}"
     if f.chapter:
         return f"{f.book} {f.chapter}"
+    # A bare book ("2 Sam") is a real citation; opening at its first chapter
+    # makes the row a link instead of dead text.
+    if f.book:
+        return f"{f.book} 1"
     return ""
 
 
@@ -310,7 +315,7 @@ def spans() -> dict:
             "period": per,
             "kind": k,
             "when": when,
-            "year": a if era == 0 else a,
+            "year": a,   # era is already encoded as the sign by _parse_approx
             "title": title,
             "refs": refs,
             "note": note,
@@ -465,3 +470,44 @@ def linked() -> dict:
         f"{linked_count} of {people_rows} entries match a name in the genealogy."
     )
     return data
+
+
+_EVENT_REF_CACHE: list | None = None
+
+
+def _event_ref_cache() -> list[list[tuple[str, int, int]]]:
+    """Parse each event's cited passages once, not on every request."""
+    global _EVENT_REF_CACHE
+    if _EVENT_REF_CACHE is None:
+        from . import refmatch
+        _EVENT_REF_CACHE = [refmatch.parse_cited(event[4] or "") for event in EVENTS]
+    return _EVENT_REF_CACHE
+
+
+def at(ref: str, limit: int = 20) -> dict:
+    """Events whose cited passages cover a passage.
+
+    Timeline dates are reconstructions, so this matches the *text's* references
+    rather than claiming the verse has a calendar date.  Book-level ("Isa") and
+    chapter-level ("2 Kgs 24") citations are honoured, as are the shorthand
+    lists the chronology uses ("Gen 21:1–24; 26").
+    """
+    if limit <= 0:
+        return {"ok": True, "events": [], "ref": ref}
+    from . import refmatch
+    targets = refmatch.milestones(ref)
+    if not targets:
+        return {"ok": False, "error": f"cannot read {ref!r} as a reference"}
+    cache = _event_ref_cache()
+    out = []
+    for event, cited in zip(EVENTS, cache):
+        if refmatch.intersects(cited, [targets]):
+            period, kind, when, title, refs, note, confidence = event
+            out.append({"period": period, "kind": kind, "when": when,
+                        "title": title, "refs": refs, "note": note,
+                        "confidence": confidence})
+            if len(out) >= limit:
+                break
+    return {"ok": True, "events": out, "ref": ref,
+            "note": "Dates are reconstructions; matches are by the passages "
+                    "the events cite."}

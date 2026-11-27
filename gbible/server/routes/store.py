@@ -23,7 +23,7 @@ def _store_items(parts, q):
         repo=q.get("repo"), lang=q.get("lang"), category=q.get("category"),
         subject=q.get("subject"), search=q.get("q"),
         installed_only=_flag(q.get("installed_only")) if q.get("installed_only") is not None else False,
-        sort=q.get("sort", "title"), limit=int(q.get("limit") or 2000),
+        sort=q.get("sort", "title"), limit=_bounded_int(q.get("limit"), 2000),
         slot=q.get("slot") or None))
 
 
@@ -55,7 +55,6 @@ def _store_install(parts, q):
     # reentrant -- the request never returned and the page sat on "starting".
     _remember_job(jid, {"state": "running", "repo": repo, "item": item,
                         "started": time.time(), "message": "starting"})
-    tid = f"job_{jid}"
 
     def work():
         def cb(phase, done=0, total=0, note=""):
@@ -97,22 +96,46 @@ def _store_install(parts, q):
 
 @endpoint("store/updates")
 def _store_updates(parts, q):
-    from ... import db as _db, library as _lib
+    """Which installed resources have a newer catalogue version.
+
+    Two honest answers matter as much as the list.  Seeded modules used to be
+    invisible because they had no store_item link; that is repaired here.  And
+    a catalogue that records no version cannot be checked at all — reporting
+    "up to date" for it would be a guess dressed as a fact.
+    """
+    from ... import db as _db, library as _lib, store as _store
     conn = _db.connect()
-    rows = conn.execute(
-        "SELECT si.repo_id, si.item_id, si.title, si.version, si.module_id "
-        "FROM store_item si JOIN module m ON m.id = si.module_id "
-        "WHERE m.installed_at > 0").fetchall()
-    out = []
-    for r in rows:
-        m = _lib.get(r["module_id"])
-        if not m:
+    linked = _store.link_installed_modules()
+    mapped = {}
+    for r in conn.execute(
+            "SELECT repo_id, item_id, title, version, module_id "
+            "FROM store_item WHERE module_id IS NOT NULL"):
+        mapped[r["module_id"]] = r
+    out, unchecked = [], []
+    for m in _lib.list_all():
+        row = mapped.get(m.id)
+        if row is None:
+            unchecked.append({"module_id": m.id, "title": m.name,
+                              "why": "not linked to a catalogue entry"})
             continue
-        if str(r["version"] or "") and str(r["version"]) != str(m.version or ""):
-            out.append({"repo": r["repo_id"], "item": r["item_id"],
-                        "title": r["title"], "installed_version": m.version,
-                        "available_version": r["version"], "module_id": r["module_id"]})
-    return _ok(updates=out, count=len(out))
+        available = str(row["version"] or "")
+        if not available:
+            unchecked.append({"module_id": m.id, "title": m.name,
+                              "why": "the catalogue records no version"})
+            continue
+        if available != str(m.version or ""):
+            out.append({"repo": row["repo_id"], "item": row["item_id"],
+                        "title": row["title"] or m.name,
+                        "installed_version": m.version or "",
+                        "available_version": available,
+                        "module_id": m.id})
+    note = ("Checked " + str(len(mapped)) + " linked resources. "
+            + (str(len(unchecked)) + " could not be checked: "
+               + ", ".join(sorted({x["why"] for x in unchecked})) + "."
+               if unchecked else "Every linked resource records a version."))
+    return _ok(updates=out, count=len(out), linked=linked,
+               unchecked=len(unchecked), unchecked_examples=unchecked[:8],
+               note=note)
 
 
 @endpoint("store/placement")
@@ -142,6 +165,16 @@ def _recommended_status(parts, q):
     total = len(_rec.RECOMMENDED)
     installed = 0
     for repo, item in _rec.RECOMMENDED:
+        # The installer names a module after its repo and item id, so check
+        # that first.  The store_item mapping is a fallback, not the source of
+        # truth: modules installed by a seed, a restore or a local import have
+        # no store_item row, and counting only mapped ones kept the prompt
+        # appearing forever even after every recommended module was present.
+        mid = library.slugify(f"{repo}-{item}")
+        m = library.get(mid)
+        if m and getattr(m, "installed_at", 0):
+            installed += 1
+            continue
         row = conn.execute(
             "SELECT module_id FROM store_item WHERE repo_id=? AND item_id=?",
             (repo, item)).fetchone()
@@ -223,13 +256,14 @@ def _recommended_install(parts, q):
                              f"failed {failed}"),
                     done=done + skipped + failed,
                     total=len(items), failures=list(failures))
-        # Dismiss only when the user explicitly selected the checkbox.
-        # Failed installations must remain retryable on the next launch.
+        # Dismiss on an explicit choice, and also after a clean run: leaving
+        # the checkbox unticked used to bring the same prompt back on every
+        # start.  Failures stay retryable on the next launch.
         with _job_lock:
             dismiss_on_finish = bool(
                 _jobs.get(jid, {}).get("dismiss_on_finish")
             )
-        if dismiss_on_finish:
+        if dismiss_on_finish or (not cancelled and failed == 0):
             try:
                 db.set_setting("recommended_prompt_dismissed", True)
             except Exception:
@@ -522,7 +556,7 @@ def _preview_sword_zip(p):
             about = get("About")
             if about:
                 out["description"] = about[:400]
-            cp = get("CopyRight")
+            cp = get("Copyright") or get("CopyrightNotes") or get("CopyRight")
             dist = get("DistributionLicense")
             out["license"] = cp or dist or ""
             out["abbrev"] = get("ModDrv")

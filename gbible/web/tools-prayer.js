@@ -17,7 +17,7 @@ const Prayer = {
       this._tpl = tpls.length ? tpls[0].id : '';
     }
     side.innerHTML = (tpls.length ? tpls.map(x => {
-      const freq = x.frequency_days || 1;
+      const freq = Number(x.frequency_days);
       const freqLabel = freq === 0 ? 'manual' : ('every ' + freq + ' day' + (freq === 1 ? '' : 's'));
       return '<div class="org-card"><div class="org-h"><b>' + esc(x.name) + '</b>'
         + '<span class="muted tiny"> · ' + freqLabel + '</span></div></div>';
@@ -61,11 +61,12 @@ const Prayer = {
         + '<b>Prayer</b> in the kind list, and write one.</div>';
     } else {
       h += items.map(p => {
-        const days = Math.round((p.due_at - Date.now() / 1000) / 86400);
+        const days = Math.ceil((p.due_at - Date.now() / 1000) / 86400);
         return '<div class="org-card"><div class="org-h"><b>'
           + esc(p.title || '(untitled)') + '</b>'
           + '<span class="muted tiny"> · ' + (p.overdue ? 'due again'
-            : 'again in ' + Math.max(0, days) + ' day' + (days === 1 ? '' : 's'))
+            : (p.manual ? 'manual'
+               : 'again in ' + Math.max(0, days) + ' day' + (days === 1 ? '' : 's')))
           + '</span>'
           + '<span class="org-a"><a href="#" data-prnote="' + esc(p.id)
           + '">open</a></span></div></div>';
@@ -85,9 +86,13 @@ const Prayer = {
       if (!body) { toast('The template has no body yet.', 'warn'); return; }
       const name = prompt('Name this prayer', $('#pt-name').value || 'Prayer');
       if (!name) return;
-      await post('notes/save', { kind: 'prayer', title: name, body,
+      const saved = await post('notes/save', {
+        kind: 'prayer', title: name, body,
         meta: { template: this._tpl,
-                frequency_days: cur ? (cur.frequency_days || 1) : 1 } });
+                frequency_days: cur ? cur.frequency_days : 0 } });
+      if (!saved || saved.ok === false) {
+        toast((saved && saved.error) || 'Could not add the prayer.', 'err'); return;
+      }
       App.show('notes');
       toast('Prayer added.');
     };

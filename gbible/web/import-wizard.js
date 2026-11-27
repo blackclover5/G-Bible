@@ -242,7 +242,16 @@ const ImportWizard = {
        { label: 'Close', cls: 'btn', close: true }]);
     const poll = async () => {
       const jr = await api('store/job', { job });
-      const j = (jr && jr.job) || {};
+      if (!jr || jr.ok === false || !jr.job) {
+        const st = $('#iw-fold-status');
+        if (st) st.innerHTML = '<div class="warn">'
+          + esc((jr && jr.error) || 'The import job could not be read.')
+          + ' <button class="btn tiny" id="iw-retry">Retry</button></div>';
+        const rt = $('#iw-retry');
+        if (rt) rt.onclick = () => poll();
+        return;
+      }
+      const j = jr.job;
       const done = Number(j.done) || 0;
       const failed = j.failed || [];
       const pct = total ? Math.min(100, Math.round(done * 100 / total)) : 100;
@@ -276,8 +285,17 @@ const ImportWizard = {
     const status = $('#iw-preview');
     if (status) status.innerHTML = '<div class="st-loading">Importing…</div>';
     const poll = async () => {
-      const j = (await api('store/job', { job: r.job })).job;
-      if (!j) return;
+      const jr = await api('store/job', { job: r.job });
+      const j = (jr && jr.job) || null;
+      if (!j) {
+        const st = $('#iw-preview');
+        if (st) st.innerHTML = '<div class="warn">'
+          + esc((jr && jr.error) || 'The import job could not be read.')
+          + ' <button class="btn tiny" id="iw-retry">Retry</button></div>';
+        const rt = $('#iw-retry');
+        if (rt) rt.onclick = () => poll();
+        return;
+      }
       if (j.state === 'done') { toast('Imported.'); closeModal(); await App.loadLibrary(); await App.loadWorkspace(); return; }
       if (j.state === 'error') { toast(j.message, 'err'); return; }
       setTimeout(poll, 800);

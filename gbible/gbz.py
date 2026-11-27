@@ -16,11 +16,15 @@ backup carries the *list* it expects, so the app can say which ones.
 
 What restore does, deliberately:
 
-    - Never deletes.  A tombstone inside the backup is recorded as "skipped".
+    - Deletes only when asked.  By default a tombstone in the backup is
+      recorded as skipped; ``restore_gbz(apply_deletes=True)`` applies it to
+      records this device knows are older than the delete.
     - Never overwrites.  A record present with different content is kept,
       and reported as a conflict.
-    - Never touches the live library.  Nothing here opens the database for
-      writing except the record merge itself, which is additive.
+    - Only touches study records.  The library's module files and indexes are
+      never written here.  The record merge is best-effort and additive apart
+      from the opt-in deletes above; appliers commit their own records, so a
+      restore is not one atomic transaction.
     - Never overwrites an existing API key.  Missing keys are restored,
       present keys stay yours, and both are reported.
 
@@ -35,13 +39,16 @@ Security note, honestly:
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import os
+import re
 import time
 import urllib.parse
 import zipfile
 from pathlib import Path
 
+from . import __version__ as APP_VERSION
 from . import db
 from . import sync as _sync
 
@@ -89,9 +96,49 @@ def _load_json(raw: bytes, what: str):
         raise GzError(f"{what} is not valid JSON: {e}")
 
 
+def _version_tuple(value: str) -> tuple[int, ...]:
+    return tuple(int(x) for x in re.findall(r"\d+", value or "")[:4]) or (0,)
+
+
+def _integrity(members: dict[str, tuple[bytes, int]]) -> str:
+    """A hash over the record set and its manifest metadata.
+
+    Zip CRCs catch a torn file, but they cannot tell a complete archive that
+    had one member swapped for another valid one.  The manifest's tombstones
+    drive deletions, so they are hashed too.  The digest itself is excluded
+    from the metadata hash to avoid a chicken-and-egg problem.
+    """
+    h = hashlib.sha256()
+    for name in sorted(members):
+        if name == "restore/manifest.json":
+            continue
+        h.update(name.encode("utf-8"))
+        h.update(b"\0")
+        h.update(hashlib.sha256(members[name][0]).hexdigest().encode("ascii"))
+        h.update(b"\0")
+    manifest = members.get("restore/manifest.json")
+    if manifest:
+        meta = _load_json(manifest[0], "restore/manifest.json")
+        if isinstance(meta, dict):
+            fields = {k: meta.get(k) for k in (
+                "format", "schema", "app_version", "tombstones",
+                "kinds", "records", "modules_expected")}
+            h.update(json.dumps(fields, sort_keys=True,
+                                ensure_ascii=False).encode("utf-8"))
+    return "sha256:" + h.hexdigest()
+
+
 def _check_members(zf: zipfile.ZipFile) -> list[zipfile.ZipInfo]:
     out = []
+    total = 0
     for info in zf.infolist():
+        # A tiny archive can claim enormous uncompressed members; the digest
+        # reads every member, so bound the declared sizes before reading.
+        if info.file_size > MAX_BYTES:
+            raise GzError("a member of this backup is too large to be safe")
+        total += info.file_size
+        if total > MAX_BYTES * 2:
+            raise GzError("this backup expands far beyond its safe size")
         name = info.filename
         if name.endswith("/"):
             continue
@@ -111,8 +158,8 @@ def _check_members(zf: zipfile.ZipFile) -> list[zipfile.ZipInfo]:
 def create_gbz(*, appearance: dict | None = None, include_ai: bool = False,
                include_sync_config: bool = True,
                credential_passphrase: str = "") -> dict:
-    """Build a .gbz backup.  Returns bytes, plus the path the AI keys came
-    from so the UI can say exactly what happened."""
+    """Build a .gbz backup.  Returns the archive bytes, its size and counts,
+    plus flags describing which optional sections were included."""
     device = _sync.device_id()
     notes: list[str] = []
 
@@ -144,8 +191,8 @@ def create_gbz(*, appearance: dict | None = None, include_ai: bool = False,
             rel = _sync.relpath(kind, rid)
             members[rel] = (json.dumps(env_rec, ensure_ascii=False,
                                        sort_keys=True).encode("utf-8"), 0o644)
-            records[rid] = {"id": rid, "kind": kind, "rev": 1,
-                            "hash": env_rec["hash"], "base": "",
+            records[rid] = {"id": rid, "kind": kind, "key": f"{kind}:{rid}",
+                            "rev": 1, "hash": env_rec["hash"], "base": "",
                             "deleted": False,
                             "updated_at": env_rec["updated_at"],
                             "clock": {"dev": device, "ctr": seq}}
@@ -158,8 +205,10 @@ def create_gbz(*, appearance: dict | None = None, include_ai: bool = False,
         .encode("utf-8"), 0o644)
     env = {"format": FORMAT, "schema": 1,
            "created": time.time(),
+           "app_version": APP_VERSION,
            "device": device,
            "records": total,
+           "tombstones": _sync.tombstones(),
            "kinds": counts,
            "modules_expected": expected,
            "has_appearance": bool(appearance),
@@ -190,6 +239,17 @@ def create_gbz(*, appearance: dict | None = None, include_ai: bool = False,
     if not include_ai:
         members = {k: v for k, v in members.items()
                    if not k.startswith("v1/ai-chats/")}
+        # The v1 manifest was written before this filter.  Drop the entries for
+        # records that are no longer in the archive, or it advertises chats
+        # nobody can read.
+        manifest_name = f"{_sync.FOLDER_VERSION}/{_sync.MANIFEST}"
+        manifest = json.loads(members[manifest_name][0])
+        manifest["records"] = {
+            k: v for k, v in manifest["records"].items()
+            if v.get("kind") != "ai-chat"}
+        members[manifest_name] = (
+            json.dumps(manifest, ensure_ascii=False, sort_keys=True)
+            .encode("utf-8"), 0o644)
         counts["ai-chat"] = 0
         total = sum(counts.values())
 
@@ -217,6 +277,11 @@ def create_gbz(*, appearance: dict | None = None, include_ai: bool = False,
         members["restore/ai-usage.json"] = (
             json.dumps({"rows": usage_rows}, indent=1, sort_keys=True)
             .encode("utf-8"), 0o644)
+
+    # Written last so the digest covers every member that actually shipped.
+    env["integrity"] = _integrity(members)
+    members["restore/manifest.json"] = (
+        json.dumps(env, indent=1, sort_keys=True).encode("utf-8"), 0o644)
 
     import io
     buf = io.BytesIO()
@@ -281,7 +346,6 @@ ENC_ITERS = 480000
 def _derive_key(passphrase: str, salt: bytes) -> bytes:
     from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
     from cryptography.hazmat.primitives import hashes
-    import base64
     kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32,
                       salt=salt, iterations=ENC_ITERS)
     return base64.urlsafe_b64encode(kdf.derive(passphrase.encode("utf-8")))
@@ -343,8 +407,56 @@ def _open_checked(data: bytes, passphrase: str = "") -> zipfile.ZipFile:
                       f"this build reads {FORMAT!r}")
     if int(manifest.get("schema") or 0) > 1:
         raise GzError("this backup is newer than this build of G-Bible")
-    _check_members(zf)
+    infos = _check_members(zf)
+    want = manifest.get("integrity")
+    if want:
+        got = _integrity({i.filename: (zf.read(i.filename), 0) for i in infos})
+        if got != want:
+            raise GzError("this backup's contents do not match its manifest; "
+                          "the file may be damaged or altered")
     return zf
+
+
+def _archive_conflicts(zf: zipfile.ZipFile) -> list[dict]:
+    """Records that differ from this machine's copies, with both hashes.
+
+    Preview needs this before applying anything, so a reader can decide which
+    side to keep.  A record that fails its own hash check is not a conflict --
+    it is damage, and is left alone.
+    """
+    live = _local_payloads()
+    out: list[dict] = []
+    for info in zf.infolist():
+        name = info.filename
+        if not name.startswith("v1/") or name.endswith("/"):
+            continue
+        parts = name[len("v1/"):].split("/")
+        if len(parts) != 2 or not parts[1].endswith(".json"):
+            continue
+        kind = next((k for k, v in _sync.KINDS.items()
+                     if v == urllib.parse.unquote(parts[0])), None)
+        if kind is None:
+            continue
+        rid = urllib.parse.unquote(parts[1][:-len(".json")])
+        rec = _load_json(zf.read(name), name)
+        if rec.get("deleted"):
+            continue
+        payload = rec.get("payload") or {}
+        want = rec.get("hash")
+        if not want or _sync.payload_hash(payload) != want:
+            continue
+        local = live.get(rid)
+        if local is not None and _sync.payload_hash(local) != want:
+            out.append({
+                "kind": kind, "id": rid,
+                "label": str(payload.get("ref_label")
+                             or payload.get("title") or "")[:120],
+                "local_hash": _sync.payload_hash(local),
+                "backup_hash": want,
+            })
+            if len(out) >= 50:
+                break
+    return out
 
 
 def inspect_gbz(data: bytes, passphrase: str = "") -> dict:
@@ -362,6 +474,8 @@ def inspect_gbz(data: bytes, passphrase: str = "") -> dict:
     missing = sorted(set(expected) - installed)
     return {"ok": True, "format": manifest.get("format"),
             "created": manifest.get("created"),
+            "app_version": manifest.get("app_version") or "",
+            "tombstones": len(manifest.get("tombstones") or []),
             "device": manifest.get("device"),
             "records": total,
             "counts": counts,
@@ -373,7 +487,8 @@ def inspect_gbz(data: bytes, passphrase: str = "") -> dict:
             "has_ai_credentials": bool(manifest.get("has_ai_credentials")),
             "has_ai_usage": bool(manifest.get("has_ai_usage")),
             "ai_usage_records": manifest.get("ai_usage_records") or 0,
-            "has_ai_chats": (manifest.get("kinds") or {}).get("ai-chat", 0) > 0}
+            "has_ai_chats": (manifest.get("kinds") or {}).get("ai-chat", 0) > 0,
+            "conflicts": _archive_conflicts(zf)}
 
 
 # ------------------------------------------------------------------ restore
@@ -405,8 +520,16 @@ def _remember(conn, kind: str, rid: str, rec: dict, payload: dict) -> None:
          rec.get("base") or ""))
 
 
-def restore_gbz(data: bytes, *, include_ai: bool = False, passphrase: str = "") -> dict:
-    """Merge a .gbz backup into the live library.  Additive; never deletes."""
+def restore_gbz(data: bytes, *, include_ai: bool = False, passphrase: str = "",
+                apply_deletes: bool = False) -> dict:
+    """Merge a .gbz backup into the live library.
+
+    Additive by default: records are added, differing ones are reported and
+    kept local.  With ``apply_deletes=True``, tombstones carried by the backup
+    also remove records this device knows are older than the delete.  The
+    opt-in matters: an ordinary restore of someone else's full snapshot must
+    never be able to erase work just because that record was absent there.
+    """
     zf = _open_checked(data, passphrase)
     members = {i.filename: i for i in zf.infolist()}
     if include_ai and not is_encrypted(data):
@@ -418,11 +541,18 @@ def restore_gbz(data: bytes, *, include_ai: bool = False, passphrase: str = "") 
     applied = existed = conflict = 0
     skipped_unknown = skipped_deleted = failed = 0
     examples: list[str] = []
+    conflict_examples: list[dict] = []
+    tombstones_applied: list[dict] = []
+    tombstones_skipped: list[dict] = []
     per_kind: dict[str, dict] = {}
 
     conn = db.connect()
+    # The appliers own their own commits (they are the same functions the app
+    # uses for normal edits), so this cannot be one atomic transaction.  Restore
+    # is additive and best-effort: a bad record is reported as failed, and the
+    # rest of the archive is still applied.  Do not pretend otherwise with a
+    # BEGIN that the first applier would immediately commit.
     try:
-        conn.execute("BEGIN")
         for name in sorted(members):
             if not name.startswith("v1/") or name.endswith("/"):
                 continue
@@ -443,6 +573,17 @@ def restore_gbz(data: bytes, *, include_ai: bool = False, passphrase: str = "") 
             payload = rec.get("payload") or {}
             if rec.get("deleted"):
                 skipped_deleted += 1
+                continue
+            # The manifest carries a hash for every record, but until now
+            # nothing checked it: a damaged member with a valid JSON body was
+            # applied as though it were the author's text.  Verify before any
+            # write and report the record by name.
+            want_hash = rec.get("hash")
+            if want_hash and _sync.payload_hash(payload) != want_hash:
+                failed += 1
+                if len(examples) < 8:
+                    examples.append(
+                        f"{kind} {rid}: record hash does not match its contents")
                 continue
 
             stat = per_kind.setdefault(
@@ -480,22 +621,31 @@ def restore_gbz(data: bytes, *, include_ai: bool = False, passphrase: str = "") 
                 continue
             conflict += 1
             stat["conflict"] += 1
+            if len(conflict_examples) < 50:
+                conflict_examples.append({"kind": kind, "id": rid})
+
+        if apply_deletes:
+            env0 = _load_json(zf.read("restore/manifest.json"),
+                              "restore/manifest.json")
+            deleted = _sync.apply_tombstones(
+                conn, env0.get("tombstones") or [])
+            tombstones_applied = deleted["applied"]
+            tombstones_skipped = deleted["skipped"]
         conn.commit()
     except GzError:
-        try:
-            conn.execute("ROLLBACK")
-        except Exception:
-            pass
         raise
     except Exception as e:
-        try:
-            conn.execute("ROLLBACK")
-        except Exception:
-            pass
         raise GzError(f"the restore could not continue: {e}")
 
     # --- restore/ section -------------------------------------------------
     notes: list[str] = []
+    made_by = str(_load_json(zf.read("restore/manifest.json"),
+                             "restore/manifest.json").get("app_version") or "")
+    if made_by and _version_tuple(made_by) > _version_tuple(APP_VERSION):
+        notes.append(
+            f"This backup was written by G-Bible {made_by}, newer than this "
+            f"build ({APP_VERSION}). Records it does not understand were left "
+            "alone; update before relying on it.")
     appearance = None
     if "restore/appearance.json" in members:
         appearance = _load_json(zf.read("restore/appearance.json"),
@@ -584,16 +734,70 @@ def restore_gbz(data: bytes, *, include_ai: bool = False, passphrase: str = "") 
     installed = _live_modules()
     missing = sorted(set(expected) - installed)
 
-    return {"ok": True,
+    return {"ok": failed == 0,
             "applied": applied, "existed": existed, "conflict": conflict,
+            "conflicts": conflict_examples,
             "skipped_unknown": skipped_unknown, "skipped_deleted": skipped_deleted,
             "failed": failed, "errors": examples,
+            "tombstones_applied": tombstones_applied,
+            "tombstones_skipped": tombstones_skipped,
+            "backup_version": made_by,
             "kinds": per_kind,
             "appearance": appearance,
             "ai_keys_added": ai_added, "ai_keys_kept": ai_kept,
             "notes": notes,
             "modules_expected": expected,
             "modules_missing": missing}
+
+
+def apply_chosen(data: bytes, decisions: list[dict], *,
+                 passphrase: str = "") -> dict:
+    """Apply only the records the reader chose to take from a backup.
+
+    The client sends ``{kind, id, choice}`` — never record text.  Every chosen
+    record is re-read from the archive and re-verified against its own hash, so
+    a tampered or damaged member cannot be smuggled in through this path.
+    Records left as "mine" are not touched.
+    """
+    zf = _open_checked(data, passphrase)
+    chosen = {(str(d.get("kind")), str(d.get("id")))
+              for d in (decisions or [])
+              if str(d.get("choice")) == "theirs"}
+    if not chosen:
+        return {"ok": True, "applied": [], "failed": []}
+    conn = db.connect()
+    applied: list[dict] = []
+    failed: list[dict] = []
+    for info in zf.infolist():
+        name = info.filename
+        if not name.startswith("v1/") or name.endswith("/"):
+            continue
+        parts = name[len("v1/"):].split("/")
+        if len(parts) != 2 or not parts[1].endswith(".json"):
+            continue
+        kind = next((k for k, v in _sync.KINDS.items()
+                     if v == urllib.parse.unquote(parts[0])), None)
+        if kind is None:
+            continue
+        rid = urllib.parse.unquote(parts[1][:-len(".json")])
+        if (kind, rid) not in chosen:
+            continue
+        try:
+            rec = _load_json(zf.read(name), name)
+            payload = rec.get("payload") or {}
+            if rec.get("deleted"):
+                continue
+            want = rec.get("hash")
+            if want and _sync.payload_hash(payload) != want:
+                raise GzError("record hash does not match its contents")
+            _sync._APPLIERS[kind](payload)
+            _remember(conn, kind, rid, rec, payload)
+            applied.append({"kind": kind, "id": rid})
+        except Exception as e:                            # noqa: BLE001
+            failed.append({"kind": kind, "id": rid,
+                           "error": f"{type(e).__name__}: {e}"})
+    conn.commit()
+    return {"ok": True, "applied": applied, "failed": failed}
 
 
 # -------------------------------------------------------------- base64 out

@@ -6,19 +6,45 @@ def _search(parts, q):
     opts = search.SearchOpts(
         modules=_obj(q.get("modules"), []) or [],
         scope=q.get("scope") or "",
-        search_bible_text=q.get("search_bible_text", True),
-        search_headings=q.get("search_headings", True),
-        match_case=bool(q.get("match_case")),
-        match_all_forms=bool(q.get("match_all_forms")),
-        reference_matching=q.get("reference_matching", "default"),
-        limit=int(q.get("limit") or 200),
-        offset=int(q.get("offset") or 0),
+        match_case=_flag(q.get("match_case")),
+        match_all_forms=_flag(q.get("match_all_forms")),
+        limit=_bounded_int(q.get("limit"), 200, low=1, high=2000),
+        offset=_bounded_int(q.get("offset"), 0, low=0, high=100000),
         sort=q.get("sort", "relevance"),
-        snippets=q.get("snippets", True) is not False,
-        context=int(q.get("context") or 0),
-        fast=q.get("fast", True),
+        snippets=_flag(q.get("snippets", True)),
+        context=_bounded_int(q.get("context"), 0, low=0, high=5),
+        include_resolved=str(q.get("include_resolved", "1")).lower()
+        not in ("0", "false", "no"),
     )
     return search.search(q.get("q", ""), opts)
+
+
+@endpoint("search/analysis")
+def _search_analysis(parts, q):
+    """A result set as a sortable grid plus facets, counted server-side.
+
+    The ordinary search endpoint ships a page of hits for reading.  Analysis
+    re-runs the query with a bound and attaches the tags from the marker table,
+    so a column can be sorted and a facet can count all the hits -- not just
+    the page the browser happened to receive.
+    """
+    from ... import analysis as _a
+    opts = search.SearchOpts(
+        modules=_obj(q.get("modules"), []) or [],
+        scope=q.get("scope") or "",
+        match_case=_flag(q.get("match_case")),
+        match_all_forms=_flag(q.get("match_all_forms")),
+        include_resolved=str(q.get("include_resolved", "1")).lower()
+        not in ("0", "false", "no"),
+    )
+    try:
+        max_hits = int(q.get("max_hits") or 5000)
+    except (TypeError, ValueError):
+        max_hits = 5000
+    descending = str(q.get("dir", "desc")).lower() != "asc"
+    return _ok(**_a.analyse(q.get("q", ""), opts=opts, max_hits=max_hits,
+                            sort=q.get("sort") or "score",
+                            descending=descending))
 
 
 @endpoint("search/help")
@@ -63,7 +89,6 @@ def _spell(parts, q):
 def _search_ranges(parts, q):
     from ... import filters as _f
     if q.get("action") == "search":
-        import json as _j
         opts = _obj(q.get("opts"), {}) or {}
         return _ok(**_f.search_in_range(
             q.get("q", ""), q.get("range", "New Testament"), opts))
@@ -91,7 +116,7 @@ def _visualfilter(parts, q):
     if act == "save":
         return _ok(**_f.save_visual_filter(
             q.get("name", ""), q.get("query", ""), q.get("style", "yellow"),
-            q.get("morph", ""), q.get("enabled", True) is not False,
+            q.get("morph", ""), _flag(q.get("enabled", True)),
             q.get("id", "")))
     if act == "delete":
         return _ok(**_f.delete_visual_filter(q.get("id", "")))
@@ -112,7 +137,6 @@ def _bible_filtered(parts, q):
     from ... import filters as _f
     refs = q.get("refs", [])
     if isinstance(refs, str):
-        import json as _j
         try:
             refs = _j.loads(refs)
         except Exception:  # noqa: BLE001

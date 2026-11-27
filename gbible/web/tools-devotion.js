@@ -34,6 +34,7 @@ const DevotionCreator = {
       scope: $('#dc-scope').value,
       start: $('#dc-start').value,
       finish: $('#dc-finish').value,
+      title: ($('#dc-title') || {}).value || '',
       weekdays: this.weekdayList(),
     };
   },
@@ -41,8 +42,13 @@ const DevotionCreator = {
   async load() {
     if (!this._bound) this.bind();
     const r = await api('devotion/books');
+    if (!r || r.ok === false) {
+      $('#dc-estimate').textContent = 'Could not load books: '
+        + ((r && r.error) || 'unknown error');
+      return;
+    }
     const sel = $('#dc-book');
-    this.books = (r && r.books) || [];
+    this.books = r.books || [];
     if (!this.books.length) {
       sel.innerHTML = '<option value="">No chaptered books installed</option>';
       $('#dc-scope').innerHTML = '<option value="">—</option>';
@@ -53,11 +59,15 @@ const DevotionCreator = {
     sel.innerHTML = this.books.map(b =>
       '<option value="' + esc(b.id) + '">' + esc(b.name) + ' <span class="muted">· '
       + (b.is_bible ? 'Bible' : esc(b.type)) + '</span></option>').join('');
-    const today = new Date();
-    $('#dc-start').value = this.iso(today);
-    $('#dc-months').value = '6';
-    $('#dc-finish').value = this.iso(this.addMonths(today, 6));
-    $('#dc-result').innerHTML = '';
+    // Only seed the form the first time.  Coming back to this view used to
+    // silently replace dates the reader had already chosen.
+    if (!this._initialised) {
+      this._initialised = true;
+      const today = new Date();
+      $('#dc-start').value = this.iso(today);
+      $('#dc-months').value = '6';
+      $('#dc-finish').value = this.iso(this.addMonths(today, 6));
+    }
     await this.refreshScopes();
     await this.refreshMine();
   },
@@ -66,6 +76,8 @@ const DevotionCreator = {
     this._bound = true;
     $('#dc-book').onchange = () => { this.refreshScopes(); };
     $('#dc-scope').onchange = () => { this.applySuggestion(this.suggestTitle()); this.estimate(); };
+    DatePicker.attach($('#dc-start'), { label: 'Start date' });
+    DatePicker.attach($('#dc-finish'), { label: 'Finish date' });
     $('#dc-start').onchange = () => { this.applyMonths(); this.estimate(); };
     $('#dc-finish').onchange = () => { this.estimate(); };
     $('#dc-months').onchange = () => { this.applyMonths(); this.estimate(); };
@@ -152,6 +164,7 @@ const DevotionCreator = {
   },
 
   async estimate() {
+    const seq = ++this._estimateSeq;
     const est = $('#dc-estimate');
     const warns = $('#dc-warnings');
     $('#dc-result').innerHTML = '';
@@ -161,6 +174,7 @@ const DevotionCreator = {
       return;
     }
     const r = await post('devotion/estimate', this.params());
+    if (seq !== this._estimateSeq) return;   // a newer estimate has won
     if (!r.ok) {
       est.innerHTML = '<span class="warn">' + esc(r.error || 'Cannot plan that.') + '</span>';
       warns.innerHTML = '';
@@ -219,7 +233,12 @@ const DevotionCreator = {
     const host = $('#dc-list');
     if (!host) return;
     const r = await api('devotion/mine');
-    const list = (r && r.devotions) || [];
+    if (!r || r.ok === false) {
+      host.innerHTML = '<div class="tiny muted">Could not load your devotions: '
+        + esc((r && r.error) || 'unknown error') + '.</div>';
+      return;
+    }
+    const list = r.devotions || [];
     $('#dc-mine-count').textContent = list.length ? '· ' + list.length : '';
     if (!list.length) {
       host.innerHTML = '<div class="tiny muted">Nothing created yet. Your devotions will appear here.</div>';

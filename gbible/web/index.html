@@ -6,7 +6,7 @@
 <meta name="csrf-token" content="__GBIBLE_CSRF_TOKEN__">
 <meta name="gbible-version" content="__GBIBLE_VERSION__">
 <title>G-Bible</title>
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=23">
 <link rel="stylesheet" href="/print.css" media="print">
 <link rel="icon" type="image/png" href="icon.png">
 </head>
@@ -23,7 +23,7 @@
       <button data-view="workspace" aria-label="Study workspace">Workspace</button>
       <button data-view="search" aria-label="Search your library">Search</button>
       <button data-view="guides" aria-label="Study guides">Guides</button>
-      <button data-view="ai" aria-label="AI assistant">Assistant<span class="exp-pill" title="Still settling — needs your own provider key">Experimental</span></button>
+      <button data-view="ai" class="ai-only" aria-label="AI assistant">Assistant<span class="exp-pill" title="Still settling — needs your own provider key">Experimental</span></button>
 
       <div class="nav-menu">
         <button class="menu-btn" data-menu="tools" aria-controls="menu-tools" aria-haspopup="true" aria-expanded="false">
@@ -49,8 +49,8 @@
           <div class="menu-divider"></div>
           <div class="menu-group-label">Research & ministry</div>
           <button id="tc-bibliography">Bibliography</button>
-          <button id="tc-sermon-import">Sermon import</button>
-          <button id="tc-sermon-documents">Sermon documents</button>
+          <button id="tc-sermon-import" title="Import a sermon into your sermon library (the same store the Sermon Manager uses)">Sermon import</button>
+          <button id="tc-sermon-documents" title="Browse sermons in your sermon library">Sermon documents</button>
           <button id="tc-visual-copy">Visual copy</button>
           <button id="tc-confessional-docs">Confessional documents</button>
           <button id="tc-catholic-readings">Catholic daily readings</button>
@@ -95,7 +95,7 @@
         </button>
         <div class="menu-pop" id="menu-settings">
           <button data-view="apis">API settings</button>
-          <button data-view="aisettings">AI providers<span class="exp-pill" title="Optional — needs your own key">Experimental</span></button>
+          <button data-view="aisettings">AI Assistant<span class="exp-pill" title="Optional — enable it in Settings">Experimental</span></button>
           <button data-view="sync">Synchronization<span class="exp-pill" title="Still settling — sync only folders you trust">Experimental</span></button>
           <button data-view="logs">Logs</button>
           <div class="menu-divider"></div>
@@ -110,6 +110,7 @@
 
     <div class="spacer"></div>
     <div id="install-spinner" class="install-spinner" hidden aria-label="Installing"></div>
+    <button id="top-export" class="btn tiny" title="Export or print what you are looking at">Export…</button>
     <button id="status-errors" class="status-errors" hidden>Error(s) found</button>
     <div class="row tiny muted" id="status"></div>
   </div>
@@ -120,18 +121,40 @@
     <div class="view on" id="v-today">
       <div class="view-head">
         <h2 id="d-title">Today</h2> <span id="d-lib" class="view-sub">Your study day at a glance</span>
+        <button class="btn tiny" id="d-refresh" title="Refresh Home">Refresh</button>
+        <button class="btn tiny" id="d-hidden" title="Hidden tiles" aria-label="Hidden tiles"
+                aria-expanded="false" hidden>
+          <span aria-hidden="true">⚙</span><span id="d-hidden-count" class="dash-gear-count" hidden></span>
+        </button>
+        <div id="d-hidden-menu" class="dash-hidden-menu" role="menu" hidden></div>
       </div>
       <div class="dash">
         <div class="dash-col">
           <div class="dash-card" id="d-reading" title="Hold on this card for a moment, then drag it to the other column"></div>
-          <div class="dash-card" id="d-plan" title="Hold on this card for a moment, then drag it to the other column"></div>
+          <div class="dash-card" id="d-where" title="Hold on this card for a moment, then drag it to the other column"></div>
+          <div class="dash-card" id="d-notes" title="Hold on this card for a moment, then drag it to the other column"></div>
           <div class="dash-card" id="d-prayer" title="Hold on this card for a moment, then drag it to the other column"></div>
+          <div class="dash-card" id="d-tags" title="Hold on this card for a moment, then drag it to the other column"></div>
+          <div class="dash-card" id="d-hl" title="Hold on this card for a moment, then drag it to the other column"></div>
         </div>
         <div class="dash-col">
-          <div class="dash-card" id="d-where" title="Hold on this card for a moment, then drag it to the other column"></div>
-          <div class="dash-card" id="d-hl" title="Hold on this card for a moment, then drag it to the other column"></div>
-          <div class="dash-card" id="d-tags" title="Hold on this card for a moment, then drag it to the other column"></div>
-          <div class="dash-card" id="d-notes" title="Hold on this card for a moment, then drag it to the other column"></div>
+          <div class="dash-card" id="d-plan" title="Hold on this card for a moment, then drag it to the other column"></div>
+          <div class="dash-card sponsor" id="d-sponsor" title="Hold on this card for a moment, then drag it to the other column">
+            <div class="dash-h">Sponsor · eStudySource</div>
+            <a href="https://estudysource.com/" target="_blank" rel="noopener noreferrer"
+               title="Opens the eStudySource store in a new tab">
+              <img src="sponsor-estudysource.png" alt="eStudySource — more e-Sword modules and books">
+            </a>
+            <div class="dash-row" style="margin-top:8px">Opens the eStudySource store in a new tab.</div>
+          </div>
+          <div class="dash-card community" id="d-community" title="Hold on this card for a moment, then drag it to the other column">
+            <div class="dash-h">Free modules · BibleSupport</div>
+            <a href="https://www.biblesupport.com/" target="_blank" rel="noopener noreferrer"
+               title="Opens BibleSupport.com in a new tab">
+              <img src="sponsor-biblesupport.png" alt="BibleSupport.com — free e-Sword modules">
+            </a>
+            <div class="dash-row" style="margin-top:8px">Community-made — check each file's license.</div>
+          </div>
         </div>
       </div>
     </div>
@@ -148,6 +171,7 @@
         <button class="btn tiny" id="ws-fullscreen" title="Fullscreen reading of the first pane">Fullscreen</button>
         <button class="btn tiny" id="ws-guidepane" title="Open Passage in a pane">Passage pane</button>
         <button class="btn tiny" id="ws-wordstudypane" title="Open Word Study in a pane">Word Study pane</button>
+        <button class="btn tiny" id="ws-printpane" title="Print the focused pane">Print pane</button>
         <button class="btn tiny" id="ws-reopen" title="Reopen the last resource you closed">Reopen last</button>
 
         <span class="spacer"></span>
@@ -186,6 +210,7 @@
           </select>
           <button id="s-case" title="Match case">Aa</button>
           <button id="s-forms" title="Match all forms (stemming)">*</button>
+          <button id="s-inferred" title="Include pronoun-resolved role matches">Inferred</button>
           <button id="s-ctx" title="Show surrounding verses">Context</button>
         </div>
 
@@ -251,7 +276,7 @@
         <button id="s-go" class="btn primary">Search</button>
         <button id="s-browse" title="Build a search without remembering the syntax">Browse</button>
         <button id="s-save" title="Keep this search">Save</button>
-        <button id="s-smart" title="Type a question in plain English; the model turns it into a query for your library">Ask AI</button>
+        <button id="s-smart" class="ai-only" title="Type a question in plain English; the model turns it into a query for your library">Ask AI</button>
       </div>
       <div class="search-body">
         <div class="search-extras">
@@ -545,7 +570,7 @@
             <button class="btn" id="g-refscan" type="button">Reference Scanner</button>
             <button class="btn" id="g-namesgod" type="button">Names for God</button>
             <button class="btn" id="g-sensesearch" type="button">Sense Search</button>
-            <button class="btn" id="g-syntax" type="button">Syntax Search</button>
+            <button class="btn" id="g-syntax" type="button" title="Opens clause search in the Search view">Clause search →</button>
             <button class="btn" id="g-oexport" style="display:none"
                     title="Open this outline in Word, Pages, LibreOffice or PowerPoint">Export</button>
             <select id="g-trad" aria-label="Choose a canon">
@@ -573,6 +598,7 @@
               <option value="lists">Passage lists</option>
               <option value="notebooks">Notebooks</option>
               <option value="quotations">Quotations</option>
+              <option value="canvases">Canvases</option>
 
               <option value="charts">Charts</option>
               <option value="templates">Search templates</option>
@@ -662,7 +688,7 @@
        <div class="store-head">
         <div class="store-filters">
           <input type="search" id="wl-q" placeholder="Filter lists">
-          <label>Show <select id="wl-limit">
+          <label>Show up to <select id="wl-limit">
             <option value="500">500</option>
             <option value="1500" selected>1500</option>
             <option value="5000">5000</option>
@@ -740,7 +766,7 @@
               <div class="org-h"><b>2 · Pick the dates</b></div>
               <div class="dc-form">
                 <label class="dc-label" for="dc-start">Start</label>
-                <input type="date" id="dc-start" class="dc-input">
+                <input type="text" id="dc-start" class="dc-input" placeholder="YYYY-MM-DD">
                 <label class="dc-label" for="dc-months">Finish after</label>
                 <select id="dc-months" class="dc-input">
                   <option value="1">1 month</option>
@@ -757,7 +783,7 @@
                   <option value="12">12 months</option>
                 </select>
                 <label class="dc-label" for="dc-finish">Finish</label>
-                <input type="date" id="dc-finish" class="dc-input">
+                <input type="text" id="dc-finish" class="dc-input" placeholder="YYYY-MM-DD">
               </div>
               <div class="tiny muted" style="margin:6px 2px">Pick a number of months and the finish date follows the start date. You can change the finish by hand instead.</div>
               <div class="dc-days-row">
@@ -799,7 +825,7 @@
       </div>
       <div class="view-col">
         <div class="store-head">
-          <div class="tiny muted" id="plans-summary"></div>
+          <div class="tiny muted" id="plans-summary-note"></div>
           <div style="display:flex;gap:6px;align-items:center">
             <button class="btn" id="pl-new">New plan</button>
             <button class="btn" id="pl-export">Export</button>
@@ -860,6 +886,7 @@
         <button class="btn danger" id="cv-delboard" title="Delete this board">Delete</button>
         <span class="spacer"></span>
         <button class="btn" id="cv-addtext" title="Add a text card">+ Text</button>
+        <button class="btn" id="cv-addheading" title="Add a heading card">+ Heading</button>
         <button class="btn" id="cv-addverse" title="Add a verse card">+ Verse</button>
         <button class="btn" id="cv-color" title="Cycle card color">Color</button>
         <button class="btn" id="cv-link" title="Connect two cards" aria-pressed="false">Link cards</button>
@@ -942,6 +969,8 @@
               <input type="checkbox" id="ai-use-library"> Use my library</label>
             <label class="tiny muted" title="Retrieve your own notes, highlights and clips, and cite them as yours">
               <input type="checkbox" id="ai-use-mine"> My own material</label>
+            <label class="tiny muted" title="Read more sources and always take the second retrieval pass">
+              <input type="checkbox" id="ai-deep-research"> Deep research</label>
             <select id="ai-scope" title="Which part of your library the assistant may read"></select>
             <select id="ai-model" title="Model"></select>
             <button class="btn" id="ai-plus" title="Put the text you are reading in front of the assistant">+</button>
@@ -956,8 +985,7 @@
         <div class="ai-compose">
           <textarea id="ai-input" rows="2" placeholder="Ask about a passage, a theme, a word…"></textarea>
           <div class="ai-compose-side">
-            <button class="btn primary" id="ai-send">Send</button>
-            <button class="btn" id="ai-stop" style="display:none">Stop</button>
+            <button class="btn primary" id="ai-send" title="Send your question">Send</button>
           </div>
         </div>
         <div class="tiny muted" id="ai-note" style="margin-top:4px"></div>
@@ -970,7 +998,8 @@
         <h2>AI <span class="view-sub">Providers and API keys.</span> <span id="ai-settings-summary" class="tiny muted"></span></h2>
       </div>
       <div class="view-col">
-        <div class="store-body">
+        <div id="ai-setup"></div>
+        <div class="store-body" id="ai-settings-body">
           <div class="store-side" id="ai-provider-side"></div>
           <div class="store-main" id="ai-provider-main"></div>
         </div>
@@ -987,43 +1016,47 @@
   <div id="popup"></div>
   <div class="refsugg" id="refsugg" style="display:none"></div>
 
-  <script src="core.js?v=10"></script>
-  <script src="app-core.js?v=6"></script>
-  <script src="print.js"></script>
-  <script src="reader.js?v=2"></script>
-  <script src="cite.js"></script>
-  <script src="study-pre.js"></script>
-  <script src="study.js?v=6"></script>
-  <script src="panes.js"></script>
-  <script src="speech.js"></script>
-  <script src="appearance.js"></script>
-  <script src="popup.js"></script>
-  <script src="workspace.js?v=6"></script>
-  <script src="library.js?v=6"></script>
-  <script src="tools-misc.js?v=2"></script>
-  <script src="tools-sermon.js?v=3"></script>
-  <script src="tools-plans.js?v=2"></script>
-  <script src="tools-devotion.js?v=2"></script>
+  <script src="core.js?v=42"></script>
+  <script src="app-core.js?v=15"></script>
+  <script src="print.js?v=2"></script>
+  <script src="datepicker.js?v=2"></script>
+  <script src="reader.js?v=10"></script>
+  <script src="cite.js?v=3"></script>
+  <script src="study-pre.js?v=1"></script>
+  <script src="study.js?v=21"></script>
+  <script src="panes.js?v=8"></script>
+  <script src="speech.js?v=2"></script>
+  <script src="appearance.js?v=2"></script>
+  <script src="popup.js?v=5"></script>
+  <script src="workspace.js?v=15"></script>
+  <script src="library.js?v=15"></script>
+  <script src="tools-misc.js?v=5"></script>
+  <script src="tools-sermon.js?v=9"></script>
+  <script src="tools-plans.js?v=5"></script>
+  <script src="tools-devotion.js?v=5"></script>
   <script src="devotional-context.js?v=1"></script>
-  <script src="tools-prayer.js?v=2"></script>
-  <script src="tools-clippings.js?v=2"></script>
-  <script src="tools-diagram.js?v=2"></script>
-  <script src="tools-bind.js?v=4"></script>
-  <script src="tools-preach.js?v=2"></script>
-  <script src="tools-selcard.js?v=2"></script>
-  <script src="tools-flashcards.js?v=2"></script>
-  <script src="tools-wordlists.js?v=3"></script>
-  <script src="tools-outlines.js?v=2"></script>
-  <script src="tools-flows.js?v=2"></script>
+  <script src="tools-prayer.js?v=4"></script>
+  <script src="tools-clippings.js?v=3"></script>
+  <script src="tools-diagram.js?v=4"></script>
+  <script src="tools-bind.js?v=22"></script>
+  <script src="tools-preach.js?v=4"></script>
+  <script src="tools-selcard.js?v=6"></script>
+  <script src="tools-flashcards.js?v=3"></script>
+  <script src="tools-wordlists.js?v=5"></script>
+  <script src="tools-outlines.js?v=6"></script>
+  <script src="tools-flows.js?v=5"></script>
   <script src="tools-translate.js?v=2"></script>
-  <script src="tools-catalogue.js?v=2"></script>
-  <script src="tools-sync.js?v=3"></script>
-  <script src="tools-logs.js?v=1"></script>
-  <script src="import-wizard.js?v=3"></script>
-  <script src="favorites.js"></script>
-  <script src="canvas.js"></script>
-  <script src="ai.js"></script>
-  <script src="tour.js"></script>
-  <script src="tools-boot.js"></script>
+  <script src="tools-catalogue.js?v=5"></script>
+  <script src="tools-sync.js?v=8"></script>
+  <script src="tools-logs.js?v=3"></script>
+  <script src="import-wizard.js?v=4"></script>
+  <script src="favorites.js?v=1"></script>
+  <script src="canvas.js?v=5"></script>
+  <script src="webresearch.js?v=5"></script>
+  <script src="ai.js?v=11"></script>
+  <script src="tour.js?v=1"></script>
+  <script src="tools-boot.js?v=1"></script>
+</div>
+</div>
 </body>
 </html>

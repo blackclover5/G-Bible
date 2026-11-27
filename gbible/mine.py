@@ -122,8 +122,11 @@ def _highlights(keys: list[str] | None = None) -> list[dict]:
     what makes it *theirs* -- so the note is kept with it and the model is
     told which is which.
     """
+    # A soft-removed module still has a row.  The highlight stays in the
+    # corpus, but only a *live* module may be named as its source.
     sql = ("SELECT h.id,h.module_id,h.unit_key,h.quote,h.note,h.label,"
-           "h.created_at,u.ref_label,m.name AS module_name "
+           "h.created_at,u.ref_label,m.name AS module_name,"
+           "m.installed_at AS module_installed "
            "FROM highlight h "
            "LEFT JOIN unit u ON u.module_id=h.module_id AND u.key=h.unit_key "
            "LEFT JOIN module m ON m.id=h.module_id")
@@ -147,14 +150,15 @@ def _highlights(keys: list[str] | None = None) -> list[dict]:
         if note:
             text = (quote + "\n\n" if quote else "") + \
                    "The reader's own note on it: " + note
-        label = r["ref_label"] or r["label"] or r["module_name"] or "a passage"
+        source = r["module_name"] if r["module_installed"] else ""
+        label = r["ref_label"] or r["label"] or source or "a passage"
         out.append({
             "id": "highlight:" + r["id"],
             "own_id": r["id"],
             "kind": "highlight",
             "title": label,
             "text": text,
-            "extra": " ".join(x for x in (r["label"], r["module_name"]) if x),
+            "extra": " ".join(x for x in (r["label"], source) if x),
             "ref": r["ref_label"] or "",
             "module_id": r["module_id"] or "",
             "unit_key": r["unit_key"] or "",

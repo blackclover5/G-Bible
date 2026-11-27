@@ -42,7 +42,11 @@ const InfoPane = {
 };
 
 /* ===================================================== Visual filters */
-const VisualFilters = {  on: true,
+const VisualFilters = {
+  // Persisted: an "off" that silently came back after a refresh was worse
+  // than no toggle at all.
+  on: (() => { try { return localStorage.getItem('gbible:vf-on') !== '0'; }
+               catch (e) { return true; } })(),
   css: {
     yellow: 'background:#fff3a3', green: 'background:#c9f2c7',
     blue: 'background:#cfe6ff', pink: 'background:#ffd6e7',
@@ -116,7 +120,8 @@ const VisualFilters = {  on: true,
   },
 
   async dialog() {
-    const r = await api('visualfilter', {}).catch(() => ({ filters: [] }));
+    const r = await api('visualfilter', {});
+    if (!r || r.ok === false) { toast((r && r.error) || 'Could not load filters.', 'err'); return; }
     const rows = (r.filters || []).map(f =>
       '<div class="item"><div style="flex:1"><div class="t">' + esc(f.name) + '</div>'
       + '<div class="m"><code>' + esc(f.query || f.morph || '') + '</code>'
@@ -137,26 +142,30 @@ const VisualFilters = {  on: true,
       + '<button class="btn primary" id="vf-add">Save</button></div>'
       + '<div class="tiny muted">Double-click F in a pane toolbar to turn highlighting off.</div>',
       [{ label: 'Close', cls: 'btn' }]);
-    $$('#modal-body button[data-del]').forEach(b => b.onclick = async () => {
-      await post('visualfilter', { action: 'delete', id: b.dataset.del });
+    const changed = async (params, okMsg) => {
+      const res = await post('visualfilter', params);
+      if (!res || res.ok === false) {
+        toast((res && res.error) || 'Could not save filter.', 'err');
+        return;
+      }
       closeModal(); this.dialog();
-    });
-    $$('#modal-body button[data-tog]').forEach(b => b.onclick = async () => {
+      if (S.layout) App.loadWorkspace();   // repaint highlights in open panes
+    };
+    $$('#modal-body button[data-del]').forEach(b => b.onclick = () =>
+      changed({ action: 'delete', id: b.dataset.del }));
+    $$('#modal-body button[data-tog]').forEach(b => b.onclick = () => {
       const cur = (r.filters || []).find(f => f.id === b.dataset.tog) || {};
-      await post('visualfilter', { action: 'save', id: cur.id, name: cur.name,
+      changed({ action: 'save', id: cur.id, name: cur.name,
         query: cur.query, morph: cur.morph, style: cur.style,
         enabled: cur.enabled === false });
-      closeModal(); this.dialog();
     });
     const add = $('#vf-add');
     if (add) add.onclick = async () => {
       const q = $('#vf-q').value.trim();
       const mp = $('#vf-morph').value.trim();
       if (!q && !mp) { toast('A filter needs a query or morphology.', 'warn'); return; }
-      await post('visualfilter', { action: 'save', name: $('#vf-name').value.trim() || q || mp,
+      await changed({ action: 'save', name: $('#vf-name').value.trim() || q || mp,
         query: q, morph: mp, style: $('#vf-style').value });
-      closeModal(); this.dialog();
-      if (S.layout) App.loadWorkspace();
     };
   },
 };
@@ -169,6 +178,7 @@ const ClickSearch = {
       const r = await api('search/panel_link', {});
       this.linkSet = (r && r.link_set) || '';
     } catch (e) { this.linkSet = ''; }
+    if (this.onChange) this.onChange();
   },
   /* When the search panel is linked to this pane's link set, a plain click on
    * a word (not a link, not a selection) runs it as a search. Drag-selecting
@@ -199,11 +209,124 @@ const ClickSearch = {
         } catch (err) { word = ''; }
         word = (word || '').trim();
         if (word.length < 2) return;
+        // A word click is always a plain library search.  Without resetting
+        // the type, a Morph/Books selection would run its own query instead.
+        if (Search.type !== 'all') {
+          const all = document.querySelector('.stype-btn[data-type="all"]');
+          if (all) all.click();
+        }
         $('#sq').value = word;
         App.show('search');
         Search.go();
       });
     } catch (e) { /* never break the reader */ }
+  },
+};
+
+/* Find a word on the page you are reading, without leaving the passage.
+ * Matches are real <mark> nodes in the pane body, so they survive scrolling
+ * and are removed again before the pane is repainted. */
+const PaneFind = {
+  attach(pane, body, tools) {
+    if (!tools || !body || tools.querySelector('.pane-find')) return;
+    const ui = el('div', 'pane-find');
+    const input = el('input', 'pane-find-q');
+    input.type = 'search';
+    input.placeholder = 'Find here';
+    input.title = 'Find in this pane (Ctrl+F)';
+    const count = el('span', 'pane-find-count', '');
+    const prev = el('button', '', '‹'); prev.title = 'Previous match';
+    const next = el('button', '', '›'); next.title = 'Next match';
+    const close = el('button', '', '✕'); close.title = 'Close find';
+    ui.append(input, count, prev, next, close);
+    tools.appendChild(ui);
+
+    input.oninput = () => this.run(body, input, count);
+    input.onkeydown = (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); this.step(body, e.shiftKey ? -1 : 1); }
+      if (e.key === 'Escape') {
+        e.preventDefault(); this.clear(body);
+        input.value = ''; count.textContent = ''; input.blur();
+      }
+    };
+    prev.onclick = () => this.step(body, -1);
+    next.onclick = () => this.step(body, 1);
+    close.onclick = () => {
+      this.clear(body);
+      ui.hidden = true;     // keep the widget so Ctrl+F can reopen it
+    };
+  },
+
+  focus(pane) {
+    const input = pane && pane.querySelector('.pane-find-q');
+    if (input) {
+      const ui = input.closest('.pane-find');
+      if (ui) ui.hidden = false;
+      input.focus(); input.select(); return true;
+    }
+    return false;
+  },
+
+  clear(body) {
+    const st = body && body._find;
+    if (!st) return;
+    st.marks.forEach(m => { if (m.isConnected) m.replaceWith(document.createTextNode(m.textContent)); });
+    body.normalize();
+    body._find = null;
+  },
+
+  run(body, input, count) {
+    this.clear(body);
+    const q = (input.value || '').trim();
+    const st = { marks: [], idx: 0, count };
+    body._find = st;
+    count.textContent = '';
+    if (q.length < 2) return;
+    const needle = q.toLocaleLowerCase();
+    const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        const p = node.parentElement;
+        if (!p || p.closest('a,button,script,style')) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(node => {
+      let cur = node, off = 0;
+      while (cur && cur.nodeValue) {
+        const text = cur.nodeValue;
+        const at = text.toLocaleLowerCase().indexOf(needle, off);
+        if (at < 0) break;
+        const mark = document.createElement('mark');
+        mark.className = 'find-hit';
+        mark.textContent = text.slice(at, at + q.length);
+        const rest = cur.splitText(at + q.length);
+        cur.nodeValue = text.slice(0, at);
+        cur.parentNode.insertBefore(mark, rest);
+        st.marks.push(mark);
+        cur = rest;
+        off = 0;
+      }
+    });
+    if (st.marks.length) { st.marks[0].classList.add('current'); this.show(st); }
+  },
+
+  show(st) {
+    st.count.textContent = st.marks.length
+      ? (st.idx + 1) + '/' + st.marks.length : '';
+    const cur = st.marks[st.idx];
+    if (cur) cur.scrollIntoView({ block: 'center' });
+  },
+
+  step(body, dir) {
+    const st = body && body._find;
+    if (!st || !st.marks.length) return;
+    st.marks[st.idx].classList.remove('current');
+    st.idx = (st.idx + dir + st.marks.length) % st.marks.length;
+    st.marks[st.idx].classList.add('current');
+    this.show(st);
   },
 };
 
@@ -270,7 +393,9 @@ const Highlights = {
 
   async load() {
     const r = await api('highlights');
+    if (!r || r.ok === false) return false;
     this.rows = r.highlights || [];
+    this.total = Number(r.total) || this.rows.length;
     this.byUnit.clear();
     this.byRef.clear();
     this.rows.forEach(h => {
@@ -329,9 +454,10 @@ const Highlights = {
     if (label === undefined) {
       label = (prompt('Label this highlight (optional):', '') || '').trim();
     }
-    await api('highlights', { action: 'add', id: moduleId, key: unitKey,
+    const r = await api('highlights', { action: 'add', id: moduleId, key: unitKey,
                               quote: quote.slice(0, 400), color: color || 'yellow',
                               label: label || '' });
+    if (!r || r.ok === false) { toast((r && r.error) || 'Could not save the highlight.', 'err'); return ''; }
     sel.removeAllRanges();
     await this.load();
     toast('Highlighted “' + quote.slice(0, 40) + (quote.length > 40 ? '…' : '') + '”'
@@ -340,10 +466,15 @@ const Highlights = {
   },
 
   async remove(hid) {
-    await api('highlights', { action: 'delete', hid: hid });
+    const r = await api('highlights', { action: 'delete', hid: hid });
+    if (!r || r.ok === false) {
+      toast((r && r.error) || 'Could not delete the highlight.', 'err');
+      return false;
+    }
     await this.load();
     Reader.repaint();
     if (S.view === 'today') Dashboard.paintHighlights();
+    return true;
   },
 
   /* Restore saved quotations across inline formatting boundaries.
@@ -451,8 +582,14 @@ const Highlights = {
   async list(refLabel) {
     await this.load();
     if (!this.rows.length) return '';
-    let h = '<div class="dash-h">Highlights · ' + this.rows.length
+    const total = Number(this.total) || this.rows.length;
+    let h = '<div class="dash-h">Highlights · ' + total
       + ' <a href="#" class="tiny muted" id="hl-pal">palettes</a></div>';
+    if (total > 40) {
+      h += '<div class="tiny muted" style="margin-bottom:6px">'
+        + 'Showing the first 40 of ' + total + ' highlights. '
+        + 'Filter by passage to see the rest.</div>';
+    }
     this.rows.slice(0, 40).forEach(x => {
       const label = refLabel ? refLabel(x) : (x.unit_key || '');
       h += '<div class="hl-row">'
@@ -460,8 +597,10 @@ const Highlights = {
         + '<span class="hl-q">' + esc(x.quote) + '</span>'
         + (x.label ? '<span class="hl-lab">' + esc(x.label) + '</span>' : '')
         + '<span class="hl-k">' + esc(label) + '</span>'
-        + '<a href="#" class="hl-go" data-m="' + esc(x.module_id)
-        + '" data-k="' + esc(x.unit_key) + '">open</a>'
+        + (modById(x.module_id)
+            ? '<a href="#" class="hl-go" data-m="' + esc(x.module_id)
+              + '" data-k="' + esc(x.unit_key) + '">open</a>'
+            : '<span class="tiny muted">removed</span>')
         + '<a href="#" class="hl-del" data-hid="' + esc(x.id) + '">×</a>'
         + '</div>';
     });
@@ -488,7 +627,15 @@ const Tags = {
   items: [],
   verse: null,         // the verse the reader is on, and its tags
   _seq: 0,             // which load is the latest
+  _last: null,         // the passage the picker is tagging
   byVerse: new Map(),   // "book.chapter.verse" -> [tag item]
+
+  async reload() {
+    // A bare load() drops the `verse` section from the response, so toggling
+    // a tag off after turning it on found no item and silently did nothing.
+    const last = this._last || {};
+    return this.load(last.moduleId, last.unitKey);
+  },
 
   async load(moduleId, unitKey) {
     /* Loads overlap -- one at startup, one when a guide opens, one when the
@@ -496,6 +643,7 @@ const Tags = {
      * overwrite a newer one.  The counter says which answer is the latest,
      * and an answer that has been overtaken is dropped rather than applied. */
     const seq = ++this._seq;
+    if (moduleId && unitKey) this._last = { moduleId, unitKey };
     const q = (moduleId && unitKey)
       ? { module_id: moduleId, unit_key: unitKey } : {};
     const r = await api('tags', q).catch(() => null);
@@ -535,7 +683,7 @@ const Tags = {
       toast((r && r.error) || 'Could not tag this verse.', 'err');
       return false;
     }
-    await this.load();
+    await this.reload();
     return true;
   },
 
@@ -545,7 +693,7 @@ const Tags = {
       toast((r && r.error) || 'Could not remove that tag.', 'err');
       return false;
     }
-    await this.load();
+    await this.reload();
     return true;
   },
 
@@ -556,18 +704,18 @@ const Tags = {
       toast((r && r.error) || 'Could not create the tag.', 'err');
       return null;
     }
-    await this.load();
+    await this.reload();
     return r && r.tag ? r.tag : null;
   },
 
   async rename(id, name) {
     await post('tags', { action: 'rename', id: id, name: name });
-    await this.load();
+    await this.reload();
   },
 
   async destroy(id) {
     await post('tags', { action: 'delete', id: id });
-    await this.load();
+    await this.reload();
   },
 
   /* The picker: put this passage in a tag, or in several.
@@ -621,14 +769,17 @@ const Tags = {
   },
 
   /* Everything that is tagged, and what is in each tag. */
-  async browse() {
-    await this.load();
-    if (!this.tags.length) {
+  async browse(onlyId) {
+    await this.reload();
+    /* Home links name the tag the reader pressed; opening the whole browser
+     * would lose which one they meant. */
+    const tags = onlyId ? this.tags.filter(t => t.id === onlyId) : this.tags;
+    if (!tags.length) {
       modal('Tags', '<div class="empty">No tags yet. Right-click a verse '
         + '&rarr; <b>Tag this verse</b>.</div>', [{ label: 'Close', cls: 'btn', hidePrint: true }]);
       return;
     }
-    const body = this.tags.map(t => {
+    const body = tags.map(t => {
       const its = this.items.filter(x => x.tag_id === t.id);
       const refs = its.map(it => {
         const r = (it.book && it.chapter && it.verse)

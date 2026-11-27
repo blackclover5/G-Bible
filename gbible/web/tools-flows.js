@@ -8,7 +8,9 @@ const Flows = {
     if (!host) return;
     const r = await api('workflow');
     const s = await api('workflow', { action: 'slots' });
-    this.slots = (s.slots || []).filter(x => x.installed > 0);
+    this.slots = (s.slots || []);
+    this.kinds = (s.kinds || []).length ? s.kinds
+      : ['open', 'search', 'outline', 'word', 'clause'];
     if (!host) return;
     const list = (r.workflows || []);
     $('#wf-side').innerHTML = list.length
@@ -110,11 +112,11 @@ const Flows = {
             ? 'Search' : (s.kind === 'outline' ? 'Outline' : 'Open')) + '</b> '
           + (s.kind === 'search'
               ? esc(s.query || '(no query)')
-              : (mod ? esc(mod.name)
-                     : esc((this.slots.find(x => x.id === s.slot) || {}).label
-                           || s.module_id || 'nothing chosen')))
+              : (s.module_id ? esc(modLabel(s.module_id))
+                 : esc((this.slots.find(x => x.id === s.slot) || {}).label
+                       || 'nothing chosen')))
           + '<div class="sub">' + esc(s.note || s.kind) + '</div></span>'
-        + '<select data-kind="' + i + '">' + ['open', 'search', 'outline']
+        + '<select data-kind="' + i + '">' + this.kinds
             .map(k => '<option value="' + k + '"' + (s.kind === k ? ' selected' : '')
               + '>' + k + '</option>').join('') + '</select>'
         + '<select data-pick="' + i + '"><option value="">choose…</option>'
@@ -123,7 +125,7 @@ const Flows = {
             + (s.slot === x.id && !s.module_id ? ' selected' : '') + '>'
             + esc(x.label) + ' (' + x.installed + ')</option>').join('')
         + '</optgroup><optgroup label="Installed">'
-        + S.modules.filter(m => m.reader !== 'verse' || true).map(m =>
+        + S.modules.map(m =>
             '<option value="mod:' + esc(m.id) + '"'
             + (s.module_id === m.id ? ' selected' : '') + '>'
             + esc(m.name) + '</option>').join('')
@@ -160,7 +162,8 @@ const Flows = {
     };
     $('#wf-del', host).onclick = async () => {
       if (!confirm('Delete "' + wf.name + '"?')) return;
-      await api('workflow', { action: 'delete', id: wf.id });
+      const r = await api('workflow', { action: 'delete', id: wf.id });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not delete the workflow.', 'err'); return; }
       this.current = '';
       this.load();
     };
@@ -223,11 +226,21 @@ const Flows = {
         opened++;
         continue;
       }
+      if (step.action === 'word' || step.action === 'clause') {
+        // These steps are instructions, not resources; say what to do rather
+        // than counting an invisible no-op as an opened pane.
+        const what = step.action === 'word' ? 'Word study' : 'Clause study';
+        toast(what + ' — ' + (step.note || 'no note') + ' ('
+          + ((step.cursor || {}).ref || r.ref) + ')');
+        opened++;
+        continue;
+      }
       if (step.action === 'outline') {
         Outlines.book = (step.cursor || {}).book || 'Gen';
         Outlines.chapter = (step.cursor || {}).chapter || 1;
         App.show('guides');
         $('#g-tab').value = 'outline';
+        $('#g-tab').dispatchEvent(new Event('change', { bubbles: true }));
         opened++;
         continue;
       }

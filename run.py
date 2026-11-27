@@ -38,7 +38,8 @@ def _use_venv() -> None:
     Nothing is installed for you -- with no .venv this is a no-op and the app
     falls back to the browser's speech engine.
     """
-    if os.environ.get("GBIBLE_VENV"):
+    # A distinct boolean marker so the re-exec cannot loop.
+    if os.environ.get("GBIBLE_VENV_REEXEC"):
         return
     venv = Path(__file__).resolve().parent / ".venv"
     py = venv / "bin" / "python"
@@ -54,7 +55,7 @@ def _use_venv() -> None:
             return
     except OSError:
         pass
-    env = dict(os.environ, GBIBLE_VENV="1")
+    env = dict(os.environ, GBIBLE_VENV_REEXEC="1")
     os.execve(str(py), [str(py), str(Path(__file__).resolve()), *sys.argv[1:]], env)
 
 
@@ -186,7 +187,12 @@ def main() -> int:
     # worker reports and waits rather than making the app feel broken.
     def _indexer():
         try:
-            from gbible import posindex
+            from gbible import db, posindex
+            # worker_state() reads pos_meta.  The background thread had not
+            # necessarily run ensure() yet, so on a fresh library the status
+            # query raced it and raised "no such table: pos_meta" at startup.
+            # Create the tables here, before starting the worker.
+            posindex.ensure(db.connect())
             w = posindex.BackgroundIndexer().start()
             st = posindex.worker_state()
             # flush=True because the launcher re-execs into the venv, which
@@ -213,31 +219,12 @@ def main() -> int:
         try:
             import webview
 
+            # The in-app updater now lives behind the local API
+            # (app/update/check|prepare|apply), so the native window and the
+            # browser use exactly the same check-and-install path. A js_api
+            # object is still required by pywebview, but it needs no methods.
             class GBibleAPI:
-                def checkForUpdates(self):
-                    import json, urllib.request, webbrowser
-                    try:
-                        with urllib.request.urlopen(
-                                "https://api.github.com/repos/blackclover5/G-Bible/releases/latest",
-                                timeout=15) as r:
-                            data = json.load(r)
-                    except Exception as exc:
-                        return {"ok": False, "error": str(exc)}
-                    tag = data.get("tag_name", "")
-                    asset = None
-                    for a in (data.get("assets") or []):
-                        if "AppImage" in (a.get("name") or "") or (a.get("name") or "").endswith(".exe"):
-                            asset = a
-                            break
-                    if asset is None and data.get("assets"):
-                        asset = data["assets"][0]
-                    link = (asset or {}).get("browser_download_url") or data.get("html_url")
-                    if link:
-                        try:
-                            webbrowser.open(link)
-                        except Exception:
-                            pass
-                    return {"ok": True, "tag": tag, "url": link}
+                pass
 
             api = GBibleAPI()
             webview.create_window("G-Bible", url, width=1280, height=860, js_api=api)

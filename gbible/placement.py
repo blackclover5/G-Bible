@@ -279,35 +279,6 @@ def _norm(s: str) -> str:
     return "".join(ch for ch in (s or "").lower() if ch.isalnum())
 
 
-def duplicates_of(module, others) -> list[dict]:
-    """Installed modules that are the same work under another name.
-
-    Two signals, both conservative enough to be worth telling the user about:
-    an identical normalised title, or the same SWORD module id appearing from a
-    different repository.  The second is the common case -- the World English
-    Bible exists on both eBible.org and CrossWire, and installing both gives
-    you two copies of the same text in the search results.
-    """
-    key = _norm(module.name)
-    out: list[dict] = []
-    for o in others:
-        if o.id == module.id:
-            continue
-        same_id = (module.source_name and o.source_name
-                   and module.source_name == o.source_name)
-        same_title = key and key == _norm(o.name)
-        if same_id or same_title:
-            out.append({
-                "module_id": o.id,
-                "name": o.name,
-                "type": o.type,
-                "repo": o.source_name or o.source or "",
-                "reason": ("same module from another repository"
-                           if same_id else "same title"),
-            })
-    return out
-
-
 def duplicates_of_names(name: str, repo_id: str, item_id: str,
                         installed=()) -> list[dict]:
     """Does the user already have this, under another name or another source?

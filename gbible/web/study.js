@@ -1,4 +1,6 @@
 const Study = {
+  _scanSeq: 0,
+  _senseSeq: 0,
   current: null,
 
   sec(title, body, n) {
@@ -85,8 +87,8 @@ const Study = {
     return h;
   },
 
-  /* Turn decoded morphology features into a human-readable label, the way
-   * Logos presents the grammatical form you can pick after typing a word + @.
+  /* Turn decoded morphology features into a human-readable label for the
+   * grammatical-form picker that follows a word + @.
    */
   _morphLabel(f) {
     const parts = [];
@@ -113,7 +115,7 @@ const Study = {
       + esc(m.name) + ' (' + esc(m.lang || '') + ')</option>').join('');
     modal('Morph search', '<div class="st-body">Search the morphology of tagged '
       + 'texts. Type a word or lemma and press <b>@</b> to pick its grammatical '
-      + 'form (as in Logos), or enter a code prefix directly '
+      + 'form, or enter a code prefix directly '
       + '(<code>HNcmsa</code>, <code>HTd/</code>, <code>V-PAI-3S</code>).</div>'
       + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">'
       + '<label>Resource <select id="morph-resource"><option value="">All tagged resources</option>'
@@ -210,7 +212,7 @@ const Study = {
           + esc((x.surface || x.code)) + '</a>';
       });
       h += '</div>';
-      /* Add Versions -- Logos shows the same search side by side across
+      /* Add Versions -- show the same search side by side across
        * translations.  Group this search's hits by module, offer the other
        * tagged modules, and render each selection as its own column. */
       const byModule = {};
@@ -442,6 +444,7 @@ const Study = {
    * twice over.
    */
   async guideAi(host, term, opts) {
+    if (aiOff()) return false;
     opts = opts || {};
     const lens = opts.lens || '';
     const action = opts.action === 'fact' ? 'fact' : 'topic';
@@ -503,6 +506,9 @@ const Study = {
     let followBtn = null;
     const overview = action === 'fact'
       ? Ai.factOverview(term, lens) : Ai.topicOverview(term);
+    // Remember the scope this guide was gathered under; a follow-up carried
+    // into the assistant panel must not silently search a different library.
+    const guideScope = (Ai.settings && Ai.settings.scope) || '';
 
     // The form is declared before `ask`, because `ask` uses it -- and because a
     // function that closes over a `const` declared after it is a trap waiting
@@ -536,7 +542,7 @@ const Study = {
         lastCites = r.cites || [];
         // The key tells the two guides apart: they read different corpora,
         // so an answer about the term is not an answer about the topic.
-        Ai.cacheTopic(action + ':' + lens + ':' + term, r.text, r.cites);
+        Ai.cacheTopic(Ai.guideKey(action, lens, term), r.text, r.cites);
         // Now there is an exchange to carry into the panel.
         if (followBtn) followBtn.disabled = false;
         // The badge says what is behind the fold, so a reader who never opens
@@ -582,14 +588,20 @@ const Study = {
       followBtn.disabled = !hist.length;
       followBtn.onclick = () => {
         App.show('ai');
-        Ai.adoptTopic(hist, lastCites, term);
+        Ai.adoptTopic(hist, lastCites, term, guideScope);
       };
       asks.appendChild(followBtn);
     };
     showQuestions((opts.fallback || []).map(q => ({ question: q, answer: '' })));
-    Ai.guideQuestions(term, { action, lens }).then(qs => {
-      if (qs && qs.length) showQuestions(qs);
-    }).catch(() => {});
+    // The generated questions are a second full model generation over the same
+    // guide material.  Run it *after* the overview has finished, not alongside
+    // it: on a local model two concurrent generations serialize and both slow
+    // down.  The fallback questions are already visible in the meantime.
+    const loadQuestions = () => {
+      Ai.guideQuestions(term, { action, lens }).then(qs => {
+        if (qs && qs.length) showQuestions(qs);
+      }).catch(() => {});
+    };
 
     body.appendChild(form);
 
@@ -602,7 +614,7 @@ const Study = {
       if (prev) { try { prev(); } catch (e) { /* the guide's own cleanup */ } }
     };
 
-    const cached = Ai.topicCache[action + ':' + lens + ':' + term];
+    const cached = Ai.topicCache[Ai.guideKey(action, lens, term)];
     if (cached) {
       // Already answered this topic: show it again without spending anything.
       if (cached.cites && cached.cites.length) {
@@ -619,9 +631,11 @@ const Study = {
       // keeping too: a topic asked once costs one call, not one per visit.
       // They are fetched above, and resolve out of the cache without a call.
       if (followBtn) followBtn.disabled = false;
+      loadQuestions();
       return true;
     }
     await ask(overview);
+    loadQuestions();
     return true;
   },
 
@@ -647,7 +661,10 @@ const Study = {
       } else {
         list = entries.filter(e => match(e.name) || match(e.module));
       }
-      let h = '<div class="tiny" style="margin:6px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+      let h = '<div class="tiny muted" style="margin:6px 0">An index of places and '
+        + 'dictionary headwords from your installed resources — not a list of '
+        + 'Bible passages. Use the reference box in Guides for a passage.</div>'
+        + '<div class="tiny" style="margin:6px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
         + '<input type="search" id="bb-q" placeholder="Filter…" value="' + esc(q) + '" style="flex:1;min-width:160px">'
         + '<button class="btn tiny' + (tab === 'places' ? ' on' : '') + '" data-tab="places">Places (' + places.length + ')</button>'
         + '<button class="btn tiny' + (tab === 'entries' ? ' on' : '') + '" data-tab="entries">Entries (' + entries.length + ')</button>'
@@ -670,7 +687,8 @@ const Study = {
           h += '<div class="st-note"><div class="st-t">' + esc(e.name) + ' ' + kindBadge + '</div>'
             + '<div class="tiny muted">' + esc(e.module) + '</div>'
             + '<div class="tiny"><a href="#" data-fact="' + esc(e.name) + '">Open Topics</a>'
-            + ' <a href="#" data-ref="' + esc(e.name) + '">Open in Bible</a></div>'
+            + ' <a href="#" data-bb-open="' + esc(e.module_id) + '" data-key="'
+            + esc(e.name) + '">Open entry</a></div>'
             + '</div>';
         });
       }
@@ -681,7 +699,13 @@ const Study = {
       h += '</div>';
       $('#modal-body').innerHTML = h;
       const inp = $('#bb-q');
-      inp.oninput = () => { q = inp.value; render(); };
+      inp.oninput = () => {
+        q = inp.value;
+        const at = inp.selectionStart;
+        render();
+        const again = $('#bb-q');
+        if (again) { again.focus(); again.setSelectionRange(at, at); }
+      };
       $$('#modal-body button[data-tab]').forEach(btn => {
         btn.onclick = () => { tab = btn.dataset.tab; render(); };
       });
@@ -689,12 +713,21 @@ const Study = {
         a.onclick = (e) => { e.preventDefault(); Study.openFact(a.dataset.fact); };
       });
       $$('#modal-body a[data-map]').forEach(a => {
-        a.onclick = (e) => { e.preventDefault(); MapsUI.showPlace && MapsUI.showPlace(a.dataset.map); };
+        a.onclick = (e) => {
+          e.preventDefault(); closeModal();
+          if (MapsUI.showPlace) MapsUI.showPlace(a.dataset.map);
+        };
       });
-      $$('#modal-body a[data-ref]').forEach(a => {
-        a.onclick = (e) => { e.preventDefault(); const ref = a.dataset.ref; if (ref) { App.show('workspace'); Reader.go((S.layout && S.layout.panes && S.layout.panes[0]) || null, ref); } };
+      $$('#modal-body a[data-bb-open]').forEach(a => {
+        a.onclick = (e) => {
+          e.preventDefault();
+          const mod = modById(a.dataset.bbOpen);
+          if (!mod) { toast('That resource is not installed.', 'warn'); return; }
+          closeModal(); App.show('workspace');
+          Workspace.openModule(mod.id, { key: a.dataset.key || '' });
+        };
       });
-      this.wire($('#modal-body'));
+      // The document-level data-ref router opens these once and safely.
     };
     render();
   },
@@ -743,8 +776,14 @@ const Study = {
           if (pane) Reader.go(pane, book + ' ' + ch);
           const r = await api('outline/chapter', { book, chapter: ch });
           if (!r.ok) { toast('No outline.', 'warn'); return; }
-          let txt = (r.sections || []).map(s => (s.title || '')).join('\n');
-          modal('Outline: ' + book + ' ' + ch, '<div class="st-body">' + esc(txt || 'No headings.') + '</div>',
+          const rows = (r.sections || []).map(s => {
+            const verses = (s.verses || []).slice(0, 4).map(v =>
+              '<a href="#" data-ref="' + esc(v) + '">' + esc(v) + '</a>').join(', ');
+            return '<div class="st-note"><div class="st-t">' + esc(s.title || '')
+              + '</div>' + (verses ? '<div class="tiny">' + verses + '</div>' : '') + '</div>';
+          }).join('');
+          modal('Outline: ' + book + ' ' + ch,
+            '<div class="st-body">' + (rows || '<div class="empty">No headings.</div>') + '</div>',
             [{ label: 'Close', cls: 'btn' }]);
         };
       });
@@ -758,25 +797,30 @@ const Study = {
       [{ label: 'Close', cls: 'btn' }]);
     let text = '';
     const render = async () => {
+      const seq = ++this._scanSeq;
       const r = await api('reference/scan', { text });
-      const refs = (r.ok && r.refs) ? r.refs : [];
-      let h = '<div style="margin:6px 0"><textarea id="rs-text" rows="6" style="width:100%" placeholder="Paste a paragraph containing Bible references…">' + esc(text) + '</textarea></div>'
-        + '<div class="tiny muted">' + refs.length + ' reference' + (refs.length === 1 ? '' : 's') + ' found.</div>'
-        + '<div class="st-body" style="max-height:40vh;overflow:auto;margin-top:8px">';
-      refs.forEach(x => {
-        h += '<div class="st-note"><div class="st-t">' + esc(x.label) + '</div>'
-          + '<div class="tiny"><a href="#" data-ref="' + esc(x.label) + '">Open passage</a></div></div>';
-      });
-      if (!refs.length) h += '<div class="tiny muted">No references found.</div>';
-      h += '</div>';
+      if (seq !== this._scanSeq) return;
+      let h = '<div style="margin:6px 0"><textarea id="rs-text" rows="6" style="width:100%" placeholder="Paste a paragraph containing Bible references…">' + esc(text) + '</textarea>'
+        + '<button class="btn" id="rs-go" style="margin-top:6px">Scan</button></div>';
+      if (!r || r.ok === false) {
+        h += '<div class="warn">' + esc((r && r.error) || 'Could not scan that text.') + '</div>';
+      } else {
+        const refs = r.refs || [];
+        h += '<div class="tiny muted">' + refs.length + ' reference'
+          + (refs.length === 1 ? '' : 's') + ' found.</div>'
+          + '<div class="st-body" style="max-height:40vh;overflow:auto;margin-top:8px">';
+        refs.forEach(x => {
+          h += '<div class="st-note"><div class="st-t">' + esc(x.label) + '</div>'
+            + '<div class="tiny"><a href="#" data-ref="' + esc(x.label) + '">Open passage</a></div></div>';
+        });
+        if (!refs.length) h += '<div class="tiny muted">No references found.</div>';
+        h += '</div>';
+      }
       $('#modal-body').innerHTML = h;
       const ta = $('#rs-text');
       ta.oninput = () => { text = ta.value; };
-      ta.onblur = () => render();
-      $$('#modal-body a[data-ref]').forEach(a => {
-        a.onclick = (e) => { e.preventDefault(); Study.openPassage(a.dataset.ref); };
-      });
-      this.wire($('#modal-body'));
+      $('#rs-go').onclick = () => { text = ta.value; render(); };
+      // No blur re-render: it replaced the result links before a click could land.
     };
     // initial with empty text
     await render();
@@ -787,9 +831,11 @@ const Study = {
       [{ label: 'Close', cls: 'btn' }]);
     const b = await api('study/biblebrowser', {});
     if (!b.ok) { $('#modal-body').innerHTML = '<div class="st-body">' + esc(b.error || 'Failed') + '</div>'; return; }
-    const terms = /god|lord|yahweh|jehovah|elohim|adonai|almighty|creator|savior|saviour|messiah|christ|shepherd|rock|king/i;
+        const terms = /\b(god|lord|yahweh|jehovah|elohim|adonai|almighty|creator|savior|saviour|messiah|christ|shepherd|rock|king)\b/i;
     const entries = (b.entries || []).filter(e => terms.test(e.name));
-    let h = '<div class="tiny muted" style="margin:6px 0">' + entries.length + ' entries</div>'
+    let h = '<div class="tiny muted" style="margin:6px 0">'
+      + entries.length + ' dictionary headwords matching divine-name words. '
+      + 'This is a text filter, not a curated list of names for God.</div>'
       + '<div class="st-body" style="max-height:60vh;overflow:auto">';
     entries.slice(0, 500).forEach(e => {
       h += '<div class="st-note"><div class="st-t">' + esc(e.name) + '</div>'
@@ -810,8 +856,10 @@ const Study = {
     modal('Sense Search', '<div class="st-loading">…</div>',
       [{ label: 'Close', cls: 'btn' }]);
     let concept = '';
+    const seq = ++this._senseSeq;
     const run = async () => {
       const r = await api('study/sensesearch', { q: concept });
+      if (seq !== this._senseSeq) return;
       let h = '<div style="margin:6px 0;display:flex;gap:6px">'
         + '<input id="ss-q" type="search" placeholder="concept, e.g. love, covenant" value="' + esc(concept) + '" style="flex:1">'
         + '<button class="btn" id="ss-go">Search</button></div>';
@@ -833,10 +881,6 @@ const Study = {
       const inp = $('#ss-q');
       inp.onkeydown = (e) => { if (e.key === 'Enter') { concept = inp.value; run(); } };
       $('#ss-go').onclick = () => { concept = inp.value; run(); };
-      $$('#modal-body a[data-ref]').forEach(a => {
-        a.onclick = (e) => { e.preventDefault(); Study.openPassage(a.dataset.ref); };
-      });
-      this.wire($('#modal-body'));
       inp.focus();
     };
     await run();
@@ -1045,15 +1089,11 @@ async openCrossrefs(ref) {
         + 'verse, and it has no entry of its own.</div>';
     }
 body.innerHTML = h;
-    $$('#modal-body a[data-ref]').forEach(a => a.onclick = (e) => {
-      e.preventDefault();
-      Reader.openRefAnywhere(a.dataset.ref.replace('.', ' '));
-    });
     $$('.st-h', body).forEach(hh => {
       hh.onclick = () => hh.parentElement.classList.toggle('open');
       hh.title = 'Click to fold or unfold this section';
     });
-    body.insertBefore(this.guideChrome(body), body.firstChild);
+    body.insertBefore(this.guideChrome(body, '', ref), body.firstChild);
     this.wire(body);
   },
 
@@ -1090,7 +1130,7 @@ body.innerHTML = h;
      * condense what is there.  One translation is used, not all of them -- five
      * copies of the same verses would only make the summary repeat itself. */
     const aiText = (b.texts && b.texts.length) ? b.texts[0].text : '';
-    if (aiText) {
+    if (aiText && !aiOff()) {
       sec('AI', b.texts[0].module,
         '<div class="st-tools">'
         + '<button class="btn" id="pg-ai-sum">Summarise this passage</button>'
@@ -1131,7 +1171,8 @@ body.innerHTML = h;
     if (b.xrefs && b.xrefs.length) {
       sec('Cross-references', b.xrefs.length + ' links',
         '<div class="pg-xref">' + b.xrefs.map(x =>
-          '<a href="#">' + esc(x.label.replace('.', ' ')) + '</a>').join('')
+          '<a href="#" data-ref="' + esc(x.label) + '">'
+          + esc(x.label.replace('.', ' ')) + '</a>').join('')
         + '</div>');
     }
     const _markerItems = (b.sermons || []).concat(b.studies || []);
@@ -1146,7 +1187,7 @@ body.innerHTML = h;
     }
     h += configuredGuideHtml(g);
     body.innerHTML = h;
-    body.insertBefore(this.guideChrome(body, gname), body.firstChild);
+    body.insertBefore(this.guideChrome(body, gname, ref), body.firstChild);
     $$('.st-h', body).forEach(hh => {
       hh.onclick = () => hh.parentElement.classList.toggle('open');
       hh.title = 'Click to fold or unfold this section';
@@ -1169,12 +1210,17 @@ body.innerHTML = h;
     if (!target) {
       modal(gtype.charAt(0).toUpperCase() + gtype.slice(1) + ': ' + ref,
         '<div class="st-loading">Gathering…</div>',
-        [{ label: 'Close', cls: 'btn' }]);
+        [{ label: 'Open in a study pane', cls: 'btn', fn: () => {
+          closeModal(); Reader.openGuidePane(ref, gtype);
+        } }, { label: 'Close', cls: 'btn' }]);
     }
     const body = target || $('#modal-body');
     if (!body) return;
     if (gtype === 'passage') {
-      const b = await api('study/passage', { ref }).catch(() => ({ ok: false }));
+      const [b, g] = await Promise.all([
+        api('study/passage', { ref }).catch(() => ({ ok: false })),
+        api('guide/run', { guide: gtype, key: ref }).catch(() => ({ ok: false })),
+      ]);
       if (!b.ok) { body.innerHTML = '<div class="st-body">' + esc(b.error) + '</div>'; return; }
       let h = '<div class="pg-src tiny muted">' + esc(b.ref)
         + ' · ' + b.verses + ' verse' + (b.verses === 1 ? '' : 's')
@@ -1184,7 +1230,7 @@ body.innerHTML = h;
           + (note ? ' <span class="tiny muted">' + esc(note) + '</span>' : '')
           + '</div>' + inner + '</div>';
       const aiText = (b.texts && b.texts.length) ? b.texts[0].text : '';
-      if (aiText) {
+      if (aiText && !aiOff()) {
         sec('AI', b.texts[0].module,
           '<div class="st-tools">'
           + '<button class="btn" id="pg-ai-sum">Summarise this passage</button>'
@@ -1224,7 +1270,8 @@ body.innerHTML = h;
       if (b.xrefs && b.xrefs.length) {
         sec('Cross-references', b.xrefs.length + ' links',
           '<div class="pg-xref">' + b.xrefs.map(x =>
-            '<a href="#">' + esc(x.label.replace('.', ' ')) + '</a>').join('')
+            '<a href="#" data-ref="' + esc(x.label) + '">'
+            + esc(x.label.replace('.', ' ')) + '</a>').join('')
           + '</div>');
       }
       const _markerItems = (b.sermons || []).concat(b.studies || []);
@@ -1237,9 +1284,9 @@ body.innerHTML = h;
             + (m.preview ? '<div class="st-body">' + esc(m.preview) + '</div>' : '')
             + '</div>').join(''));
       }
-      h += configuredGuideHtml(gtype);
+      h += configuredGuideHtml(g);
       body.innerHTML = h;
-      body.insertBefore(this.guideChrome(body, gtype), body.firstChild);
+      body.insertBefore(this.guideChrome(body, gtype, ref), body.firstChild);
       $$('.st-h', body).forEach(hh => {
         hh.onclick = () => hh.parentElement.classList.toggle('open');
         hh.title = 'Click to fold or unfold this section';
@@ -1318,8 +1365,8 @@ body.innerHTML = h;
           s.word_by_word.map(v => '<div class="st-note"><div class="st-src">'
           + esc(v.ref) + '</div><div class="st-body">'
           + v.words.map(w => '<span class="wbw-word"><b>' + esc(w.form)
-          + '</b>' + (w.strongs && w.strongs.length ? ' <span class="tiny muted">[' + w.strongs.join(', ') + ']</span>' : '')
-          + (w.morph && w.morph.length ? ' <span class="tiny muted">(' + w.morph.join(', ') + ')</span>' : '')
+          + '</b>' + (w.strongs && w.strongs.length ? ' <span class="tiny muted">[' + esc(w.strongs.join(', ')) + ']</span>' : '')
+          + (w.morph && w.morph.length ? ' <span class="tiny muted">(' + esc(w.morph.join(', ')) + ')</span>' : '')
           + (w.gloss ? ' <span class="wbw-gloss">' + esc(w.gloss) + '</span>' : '') + '</span>').join(' ')
           + '</div></div>').join(''));
       }
@@ -1408,12 +1455,6 @@ body.innerHTML = h;
       + (r.cites_count || 0) + ' it cites · scope: ' + esc(r.scope) + '</div>'
       + side('Cited by', r.incoming) + side('Cites', r.outgoing),
       [{ label: 'Close', cls: 'btn' }]);
-    $$('#modal-body [data-eqr]').forEach(a => a.onclick = (e) => {
-      e.preventDefault();
-      closeModal();
-      App.show('workspace');
-      Reader.openRefAnywhere(a.dataset.eqr.replace(/\./g, ' '));
-    });
   },
 
   async openQuestions(ref) {
@@ -1435,8 +1476,11 @@ body.innerHTML = h;
     $('#q-save').onclick = async () => {
       const body = qs.map(q => '**' + q.kind + '** — ' + q.q
         + '\n  <small>' + q.from + '</small>').join('\n\n');
-      await post('notes/save', { kind: 'note', title: 'Study questions: ' + ref,
-        ref_label: ref, body });
+      const saved = await post('notes/save', { kind: 'note',
+        title: 'Study questions: ' + ref, ref_label: ref, body });
+      if (!saved || saved.ok === false) {
+        toast((saved && saved.error) || 'Could not save the note.', 'err'); return;
+      }
       closeModal();
       toast('Saved as a note.');
     };
@@ -1485,7 +1529,10 @@ body.innerHTML = h;
     const anyXref = S.modules.filter(m => m.has_xref);
     let mid = moduleId;
     let why = '';
-    if (xrefBibles.length) {
+    const own = xrefBibles.find(x => x.id === moduleId);
+    if (own) {
+      why = 'the cross-reference table in ' + own.name;
+    } else if (xrefBibles.length) {
       mid = xrefBibles[0].id;
       why = 'the cross-reference table in ' + xrefBibles[0].name;
     } else if (anyXref.length) {
@@ -1500,7 +1547,8 @@ body.innerHTML = h;
     }
     const r = await api('search/equivalent', { id: mid, ref });
     if (!r.ok) { toast(r.error || 'Could not read that reference.', 'warn'); return; }
-    const keys = (r.equivalent || []).filter(k => k !== r.key);
+    const keys = (r.equivalent || []).filter(k => k !== r.key
+      && k !== r.ref && k !== ref);
     const isRef = (k) => /^[A-Za-z0-9]+\.[A-Za-z0-9]+\.\d+$/.test(k)
       || /^\d?\s?[A-Za-z]+\s+\d+/.test(k);
     const passages = keys.filter(isRef);
@@ -1603,7 +1651,7 @@ body.innerHTML = h;
    * interleaved.  Interleaving makes the move-up and move-down controls
    * useless: a chosen section with an unchosen one above it cannot move up,
    * because the slot it would enter is not itself chosen. */
-  async configureGuide(ref, moduleId) {
+  async configureGuide() {
     const defs = await api('guide/sections');
     const cur = await api('guide/config', { guide: 'passage' });
     const all = defs.sections || [];
@@ -1703,12 +1751,13 @@ body.innerHTML = h;
     modal('Configure Passage', '', [
       { label: 'Cancel', cls: 'btn' },
       { label: 'Reset to default', cls: 'btn', close: false, fn: async () => {
-        await post('guide/config', { action: 'set', guide: 'passage', sections: [] });
+        const r = await post('guide/config', { action: 'set', guide: 'passage', sections: [] });
+        if (!r || r.ok === false) { toast((r && r.error) || 'Could not reset the guide.', 'err'); return; }
         closeModal();
         toast('Back to the default guide.');
       } },
       { label: 'Save', cls: 'btn primary', close: false, fn: async () => {
-        const secs = on.querySelectorAll('.org-card[data-on]');
+        const secs = document.querySelectorAll('#gs-on .org-card[data-on]');
         if (!secs.length) {
           toast('Add at least one section, or press Reset.', 'warn');
           return;
@@ -1724,7 +1773,6 @@ body.innerHTML = h;
           : (r.error || 'Could not save that.'), r.ok ? '' : 'err');
       } }]);
     paint();
-    void ref; void moduleId;
   },
 
 
@@ -1787,7 +1835,10 @@ body.innerHTML = h;
 
   /* You can collapse or expand every section of a guide from one control.
    * Two guides with the same handful of controls is worth having once, here. */
-  guideChrome(host, currentGuide) {
+  guideChrome(host, currentGuide, ref) {
+    const at = () => (ref || $('#modal-title').textContent
+      .replace(/^Cross-references: /, '')
+      .replace(/^Passage: /, '').replace(/^Topics: /, '')).trim();
     const bar = el('div', 'guide-bar');
     const mk = (label, fn) => {
       const btn = el('button', 'btn tiny', label);
@@ -1817,8 +1868,7 @@ body.innerHTML = h;
         + (g.id === running ? ' selected' : '') + '>'
         + esc(g.name) + (g.preset ? '' : ' (yours)') + '</option>').join('');
       sel.onchange = () => {
-        const title = $('#modal-title').textContent.replace(/^Passage: /, '')
-          .replace(/^Topics: /, '');
+        const title = at();
         if (title && sel.value) {
           closeModal();
           this.openPassage(title, sel.value);
@@ -1845,7 +1895,7 @@ body.innerHTML = h;
      * a dialog you re-answer every time you open a passage. */
     const cfg = el('button', 'btn tiny', 'sections\u2026');
     cfg.onclick = () => {
-      const title = $('#modal-title').textContent.replace(/^Passage: /, '');
+      const title = at();
       closeModal();
       this.configureGuide(title);
     };
@@ -1854,8 +1904,7 @@ body.innerHTML = h;
      * it is saved alongside the presets. */
     const newG = el('button', 'btn tiny', 'new guide');
     newG.onclick = () => {
-      const title = $('#modal-title').textContent.replace(/^Passage: /, '')
-        .replace(/^Topics: /, '');
+      const title = at();
       closeModal();
       this.createGuide(title);
     };
@@ -1937,7 +1986,10 @@ body.innerHTML = h;
       };
     };
     bindLens();
-    const b = await api('study/fact', { q: term, n: 8, lens: lensVal });
+    // The visible guide must read the same scoped library as its AI, or the
+    // citations and the entries on screen describe different collections.
+    const scope = (Ai.settings && Ai.settings.scope) || '';
+    const b = await api('study/fact', { q: term, n: 8, lens: lensVal, scope });
     if (!b.ok) {
       body.innerHTML = lensBar + '<div class="st-body">' + esc(b.error)
         + '</div>';
@@ -1964,6 +2016,7 @@ body.innerHTML = h;
       + b.matched + ' entr' + (b.matched === 1 ? 'y' : 'ies') + ' matched in '
       + books.length + ' topic source' + (books.length === 1 ? '' : 's')
       + ' · ' + esc(books.join(', ')) + '</div>';
+    const summaries = [];
     b.sections.forEach(sec => {
       // Labelled counts: "3 1" beside PLACE read as a stray number.
       const counts = [];
@@ -1980,26 +2033,44 @@ body.innerHTML = h;
           + '</div>';
       });
       sec.items.forEach(it => {
+        const si = summaries.length;
+        summaries.push({ text: it.text || '', title: it.title || it.key || '' });
         h += '<div class="st-note"><div class="st-src">' + esc(it.module)
           + (it.length && it.length > it.text.length
             ? ' <span class="muted tiny">(' + it.length + ' chars)</span>' : '')
           + '</div><div class="st-t">' + esc(it.title) + '</div>'
           + '<div class="st-body">' + esc(it.text) + '</div>'
+          + '<div class="tiny">'
           + (it.module_id
-            ? '<div class="tiny"><a href="#" data-open="' + esc(it.module_id)
-              + '" data-key="' + esc(it.key) + '">Open in a pane</a></div>' : '')
+            ? '<a href="#" data-open="' + esc(it.module_id)
+              + '" data-key="' + esc(it.key) + '">Open in a pane</a> · ' : '')
+          + '<button class="btn tiny" data-sum="' + si
+            + '" title="Summarise this entry — sends its text to your AI provider">'
+            + 'Summarise</button></div>'
           + '</div>';
       });
       h += '</div>';
     });
     body.innerHTML = h;
-    body.insertBefore(this.guideChrome(body), body.firstChild);
+    // No guide toolbar here: Topics is a lookup, not a guide editor.  The
+    // generic bar used to default to "Passage guide" and, if changed, sent the
+    // term to study/passage as though it were a scripture reference.  Guide
+    // editing and guide switching stay in the Guides view and guide modals.
     bindLens();
     $$('.st-h', body).forEach(hh => {
       hh.onclick = () => hh.parentElement.classList.toggle('open');
       hh.title = 'Click to fold or unfold this section';
     });
     this.wire(body);
+    $$('[data-sum]', body).forEach(btn => {
+      btn.onclick = () => {
+        const s = summaries[Number(btn.dataset.sum)];
+        if (s && s.text) {
+          closeModal();
+          Ai.ask('summarize', s.text, s.title);
+        }
+      };
+    });
 
     // BibleProject videos for this term, fetched on demand and appended
     // below the entries.  Played from BibleProject's own host; nothing is
@@ -2302,21 +2373,21 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
   },
 
   /* =============================================== New Testament use of OT */
-  ouMods(sel) {
-    if (!this._ouMods) {
-      this._ouMods = (S.modules || []).filter(m => m.type === 'Bible');
-      const byId = new Map(this._ouMods.map(m => [m.id, m]));
-      ['#ou-nt', '#ou-ot'].forEach((q) => {
-        const el2 = $(q);
-        el2.innerHTML = this._ouMods.map(m =>
-          '<option value="' + esc(m.id) + '">' + esc(m.name) + '</option>').join('');
-      });
-      // No default chosen here: the pickers default to the first option, which
-      // is a New Testament in Basque, and the whole view then reports nothing.
-      // The server works out which Bibles have both testaments and the load
-      // below sets the fields from that.
-    }
-    return this._ouMods;
+  _ouSeq: 0,
+
+  ouMods() {
+    // Rebuild whenever the view opens: modules can be installed or removed,
+    // and a once-only build left stale or empty selects for the session.
+    const mods = (S.modules || []).filter(m => m.type === 'Bible');
+    ['#ou-nt', '#ou-ot'].forEach((q) => {
+      const sel = $(q);
+      if (!sel) return;
+      const keep = sel.value;
+      sel.innerHTML = mods.map(m =>
+        '<option value="' + esc(m.id) + '">' + esc(m.name) + '</option>').join('');
+      if (mods.some(m => m.id === keep)) sel.value = keep;
+    });
+    return mods;
   },
 
   async loadNtuSeOt() {
@@ -2324,18 +2395,24 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
     this.ouMods();
     /* Ask the server which installed Bibles actually carry both testaments,
      * rather than guessing from a name or a unit count. */
-    if (!this._ouDefaulted) {
-      const cap = await api('ntuseot/modules');
-      if (cap.ok && cap.both && cap.both.length) {
-        $('#ou-nt').value = cap.both[0].id;
-        $('#ou-ot').value = cap.both[0].id;
+    const cap = await api('ntuseot/modules');
+    const usable = ((cap && cap.both) || []).map(m => m.id);
+    if (usable.length) {
+      if (!usable.includes($('#ou-nt').value)) $('#ou-nt').value = usable[0];
+      if (!usable.includes($('#ou-ot').value)) $('#ou-ot').value = usable[0];
+      if (this._ouWantModule && usable.includes(this._ouWantModule)) {
+        $('#ou-nt').value = this._ouWantModule;
+        $('#ou-ot').value = this._ouWantModule;
       }
-      this._ouDefaulted = true;
     }
+    if (this._ouWantRef && $('#ou-vref')) $('#ou-vref').value = this._ouWantRef;
+    this._ouWantRef = ''; this._ouWantModule = '';
     const nt = $('#ou-nt').value, ot = $('#ou-ot').value;
     const host = $('#ou-results');
     host.innerHTML = '<div class="loading">Checking every reference against the text…</div>';
+    const seq = ++this._ouSeq;
     const r = await api('ntuseot/list', { nt, ot });
+    if (seq !== this._ouSeq) return;
     host.innerHTML = '';
     if (!r.ok) { host.appendChild(el('div', 'warn', esc(r.error))); return; }
     $('#ou-head').innerHTML = esc(r.nt) + ' / ' + esc(r.ot)
@@ -2404,6 +2481,9 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
       + 'They are candidates, not findings.</span>'));
     $('#ou-find').onclick = () => this.unlisted(nt, ot);
     $('#ou-verse').onclick = () => this.borrowed(nt, ot);
+    $('#ou-vref').onkeydown = (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); this.borrowed(nt, ot); }
+    };
   },
 
   /* The reference list is a list.  This is the text: which New Testament
@@ -2432,14 +2512,14 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
     host.innerHTML = '<div class="st-tools"><button class="btn" id="ou-back">'
       + '← Back to the reference list</button><span class="tiny muted">'
       + rows.length + ' verse' + (rows.length === 1 ? '' : 's')
-      + (r.truncated ? ' (more found than shown)' : '')
+      + (r.truncated ? ' (' + (r.verses || []).length + ' of ' + r.verse_count + ' shown)' : '')
       + ' share wording with the Old Testament and are not on the list. '
       + 'A candidate is not a quotation: read it before you use it.'
       /* Parenthesised. Written as `... + cond ? a : b` this parses as
        * `(... + cond) ? a : b`, so the entire header becomes the *condition*
        * and innerHTML is assigned just the note -- which is exactly what
        * happened: a panel containing one sentence of prose and no results. */
-      + ((r.notes || []).length ? ' ' + esc(r.notes[1]) : '')
+      + ((r.notes || []).length ? ' ' + esc(r.notes[0]) : '')
       + '</span></div>'
       + rows.map(x => {
         const q = (x.quotes || [])[0] || {};
@@ -2455,7 +2535,7 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
             + esc(x.shared.join(', ')) + '</div>' : '')
           + '</div>';
       }).join('')
-      + (r.notes || []).slice(2).map(n => '<div class="tiny muted"'
+      + (r.notes || []).slice(1).map(n => '<div class="tiny muted"'
         + ' style="margin-top:8px">' + esc(n) + '</div>').join('');
     $('#ou-back').onclick = () => this.loadNtuSeOt();
     host.querySelectorAll('a.ref').forEach(a => a.onclick = (e) => {
@@ -2466,7 +2546,8 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
 
   /* One verse, and the Old Testament verses it shares wording with. */
   async borrowed(nt, ot) {
-    const ref = ($('#ou-vref').value || '').trim();
+    const box = $('#ou-vref');
+    const ref = ((box && box.value) || '').trim();
     if (!ref) { toast('Type a verse first.', 'warn'); return; }
     const r = await api('ntuseot/verse', { nt, ref, ot });
     if (!r.ok) { toast(r.error || 'Could not read that verse.', 'warn'); return; }
@@ -2494,11 +2575,15 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
     });
   },
 
-  /* Populate the resource picker once, with the verse-capable resources first:
+  _cgSeq: 0,
+
+  /* Populate the resource picker, with the verse-capable resources first:
    * a concordance over a lexicon is a list of headwords, which is true but
    * rarely what someone opening this view wanted. */
-  concordanceMods() {
-    if (this._cgMods) return this._cgMods;
+  concordanceMods(preferId) {
+    // Rebuild on every visit: the module list can change, and caching it once
+    // left an empty or stale picker for the rest of the session.
+    const keep = preferId || ($('#cg-mod') && $('#cg-mod').value) || '';
     /* Only resources keyed by verse.  The picker listed every installed module,
      * so Strong's Exhaustive Concordance appeared in it -- and choosing it gave
      * "No words matched", because its 14,199 entries are keyed by Strong's
@@ -2506,17 +2591,19 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
      * cannot work is worse than a missing one. */
     const rank = (m) => (m.type === 'Bible' ? 0 : m.reader === 'verse' ? 1
       : m.has_strongs ? 2 : 3);
-    this._cgMods = (S.modules || [])
+    const mods = (S.modules || [])
       .filter(m => m.type !== 'Concordance' && m.reader !== 'article')
       .slice().sort((a, b) =>
         rank(a) - rank(b) || (a.name || '').localeCompare(b.name || ''));
     const sel = $('#cg-mod');
-    sel.innerHTML = this._cgMods.map(m =>
+    if (!sel) return mods;
+    sel.innerHTML = mods.map(m =>
       '<option value="' + esc(m.id) + '">' + esc(m.name) + '</option>').join('');
-    const first = this._cgMods.find(m => m.type === 'Bible' && m.has_strongs)
-      || this._cgMods.find(m => m.type === 'Bible') || this._cgMods[0];
+    const first = mods.find(m => m.id === keep)
+      || mods.find(m => m.type === 'Bible' && m.has_strongs)
+      || mods.find(m => m.type === 'Bible') || mods[0];
     if (first) sel.value = first.id;
-    return this._cgMods;
+    return mods;
   },
 
   async loadConcordance() {
@@ -2549,8 +2636,10 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
     if (ref) $('#cg-ref').value = ref;
     if (word !== undefined) $('#cg-word').value = word;
     if (taggedOnly !== undefined) $('#cg-tagged').checked = !!taggedOnly;
+    const seq = ++this._cgSeq;
     const res = await api('concordance', { id: moduleId, ref: $('#cg-ref').value,
       word: $('#cg-word').value || '', tagged_only: $('#cg-tagged').checked });
+    if (seq !== this._cgSeq) return;   // a newer request has already painted
     const host = $('#cg-results');
     host.innerHTML = '';
     if (!res.ok) { host.appendChild(el('div', 'warn', esc(res.error))); return; }
@@ -2577,7 +2666,10 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
       if (e.strongs) {
         head.onclick = (ev) => {
           if (ev.target.closest('.n')) return;
-          Popup.strongs(e.strongs.split(' ')[0]);
+          // The document-level popup closer listens on this same click; without
+          // stopping it the entry opens and is hidden in the same turn.
+          ev.preventDefault(); ev.stopPropagation();
+          Popup.strongs(e.strongs.split(' ')[0], ev.clientX, ev.clientY);
         };
         head.title = 'Open the lexicon entry';
       }
@@ -2614,9 +2706,14 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
 
   async openWord(num) {
     Popup.hide();
-    modal('Strong’s ' + num, '<div class="st-loading">Gathering…</div>',
+    const q = String(num || '').trim();
+    const looksStrong = /^[GH]?\d{1,5}[a-z]?$/i.test(q);
+    modal(looksStrong ? 'Strong’s ' + q : 'Word study: ' + q,
+      '<div class="st-loading">Gathering…</div>',
       [{ label: 'Close', cls: 'btn' }]);
-    const b = await api('study/word', { number: num });
+    // A surface word used to be sent as the Strong's number and rejected.  The
+    // backend resolves it from the marker table when `number` is not Strong's.
+    const b = await api('study/word', { number: q, word: looksStrong ? '' : q });
     if (!b.ok) { $('#modal-body').innerHTML = '<div class="st-body">' + esc(b.error) + '</div>'; return; }
     /* Two ways out of a word.  The interlinear starts from a verse and shows its
      * words; the reverse interlinear starts from the word and shows every verse
@@ -2625,11 +2722,14 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
     const tools = '<div class="st-tools">'
       + '<button class="btn" id="w-rev">Reverse interlinear</button>'
       + '<button class="btn" id="w-conc">Concordance</button>'
+      + '<button class="btn" id="w-pane" title="Keep this word study beside your Bible">'
+      + 'Open in a study pane</button>'
       + '</div>';
     $('#modal-body').innerHTML = tools + this.wordHtml(b);
     this.wire($('#modal-body'));
     $('#w-rev').onclick = () => this.openReverse(num);
     $('#w-conc').onclick = () => this.openConcordance(num);
+    $('#w-pane').onclick = () => { closeModal(); Reader.openWordStudyPane(num); };
     /* Senses, grouped from installed lexica. Decorative: the word panel is
      * complete without it, so a failure just leaves no section. */
     api('sense/for', { num }).then(s => {
@@ -2791,6 +2891,7 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
       const r = e.target.closest('a[data-ref]');
       if (r) {
         e.preventDefault();
+        e.stopPropagation();   // the document router would handle this twice
         closeModal();
         Reader.openRefAnywhere(r.dataset.ref);
         return;
@@ -2807,7 +2908,9 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
       if (m) {
         e.preventDefault();
         closeModal();
-        Reader.focusRef(modById(m.dataset.m), m.dataset.k);
+        const target = modById(m.dataset.m);
+        if (!target) { toast('That resource is not installed.', 'warn'); return; }
+        Reader.focusRef(target, m.dataset.k);
         return;
       }
       const o = e.target.closest('a[data-open]');
@@ -2838,7 +2941,11 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
       }
       const row = el('div', 'ctx-row');
       const b = el('button', '', it.label);
-      b.onclick = () => { dismiss(); it.fn(it.color || 'yellow'); };
+      b.onclick = () => {
+        dismiss();
+        Promise.resolve(it.fn(it.color || 'yellow'))
+          .catch(e => toast((e && e.message) || String(e), 'err'));
+      };
       row.appendChild(b);
       if (it.colors && it.colors.length) {
         const swatches = el('div', 'hl-colors');
@@ -2846,7 +2953,11 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
           const sw = el('button', 'hl-swatch hl-swatch-' + color);
           sw.title = color;
           sw.style.background = it.swatch && it.swatch[color] ? it.swatch[color] : '';
-          sw.onclick = (e) => { e.stopPropagation(); dismiss(); it.fn(color); };
+          sw.onclick = (e) => {
+            e.stopPropagation(); dismiss();
+            Promise.resolve(it.fn(color))
+              .catch(err => toast((err && err.message) || String(err), 'err'));
+          };
           swatches.appendChild(sw);
         });
         row.appendChild(swatches);
@@ -2870,14 +2981,50 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
     if (firstAction) firstAction.focus({ preventScroll: true });
   },
 
-  wordMenu(x, y, word, m, unitKey, ref, selText, strongs) {
+  /* The scoped timeline card, shared by the verse menu and search results. */
+  async showTimelineFor(ref) {
+    const r = await api('timeline/at', { ref });
+    if (!r.ok || !(r.events || []).length) {
+      toast('No timeline event cites this passage.', 'warn');
+      return;
+    }
+    const rows = r.events.map(e => '<div class="st-sec open"><div class="st-h">'
+      + esc(e.title) + ' <span class="tiny muted">' + esc(e.when) + '</span></div>'
+      + '<div class="st-body">' + esc(e.note || '') + '</div>'
+      + '<div class="tiny muted">' + esc(e.refs || '') + '</div></div>').join('');
+    modal('Timeline: ' + ref,
+      '<div class="st-body tiny muted">' + esc(r.note || '') + '</div>' + rows,
+      [{ label: 'Open full timeline', cls: 'btn', fn: () => {
+        const gt = $('#g-tab'); if (gt) gt.value = 'timeline';
+        App.show('guides');
+      } }, { label: 'Close', cls: 'btn' }]);
+  },
+
+  wordMenu(x, y, word, m, unitKey, ref, selText, strongs, pos) {
     const items = [];
+    /* A term for word-based tools.  The per-verse handler passes the word under
+     * the pointer; the pane-level fallback passes a selection that may be a
+     * whole verse fragment.  Accept only a short, single-word-looking value,
+     * then fall back to the selection. */
+    const cleanTerm = (s) => {
+      const v = String(s || '').trim();
+      return (v && v.length <= 40 && !/[.;:,—""\s]/.test(v)) ? v : '';
+    };
+    const topicTerm = cleanTerm(word) || cleanTerm(selText);
+
     if (word) {
-      items.push({ section: 'QUICK ACTIONS' });
-      items.push({ label: 'Copy word', fn: () => navigator.clipboard.writeText(word) });
-      items.push({ section: 'WORD & TOPIC STUDY' });
-      items.push({ label: 'Word find from ' + ref, fn: () => Study.openWordFind(ref) });
-      if (/[\u0370-\u03ff]/.test(word) || /[\u0590-\u05ff]/.test(word)) {
+      items.push({ section: 'THIS WORD' });
+      items.push({ label: 'Copy word', fn: () => Clipboard.write(word) });
+      if (topicTerm) {
+        items.push({ label: 'Topics: ' + topicTerm,
+                     fn: () => Study.openFact(topicTerm) });
+        items.push({ label: 'Dictionary: ' + topicTerm,
+                     fn: () => Popup.word(topicTerm, x, y) });
+      }
+      items.push({ label: 'Word find from ' + ref,
+                   fn: () => Study.openWordFind(ref) });
+      if (/[\u0370-\u03ff\u1f00-\u1fff]/.test(word)
+          || /[\u0590-\u05ff]/.test(word)) {
         items.push({ label: 'Pronounce “' + word + '”',
           fn: () => Study.pronounce(word) });
         items.push({ label: 'How to sound out “' + word + '” letter by letter',
@@ -2887,68 +3034,47 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
             fn: () => Study.gematria(word) });
         }
       }
-      items.push({ label: 'Bible Browser', fn: () => Study.openBibleBrowser() });
-      items.push({ label: 'Topics for “' + word + '”', fn: () => Study.openFact(word) });
+      /* A term list is a query, not a set of rows kept from these results: it
+       * keeps finding occurrences in books installed tomorrow.  Offered only
+       * for an actual word -- the pane-level fallback can pass a verse-sized
+       * fragment here. */
+      if (cleanTerm(word)) {
+        items.push({ label: 'Every occurrence of “' + word + '” as a word list',
+          fn: () => WordLists.fromQuery(word) });
+      }
     }
+
     if (ref) {
-      items.push({ section: 'PASSAGE RESEARCH' });
+      items.push({ section: 'THIS PASSAGE' });
       items.push({ label: 'Cross-references for ' + ref,
                    fn: () => Study.openCrossrefs(ref) });
-      items.push({ label: 'Cite / export this', fn: () => Cite.exportPassage(ref) });
-      items.push({ label: 'Citation for this resource',
-                   fn: () => Cite.open(m.id, ref) });
-      items.push({ label: 'Copy citation with attribution',
-                   fn: () => Cite.copy(m.id, ref) });
       items.push({ label: 'What this verse takes from the Old Testament',
-                   fn: async () => {
-                      App.show('ntuseot');
-                      await Study.loadNtuSeOt();
-                      const ntSel = $('#ou-nt'), otSel = $('#ou-ot');
-                      if (ntSel && m && m.id) {
-                        const opt = [...ntSel.options].find(o => o.value === m.id);
-                        if (opt) { ntSel.value = m.id; if (otSel) otSel.value = m.id; }
-                      }
-                      const vref = $('#ou-vref');
-                      if (vref) vref.value = ref;
-                      Study.borrowed(ntSel ? ntSel.value : '', otSel ? otSel.value : '');
-                    } });
+        fn: () => {
+          // App.show() already loads this view.  Pass the passage through
+          // state instead of running a second full classification.
+          Study._ouWantRef = ref;
+          Study._ouWantModule = m ? m.id : '';
+          App.show('ntuseot');
+        } });
       items.push({ label: 'Concordance for this chapter',
                    // Set the fields *before* switching view: App.show() is what
                    // triggers the load, so switching first fetched the defaults
-                   // (John 3 in some other translation) and then ran a second
-                   // request to correct it.
+                   // and then ran a second request to correct them.
                    fn: () => {
                      if (m.reader === 'verse') $('#cg-mod').value = m.id;
                      $('#cg-ref').value = chapterOf(ref);
                      $('#cg-word').value = '';
                      App.show('concordance');
                    } });
-      // Reader.repaint, not this.repaint: this arrow belongs to Study.wordMenu,
-      // so `this` is Study, which has no repaint and threw
-      // "this.repaint is not a function" on the first highlight ever made.
-      // unitKey and ref arrive as parameters; `v` is local to the contextmenu
-      // handler and does not exist here, so naming it threw on every click.
-      items.push({ label: 'Outline of this chapter',
-                   fn: () => {
-                     const at = String(ref).match(/^(.+?)\s+(\d+)/);
-                     Outlines.book = at ? at[1] : 'Gen';
-                     Outlines.chapter = at ? parseInt(at[2], 10) : 1;
-                     $('#g-tab').value = 'outline';
-                     App.show('guides');
-                   } });
-      items.push({ label: 'Sentence diagram of this verse',
-                   fn: () => Diagram.open(ref, m.id) });
-      items.push({ label: 'Propositional flow (English) of this verse',
-                   fn: () => Diagram.openFlow(ref, m.id) });
-      items.push({ label: 'Which words the commentaries discuss here',
-                   fn: () => Study.openImportant(ref) });
-      items.push({ label: 'Who cites this verse',
-                   fn: () => Study.openCitedBy(ref) });
       items.push({ label: 'Study questions for this passage',
                    fn: () => Study.openQuestions(ref) });
       items.push({ label: 'Everything a cross-reference table links it to',
                    fn: () => Study.openEquivalent(ref, m.id) });
-      items.push({ label: 'Clause search from this verse',
+      items.push({ label: 'Who cites this verse',
+                   fn: () => Study.openCitedBy(ref) });
+      items.push({ label: 'Which words the commentaries discuss here',
+                   fn: () => Study.openImportant(ref) });
+      items.push({ label: 'Set up clause search from this verse…',
                    fn: () => {
                      $('#cl-a').value = (word || '').trim();
                      $('#cl-b').value = '';
@@ -2957,45 +3083,87 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
                        + 'Type a second term and press <b>Find</b>. Both terms '
                        + 'in one clause, or in two, is a different question '
                        + 'and a different answer.</div>';
+                     const panel = $('#clause-panel');
+                     const d = panel && (panel.tagName === 'DETAILS'
+                       ? panel : panel.querySelector('details'));
+                     if (d) d.open = true;
+                     if (panel && panel.scrollIntoView) {
+                       panel.scrollIntoView({ behavior: 'smooth' });
+                     }
+                     const a = $('#cl-a'); if (a) a.focus();
                    } });
       items.push({ label: 'Preach from this verse',
-                   fn: () => { Preach.enter(); } });
-      items.push('-');
-      items.push({ section: 'ORGANIZE & SAVE' });
-      items.push({ label: 'Add to a passage list',
-                   fn: () => Organise.addToPassageList(m.id, unitKey, ref) });
-      items.push({ label: 'Add this resource to a collection',
-                   fn: () => Organise.addModuleToCollection(m.id) });
-      items.push('-');
-      /* A term list is a query, not a set of rows kept from these results: the
-       * whole point is that it keeps finding occurrences in books this search
-       * did not reach, and in books installed tomorrow.
-       *
-       * Offered only for an actual word.  `wordMenu` falls back to the clicked
-       * element's text when the click was not on a word, so right-clicking the
-       * body of a verse offered "every occurrence of '1:1In the beginning was
-       * the Word, and th'" -- a list of one thing, under a name nobody would
-       * choose.  A word is short and has no sentence punctuation in it. */
-      if (word && word.length <= 40 && !/[.;:,—""]/.test(word)) {
-        items.push({ label: 'Every occurrence of “' + word + '” as a word list',
-          fn: () => WordLists.fromQuery(word) });
-      }
-      /* ---- Logos-style study panes --------------------------------------
-       * Open a linked Word Study, Passage Guide or Exegetical Guide pane for
-       * this word or verse.  These open in the current pane's link set so the
-       * guide follows the Bible as the reader moves. */
+                   fn: () => { Preach.enter(ref); } });
+
+      items.push({ section: 'CONNECT THIS VERSE' });
+      items.push({ label: 'Places in this verse → Maps', fn: async () => {
+        const v = await api('study/verse', { id: m.id, key: unitKey });
+        const names = ((v && v.places) || []).map(p => p.name).filter(Boolean);
+        if (!names.length) {
+          toast('No gazetteer place is tagged in this verse.', 'warn');
+          return;
+        }
+        MapsUI.showPlace(names[0]);
+        if (names.length > 1) toast('Also named here: ' + names.slice(1).join(', '));
+      } });
+      items.push({ label: 'Events at this passage → Timeline',
+                   fn: () => Study.showTimelineFor(ref) });
+      items.push({ label: 'People in this verse → Genealogy', fn: async () => {
+        const r = await api('guide/section', { section: 'people', key: ref });
+        const names = ((r && r.items) || []).map(x => x.word).filter(Boolean);
+        let chosen = '';
+        for (const name of names) {
+          const p = await api('genealogy/person', { name });
+          if (p && p.ok && p.person) { chosen = name; break; }
+        }
+        if (!chosen) {
+          toast('No genealogy entry matches a name in this verse.', 'warn');
+          return;
+        }
+        $('#g-name').value = chosen.toLowerCase();
+        $('#g-tab').value = 'genealogy';
+        App.show('guides');
+      } });
+
+      items.push({ section: 'VISUALISE' });
+      items.push({ label: 'Outline of this chapter',
+                   fn: () => {
+                     const gr = $('#g-ref');
+                     if (gr) gr.value = chapterOf(ref);
+                     $('#g-tab').value = 'outline';
+                     App.show('guides');
+                   } });
+      items.push({ label: 'Sentence diagram of this verse',
+                   fn: () => Diagram.open(ref, m.id) });
+      items.push({ label: 'Propositional flow (English) of this verse',
+                   fn: () => Diagram.openFlow(ref, m.id) });
+
+      items.push({ section: 'OPEN IN STUDY PANES' });
       if (strongs) {
-        items.push({ section: 'OPEN IN STUDY PANES' });
         items.push({ label: 'Word Study: ' + strongs,
           fn: () => Reader.openWordStudyPane(strongs) });
+        items.push({ label: 'Note on this word: ' + (word || strongs),
+          fn: () => Notes.addHere(m, unitKey, ref, word || strongs,
+            { anchor_strongs: strongs, anchor_word: word || '',
+              word_pos: Number(pos) || 0 }) });
       }
       items.push({ label: 'Passage Guide: ' + ref,
         fn: () => Reader.openGuidePane(ref, 'passage') });
       items.push({ label: 'Exegetical Guide: ' + ref,
         fn: () => Reader.openGuidePane(ref, 'exegetical') });
+      items.push({ label: 'Bible Browser', fn: () => Study.openBibleBrowser() });
+
+      items.push({ section: 'COPY & CITE' });
+      items.push({ label: 'Cite / export this',
+                   fn: () => Cite.exportPassage(ref, [m.id]) });
+      items.push({ label: 'Citation for this resource',
+                   fn: () => Cite.open(m.id, ref) });
+      items.push({ label: 'Copy citation with attribution',
+                   fn: () => Cite.copy(m.id, ref) });
       items.push({ label: 'Translate this verse  (sends text off this computer)',
                    fn: () => Translate.passage(ref, m.id) });
-      items.push({ section: 'PERSONAL STUDY' });
+
+      items.push({ section: 'PERSONAL & SAVE' });
       items.push({
         label: 'Highlight selection',
         color: 'yellow',
@@ -3008,15 +3176,17 @@ $('#cmp-scanout').innerHTML = (s.verses || []).slice(0, 12).map(v =>
           orange: '#f6cda2',
         },
         fn: async (color) => {
-          await Highlights.add(m.id, unitKey, ref, color, selText);
+          await Highlights.add(m.id, unitKey, ref, color, selText, '');
           await Reader.repaint();
         } });
-      items.push({ label: 'Note on this verse', fn: () => Notes.addHere(m, unitKey, ref, word) });
-      /* The label says what is being tagged, because the menu is the same
-       * everywhere a word or a verse can be pointed at -- and on a
-       * commentary the thing tagged is the entry, not a verse. */
+      items.push({ label: 'Note on this verse',
+                   fn: () => Notes.addHere(m, unitKey, ref, word) });
       items.push({ label: (m.is_bible ? 'Tag this verse…' : 'Tag this…'),
                    fn: () => Tags.picker(ref, m.id, unitKey) });
+      items.push({ label: 'Add to a passage list',
+                   fn: () => Organise.addToPassageList(m.id, unitKey, ref) });
+      items.push({ label: 'Add this resource to a collection',
+                   fn: () => Organise.addModuleToCollection(m.id) });
     }
     this.menu(x, y, items);
   },

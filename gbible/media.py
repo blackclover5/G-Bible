@@ -317,6 +317,7 @@ def status() -> dict:
         "site": (a.site_url if a else ""),
         "terms": (a.terms_url if a else ""),
         "reusable": list(REUSABLE),
+        "sources": sorted(BIBLICAL_SOURCES),
         "note": "Nothing is sent anywhere until this service is switched on "
                 "in API Settings. Answers are cached for a week.",
     }

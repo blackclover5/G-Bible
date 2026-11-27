@@ -294,10 +294,17 @@ def build(refresh: bool = False) -> dict:
                 w.author_id)
             item_id = w.work_id
             if item_id in seen:
-                # The same work in two volumes is a catalogue bug upstream; keep
-                # both, disambiguated, rather than offering one silently.
-                item_id = f"{slug}-{w.work_id}"
+                # The same work id can recur even within one volume (two
+                # different "fragments" works). Prefixing with the volume alone
+                # then produced the *same* id a second time, so one was lost.
+                base = f"{slug}-{w.work_id}"
+                item_id = base
+                n = 2
+                while item_id in seen:
+                    item_id = f"{base}-{n}"
+                    n += 1
             seen[w.work_id] = slug
+            seen[item_id] = slug
             series = volume_series(slug)
             # A division has no author/work page of its own -- CCEL published
             # these files before the per-work addresses existed -- so its own

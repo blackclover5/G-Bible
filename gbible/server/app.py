@@ -9,7 +9,7 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from .. import ai, db, errorlog, publish, sync, tts
+from .. import ai, db, errorlog, publish, sync, tts, webresearch
 from .routes import (
     CSRF_HEADER, CSRF_TOKEN, FILE_ROUTES, VERSION, _ai_context, route,
 )
@@ -266,6 +266,13 @@ class Handler(BaseHTTPRequestHandler):
             }).encode("utf-8"), "application/json; charset=utf-8")
         if not isinstance(body, dict):
             body = {}
+        from .. import aisetup
+        if not aisetup.enabled():
+            return self._send(403, json.dumps({
+                "ok": False, "ai_disabled": True,
+                "error": "AI Assistant is not set up. Open Settings → AI "
+                         "Assistant to enable it.",
+            }).encode("utf-8"), "application/json; charset=utf-8")
 
         self.close_connection = True
         self.send_response(200)
@@ -287,6 +294,12 @@ class Handler(BaseHTTPRequestHandler):
         try:
             provider, model = ai.resolve(body.get("provider") or None,
                                          body.get("model") or None)
+            # Which generator actually answered.  Sent before anything else so
+            # the reader knows at a glance whether this went to a local server
+            # on their machine or to a cloud provider.
+            frame({"type": "backend",
+                   "backend": "local" if provider.local else "api",
+                   "provider": provider.id, "model": model})
             s = ai.get_settings()
             use_library = body.get("use_library")
             if use_library is None:
@@ -298,13 +311,13 @@ class Handler(BaseHTTPRequestHandler):
             if scope is None:
                 scope = s.get("scope", "")
             context = _ai_context(body)
-            semantic = body.get("semantic")
-            if semantic is None:
-                semantic = s.get("semantic", True)
             smart_query = body.get("smart_query")
             if smart_query is None:
                 smart_query = s.get("smart_query", True)
-            max_sources = int(body.get("max_sources") or s.get("max_sources", 8))
+            max_sources = int(body.get("max_sources") or s.get("max_sources", 20))
+            deep_research = body.get("deep_research")
+            if deep_research is None:
+                deep_research = s.get("deep_research", False)
 
             # One stream, four shapes: a chat question, one study action over a
             # selection, one piece of sermon research over a passage, or one
@@ -313,10 +326,13 @@ class Handler(BaseHTTPRequestHandler):
             # the model different things.
             kind = (body.get("action") or "").strip()
             stats: dict = {}
+            question = str(body.get("question") or "")
             if kind == "topic":
                 topic = body.get("topic", "")
-                question = body.get("question", "")
-                sources = ai.topic_sources(topic, max_sources=max(max_sources, 8))
+                sources = ai.topic_sources(
+                    topic, max_sources=max(max_sources, 8),
+                    module_ids=ai.guide_scope_modules(scope),
+                    provider=provider, question=question)
                 frame({"type": "sources", "citations": sources,
                        "provider": provider.id, "model": model,
                        "used_library": bool(use_library), "action": kind,
@@ -326,10 +342,11 @@ class Handler(BaseHTTPRequestHandler):
                 usage_kind = "topic:ask"
             elif kind == "fact":
                 term = body.get("term", "")
-                question = body.get("question", "")
                 lens = body.get("lens", "") or ""
-                sources = ai.fact_sources(term, lens,
-                                          max_sources=max(max_sources, 8))
+                sources = ai.fact_sources(
+                    term, lens, max_sources=max(max_sources, 8),
+                    module_ids=ai.guide_scope_modules(scope),
+                    provider=provider, question=question)
                 frame({"type": "sources", "citations": sources,
                        "provider": provider.id, "model": model,
                        "used_library": bool(use_library), "action": kind,
@@ -356,52 +373,132 @@ class Handler(BaseHTTPRequestHandler):
                                             use_mine=bool(use_mine),
                                             scope=scope or "",
                                             provider=provider,
-                                            semantic=bool(semantic),
-                                            smart_query=bool(smart_query))
+                                            smart_query=bool(smart_query),
+                                            deep_research=bool(deep_research))
                 frame({"type": "sources", "citations": sources,
                        "provider": provider.id, "model": model,
                        "used_library": bool(use_library),
                        "used_mine": bool(use_mine), "scope": scope or "",
-                       "semantic": bool(semantic) and provider.embeds,
                        "action": kind})
                 msgs = ai.action_messages(kind, text, label, target, sources)
                 usage_kind = f"action:{kind}"
             else:
-                question = body.get("question", "")
-                sources = ai.build_context(question, max_sources,
+                question = str(body.get("question") or "")
+                lookup_question = ai.retrieval_question(
+                    question, body.get("history") or [])
+                sources = ai.build_context(lookup_question, max_sources,
                                            use_library=bool(use_library),
                                            use_mine=bool(use_mine),
                                            scope=scope or "", context=context,
                                            provider=provider,
-                                           semantic=bool(semantic),
-                                           smart_query=bool(smart_query))
+                                           smart_query=bool(smart_query),
+                                           deep_research=bool(deep_research))
+                # The only bridge from the open web into a prompt: a one-use
+                # token issued after the reader approved a concrete set of
+                # URLs.  take_results() consumes it, so a second call cannot
+                # quietly reuse outside text the reader approved earlier.
+                web = webresearch.take_results(body.get("web_token", ""))
+                web_approved = bool(body.get("web_approved"))
+                if web:
+                    sources = list(sources) + webresearch.as_sources(web)
+                    for i, s in enumerate(sources):
+                        s["n"] = i + 1
                 frame({"type": "sources", "citations": sources,
                        "provider": provider.id, "model": model,
                        "used_library": bool(use_library),
                        "used_mine": bool(use_mine), "scope": scope or "",
-                       "semantic": bool(semantic) and provider.embeds,
-                       "has_context": bool(context)})
+                       "has_context": bool(context),
+                       "web_research": {
+                           "approved": web_approved,
+                           "pages": len(web),
+                           "message": (
+                               f"The assistant received {len(web)} approved website "
+                               f"{'page' if len(web) == 1 else 'pages'} "
+                               "to check against this question." if web else
+                               "No approved website page passed the question check; "
+                               "this answer uses the non-web sources selected."
+                               if web_approved else "")}})
                 msgs = ai.build_messages(question, body.get("history") or [],
                                          sources, context)
+                if web_approved and not web:
+                    msgs.insert(1, {"role": "system", "content":
+                        "The reader approved web research, but no website page "
+                        "passed the direct-answer relevance check. Do not imply "
+                        "that websites were used; answer from the other supplied "
+                        "sources and state if they do not answer the question."})
                 usage_kind = "chat"
+            review_mode = not kind or kind in ("topic", "fact")
+            review_question = question if question.strip() else (
+                f"Explain the topic {topic}." if kind == "topic" else
+                f"Explain {term}." if kind == "fact" else question)
             # The call is written down whatever becomes of it.  A reader who
             # presses stop has still spent the tokens the provider already
             # generated, so an aborted stream is recorded as an incomplete call
             # rather than quietly dropped.
             answer: list[str] = []
+            # Keep the generator in a name so a reader who presses Stop closes
+            # the upstream provider connection deterministically, rather than
+            # waiting for the loop's iterator to be collected.  That close is
+            # what actually stops the model: without it the provider carries on
+            # generating (and billing) for a client that has already gone.
+            stream = ai.stream(msgs, provider, model, stats=stats)
             try:
-                for delta in ai.stream(msgs, provider, model, stats=stats):
-                    answer.append(delta)
-                    frame({"type": "delta", "text": delta})
-            except Exception:
-                ai.record_usage(provider.id, model, usage_kind, stats, ok=False)
-                raise
-            ai.record_usage(provider.id, model, usage_kind, stats)
-            # Which words of each source the answer leaned on.  It is sent
-            # after the answer because it cannot be known before it: the
-            # fragment is the part of the source that says what the answer
-            # says.
-            if answer and sources:
+                try:
+                    for delta in stream:
+                        answer.append(delta)
+                        # A chat draft is private until it passes both the
+                        # evidence check and an independent question-fit review.
+                        if not review_mode:
+                            frame({"type": "delta", "text": delta})
+                except Exception:
+                    ai.record_usage(provider.id, model,
+                                    usage_kind if not review_mode else
+                                    f"{usage_kind}:draft",
+                                    stats, ok=False)
+                    raise
+                ai.record_usage(provider.id, model,
+                                usage_kind if not review_mode else
+                                f"{usage_kind}:draft", stats)
+            finally:
+                try:
+                    stream.close()
+                except Exception:                        # noqa: BLE001
+                    pass
+            # Keep chat drafts private until the source check and question-fit
+            # review finish. Study actions remain streamed because they are
+            # transformations of the reader's selected text, not open questions.
+            grounded = True
+            if review_mode:
+                try:
+                    auditor, audit_model = ai.review_target(provider, model, s)
+                    reviewed, grounded, reason = ai.reviewed_answer(
+                        review_question, msgs, "".join(answer), sources,
+                        provider, model, review_provider=auditor,
+                        review_model=audit_model,
+                        on_status=lambda text: frame({"type": "status",
+                                                      "text": text}))
+                    answer = [reviewed]
+                except Exception:                        # noqa: BLE001
+                    grounded, reason = False, "source validation failed"
+                if not grounded:
+                    safe = ("I couldn't verify a reliable answer from the sources "
+                            "retrieved for this question, so I removed the draft "
+                            "rather than guess. The sources supplied are listed "
+                            "below for you to inspect. Try a narrower question or "
+                            "open the passage you want to study.")
+                    answer = [safe]
+                    has_web = any(source.get("external") for source in sources)
+                    frame({"type": "replace", "text": safe,
+                           "reason": reason,
+                           "web_status": ("The draft could not be verified against "
+                               "the listed sources; website pages were supplied "
+                               "for this question." if has_web else
+                               "The draft failed the source check and was not kept.")})
+                else:
+                    frame({"type": "delta", "text": answer[0]})
+            # Which words of each source the answer leaned on. It is sent after
+            # the answer because it cannot be known before it.
+            if answer and sources and grounded:
                 try:
                     frags = ai.fragments("".join(answer), sources)
                 except Exception:                        # noqa: BLE001
@@ -501,7 +598,18 @@ class Handler(BaseHTTPRequestHandler):
         if not self._guard() or not self._csrf_guard():
             return
         u = urllib.parse.urlparse(self.path)
-        n = int(self.headers.get("Content-Length") or 0)
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+        except (TypeError, ValueError):
+            self._send(400, b'{"ok":false,"error":"bad Content-Length"}',
+                       "application/json; charset=utf-8")
+            return
+        # A local page cannot claim an unlimited body.  The largest legitimate
+        # request is an AI selection with context, well under this bound.
+        if n > 16 * 1024 * 1024:
+            self._send(413, b'{"ok":false,"error":"request too large"}',
+                       "application/json; charset=utf-8")
+            return
         raw = self.rfile.read(n) if n else b""
         if u.path == "/tts":
             return self._serve_tts(raw)

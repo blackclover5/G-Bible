@@ -1,4 +1,96 @@
+/* Ctrl/⌘+K: one searchable list of every view and tool the app already has.
+ * View commands go straight through App.show; tool commands click the button
+ * that owns the action, so its handler is not duplicated here. */
+const CommandPalette = {
+  commands() {
+    const out = [];
+    $$('#nav button[data-view]').forEach(b => {
+      const label = (b.textContent || '').trim();
+      if (label) out.push({ label, group: 'Go to', run: () => App.show(b.dataset.view) });
+    });
+    $$('#nav .menu-pop button').forEach(b => {
+      const label = (b.textContent || '').trim();
+      if (!label || b.dataset.view) return;   // views are already in "Go to"
+      const host = b.closest('.menu-pop');
+      const trigger = host && host.parentElement && host.parentElement.querySelector('.menu-btn');
+      const group = (trigger && trigger.textContent || 'Tools').trim();
+      out.push({ label, group, run: () => b.click() });
+    });
+    return out;
+  },
+  open() {
+    const all = this.commands();
+    let shown = all.slice();
+    let idx = 0;
+    modal('Command palette',
+      '<input type="search" id="cmd-q" placeholder="Type a command…" style="width:100%">'
+      + '<div id="cmd-list" style="margin-top:8px;max-height:50vh;overflow:auto"></div>',
+      [{ label: 'Close', cls: 'btn' }]);
+    const list = $('#cmd-list');
+    const paint = () => {
+      const term = (($('#cmd-q').value || '') + '').trim().toLowerCase();
+      shown = all.filter(c => (c.label + ' ' + c.group).toLowerCase().includes(term)).slice(0, 60);
+      if (idx >= shown.length) idx = 0;
+      list.innerHTML = shown.map((c, i) =>
+        '<button class="btn" data-cmd="' + i + '" style="display:block;width:100%;'
+        + 'text-align:left;margin-bottom:3px' + (i === idx
+          ? ';outline:2px solid var(--accent)' : '') + '">'
+        + '<span class="tiny muted">' + esc(c.group) + ' · </span>' + esc(c.label) + '</button>').join('')
+        || '<div class="empty">No commands match.</div>';
+      list.querySelectorAll('[data-cmd]').forEach(b => {
+        b.onmouseenter = () => { idx = +b.dataset.cmd; };
+        b.onclick = () => {
+          idx = +b.dataset.cmd;
+          const c = shown[idx];
+          closeModal(); if (c) c.run();
+        };
+      });
+      const active = list.children[idx];
+      if (active && active.scrollIntoView) active.scrollIntoView({ block: 'nearest' });
+    };
+    $('#cmd-q').oninput = paint;
+    $('#cmd-q').onkeydown = (e) => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); idx = Math.min(shown.length - 1, idx + 1); paint(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); idx = Math.max(0, idx - 1); paint(); }
+      else if (e.key === 'Enter') { e.preventDefault(); const c = shown[idx]; if (c) { closeModal(); c.run(); } }
+    };
+    paint();
+  },
+};
+
 App.bind = function () {
+  $('#top-export').onclick = () => Export.dialog();
+  $('#ws-printpane').onclick = () => Export.open('pane');
+
+  /* Memorization controls are bound here, not in Memorization.load(): that
+   * load awaits two requests, and a click during them used to do nothing. */
+  const addMemCard = async () => {
+    const input = $('#mem-ref');
+    const ref = (input && input.value || '').trim();
+    if (!ref) { toast('Type a reference first.', 'warn'); return; }
+    // Resolve the reference so the card can carry a module and unit key;
+    // without them the review screen has no verse text to show.
+    let cursor = {};
+    const parsed = await api('reference', { ref });
+    const bible = S.modules.find(m => m.is_bible && m.reader === 'verse')
+      || S.modules.find(m => m.is_bible);
+    if (parsed && parsed.ok && bible) {
+      cursor = { module_id: bible.id, unit_key: parsed.key };
+    }
+    const r = await api('srs/add', Object.assign({ ref }, cursor));
+    if (r && r.ok) {
+      toast(r.already ? 'Already a card.' : 'Card added.', r.already ? 'warn' : '');
+      if (input) input.value = '';
+      Memorization.load();
+    } else toast((r && r.error) || 'Could not add.', 'err');
+  };
+  const memAdd = $('#mem-add'); if (memAdd) memAdd.onclick = addMemCard;
+  const memRef = $('#mem-ref');
+  if (memRef) memRef.onkeydown = (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); addMemCard(); }
+  };
+  const memReview = $('#mem-review');
+  if (memReview) memReview.onclick = () => SRS.open();
   $$('#nav button[data-view]').forEach(b => b.onclick = () => { App.show(b.dataset.view);
     $$('#nav .menu-pop').forEach(m => m.classList.remove('open'));
     $$('#nav .menu-btn').forEach(x => x.setAttribute('aria-expanded', 'false'));
@@ -40,7 +132,7 @@ App.bind = function () {
     // Use the first pane's reference if available
     const p = (S.layout && S.layout.panes && S.layout.panes[0]) ? S.layout.panes[0] : null;
     const ref = p && p.cursor && (p.cursor.ref || p.cursor.key);
-    if (ref) Study.configureGuide(ref, p.module_id);
+    if (ref) Study.configureGuide();
     else toast('Open a passage first.', 'warn');
   };
   const aboutBtn = $('#menu-about');
@@ -49,17 +141,28 @@ App.bind = function () {
     About.show();
   };
   document.addEventListener('keydown', (e) => {
+    // The palette works even while typing in another field.
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault(); CommandPalette.open(); return;
+    }
     if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
       e.preventDefault();
+      // Reading a chapter? Find on that page rather than jumping to the
+      // library search.  Panes without a find box fall back to global search.
+      const paneEl = e.target && e.target.closest ? e.target.closest('.pane') : null;
+      if (paneEl && typeof PaneFind !== 'undefined' && PaneFind.focus(paneEl)) return;
       App.show('search');
       setTimeout(() => { const q = $('#sq'); if (q) { q.focus(); q.select(); } }, 50);
       return;
     }
     if (e.key === 'Escape') {
       const modalUp = $('#modal-bg') && $('#modal-bg').classList.contains('on');
-      if (modalUp) { closeModal(); e.preventDefault(); }
-      const openMenu = $('#nav .menu-pop.open');
+      if (modalUp) { closeModal(); Popup.hide(); e.preventDefault(); }
+      /* $() returns a truthy safe-null proxy when nothing matches, so a plain
+       * `if ($(...))` would run this block on every Escape.  Ask the document
+       * directly to get a real null when no menu is open. */
+      const openMenu = document.querySelector('#nav .menu-pop.open');
       if (openMenu) {
         const trigger = openMenu.parentElement && openMenu.parentElement.querySelector('.menu-btn');
         $$('#nav .menu-pop').forEach(m => m.classList.remove('open'));
@@ -78,9 +181,18 @@ App.bind = function () {
   $('#sq').oninput = debounce(() => Search.suggestNow().catch(() => {}), 260);
   $('#s-go').onclick = () => Search.go();
   $('#s-case').onclick = (e) => { S.search.opts.match_case = !S.search.opts.match_case;
-    e.target.classList.toggle('on', S.search.opts.match_case); };
+    e.target.classList.toggle('on', S.search.opts.match_case); Search.go(); };
   $('#s-forms').onclick = (e) => { S.search.opts.match_all_forms = !S.search.opts.match_all_forms;
-    e.target.classList.toggle('on', S.search.opts.match_all_forms); };
+    e.target.classList.toggle('on', S.search.opts.match_all_forms); Search.go(); };
+  const inf = $('#s-inferred');
+  if (inf) {
+    inf.classList.toggle('on', !!S.search.opts.include_resolved);
+    inf.onclick = (e) => {
+      S.search.opts.include_resolved = !S.search.opts.include_resolved;
+      e.target.classList.toggle('on', !!S.search.opts.include_resolved);
+      Search.go();
+    };
+  }
   $('#s-ctx').onclick = (e) => { S.search.opts.context = S.search.opts.context ? 0 : 2;
     e.target.classList.toggle('on', !!S.search.opts.context); Search.go(); };
   $('#s-sort').onchange = (e) => { S.search.opts.sort = e.target.value; Search.go(); };
@@ -102,10 +214,80 @@ App.bind = function () {
         x.classList.toggle('active', x === btn);
       });
       Search.type = nt;
-      /* Show/hide type-specific filters. */
+      /* Show/hide type-specific filters.  Restore the saved query *after*
+       * populating the selects: restoring into an empty <select> silently
+       * dropped the previous choice. */
       Search.showTypeFilters(nt);
-      /* Restore the new type's query into its input(s). */
-      Search.restoreTypeQuery(nt);
+
+      /* Bible search: offer the installed translations and let a passage
+       * narrow the query.  These selects used to be saved and restored but
+       * never read, so changing them had no effect at all. */
+      if (nt === 'bible') {
+        const sb = $('#s-bible-translation');
+        if (sb && !sb._populated) {
+          const bibles = (S.modules || []).filter(m => m.is_bible);
+          sb.innerHTML = '<option value="">All translations</option>'
+            + bibles.map(m => '<option value="' + esc(m.id) + '">'
+              + esc(m.name) + '</option>').join('');
+          sb._populated = true;
+        }
+      }
+
+      /* Books search: a collection is a module and a type is its taxonomy id. */
+      if (nt === 'books') {
+        const bc = $('#s-books-collection');
+        if (bc && !bc._populated) {
+          const books = (S.modules || []).filter(m => !m.is_bible);
+          bc.innerHTML = '<option value="">All collections</option>'
+            + books.map(m => '<option value="' + esc(m.id) + '">'
+              + esc(m.name) + '</option>').join('');
+          bc._populated = true;
+        }
+        const bt = $('#s-books-type');
+        if (bt && !bt._populated) {
+          const types = Array.from(new Set(
+            (S.modules || []).map(m => m.type).filter(Boolean))).sort();
+          bt.innerHTML = '<option value="">All types</option>'
+            + types.map(x => '<option value="' + esc(x) + '">'
+              + esc(x) + '</option>').join('');
+          bt._populated = true;
+        }
+      }
+
+      /* Media: the service publishes the sources it will answer for and the
+       * licences it allows.  Both selects were permanently empty otherwise. */
+      if (nt === 'media') {
+        const ms = $('#s-media-source'), ml = $('#s-media-license');
+        if (ms && !ms._populated) {
+          api('media/status').then(r => {
+            if (!r || r.ok === false) return;
+            const opts = xs => xs.map(x => '<option value="' + esc(x) + '">'
+                                        + esc(x) + '</option>').join('');
+            ms.innerHTML = '<option value="">All sources</option>'
+              + opts(r.sources || []);
+            ml.innerHTML = '<option value="">All licenses</option>'
+              + opts(r.reusable || []);
+            ms._populated = ml._populated = true;
+            if (Search.type === 'media') Search.restoreTypeQuery('media');
+          }).catch(() => {});
+        }
+      }
+
+      /* The Maps "type" filter had one static option and no data behind it. */
+      if (nt === 'maps') {
+        const mt = $('#s-map-type');
+        if (mt && !mt._populated) {
+          api('maps/places', { limit: 1000 }).then(r => {
+            if (!r || r.ok === false) return;
+            const types = Array.from(new Set((r.places || [])
+              .map(p => p.type).filter(Boolean))).sort();
+            mt.innerHTML = '<option value="">All places</option>'
+              + types.map(t => '<option value="' + esc(t) + '">' + esc(t)
+                + '</option>').join('');
+            mt._populated = true;
+          }).catch(() => {});
+        }
+      }
 
       /* Populate the Topics source dropdown with the installed fact books. */
       if (nt === 'topics') {
@@ -137,6 +319,7 @@ App.bind = function () {
         }
       }
 
+      Search.restoreTypeQuery(nt);
       Search.go();
     };
   });
@@ -158,11 +341,14 @@ App.bind = function () {
   plb.id = 's-panelink';
   plb.title = 'Word clicks search from link set… (none off)';
   plb.textContent = 'Click: off';
-  $('#s-scope').after(plb);
+  // The type filters are hidden when their type is not active. Putting this
+  // global control after #s-scope made it disappear in seven of eight types.
+  (document.querySelector('.search-bar') || $('#s-filters-all')).appendChild(plb);
   const paintPl = () => {
     plb.textContent = ClickSearch.linkSet ? 'Click: ' + ClickSearch.linkSet : 'Click: off';
   };
   paintPl();
+  ClickSearch.onChange = paintPl;
   plb.onclick = async () => {
     const sets = [''].concat(S.linkSets || ['A', 'B', 'C', 'D', 'E', 'F']);
     const nx = sets[(sets.indexOf(ClickSearch.linkSet) + 1) % sets.length];
@@ -206,14 +392,29 @@ App.bind = function () {
 
   /* ---- Tools menu items ------------------------------------------------ */
   $('#tc-copy-bible-verses').onclick = async () => {
-    const ref = prompt('Reference to copy:', 'John 3:16');
-    if (ref) {
-      const r = await api('read', { id: 'crosswire-kjv', cursor: { ref }, span: 'verse' });
-      if (!r.ok || !r.items || !r.items.length) { toast('Could not read that verse.'); return; }
-      const text = r.items.map(i => i.text || '').join(' ');
-      await navigator.clipboard.writeText(text);
-      toast('Copied to clipboard.');
-    }
+    // Seed from the verse in front of the reader rather than a fixed example.
+    const ref = prompt('Reference to copy:', Export.ref() || 'John 3:16');
+    if (!ref) return;
+    const p = await api('reference', { ref });
+    if (!p || p.ok === false) { toast('Cannot read that reference.', 'warn'); return; }
+    // Prefer the Bible on the focused pane; fall back to any installed one.
+    // Never assume KJV is installed — it may have been removed.
+    const tab = document.querySelector('.tile-tab.on');
+    const tile = tab && tab.closest('.tile');
+    const paneId = tile && (tile.querySelector('.pane') || {}).dataset.pane;
+    const pane = paneId && (S.layout && S.layout.panes || []).find(x => x.id === paneId);
+    const bible = (pane && modById(pane.module_id) && modById(pane.module_id).is_bible
+        && modById(pane.module_id))
+      || (S.modules || []).find(m => m.is_bible && m.installed_at)
+      || (S.modules || []).find(m => m.is_bible);
+    if (!bible) { toast('No Bible is installed.', 'warn'); return; }
+    // A `ref` cursor with span:'verse' still reads the whole chapter.  Address
+    // the resolved unit key directly so exactly one verse is copied.
+    const r = await api('read', { id: bible.id, cursor: { keys: [p.key] },
+                                  span: 'verse', context: 0 });
+    if (!r.ok || !r.items || !r.items.length) { toast('Could not read that verse.', 'warn'); return; }
+    const text = (r.items[0].text || '').trim();
+    await Clipboard.write(text);
   };
   $('#tc-text-comparison').onclick = async () => {
     const ref = prompt('Reference to compare across translations:', 'John 3:16');
@@ -222,10 +423,12 @@ App.bind = function () {
     const bibles = (S.modules || []).filter(m => m.is_bible && m.installed_at).slice(0, 4);
     if (!bibles.length) { toast('No Bibles installed.', 'warn'); return; }
     for (const b of bibles) {
-      await Workspace.openModule(b.id, { ref, span: 'chapter' });
+      await Workspace.openModule(b.id, { ref });
     }
     await App.loadWorkspace();
-    toast('Opened ' + bibles.length + ' translations side by side.');
+    toast(bibles.length === 1
+      ? 'Opened ' + bibles[0].name + '.'
+      : 'Opened ' + bibles.length + ' translations in this pane’s tabs.');
   };
   $('#vf-visual-filters').onclick = async () => {
     await VisualFilters.dialog();
@@ -233,7 +436,7 @@ App.bind = function () {
 
   /* ---- New tools menu items ------------------------------------------------ */
   $('#tc-info-tool').onclick = async () => {
-    const ref = prompt('Reference to look up:', 'John 3:16');
+    const ref = (prompt('Reference to look up:', Export.ref() || 'John 3:16') || '').trim();
     if (!ref) return;
     const r = await api('info-tool', { ref: ref });
     if (!r.ok) { toast(r.error || 'Failed to load info.', 'err'); return; }
@@ -246,16 +449,16 @@ App.bind = function () {
       h += '</div>';
     }
     if (r.strongs && r.strongs.length) {
-      h += '<div class="st-sec"><div class="st-h">Strong\'s Numbers</div>' + r.strongs.join(', ') + '</div>';
+      h += '<div class="st-sec"><div class="st-h">Strong\'s Numbers</div>' + esc(r.strongs.join(', ')) + '</div>';
     }
     if (r.morphology && r.morphology.length) {
-      h += '<div class="st-sec"><div class="st-h">Morphology</div>' + r.morphology.join(', ') + '</div>';
+      h += '<div class="st-sec"><div class="st-h">Morphology</div>' + esc(r.morphology.join(', ')) + '</div>';
     }
     if (r.topics && r.topics.length) {
-      h += '<div class="st-sec"><div class="st-h">Topics</div>' + r.topics.join(', ') + '</div>';
+      h += '<div class="st-sec"><div class="st-h">Topics</div>' + esc(r.topics.join(', ')) + '</div>';
     }
     if (r.cross_references && r.cross_references.length) {
-      h += '<div class="st-sec"><div class="st-h">Cross-References</div>' + r.cross_references.map(x => '<a href="#" data-ref="' + esc(x) + '">' + esc(x) + '</a>').join(', ') + '</div>';
+      h += '<div class="st-sec"><div class="st-h">Cross-References</div>' + r.cross_references.map(x => '<a href="#" data-ref="' + esc(x) + '">' + esc(osisToRef(x)) + '</a>').join(', ') + '</div>';
     }
     if (r.notes && r.notes.length) {
       h += '<div class="st-sec"><div class="st-h">Notes</div>' + r.notes.map(n => '<div class="st-body">' + esc(n) + '</div>').join('');
@@ -263,49 +466,55 @@ App.bind = function () {
     modal('Info Tool', h, [{ label: 'Close', cls: 'btn' }]);
   };
 
-  $('#tc-bibliography').onclick = async () => {
-    const r = await api('bibliography', {});
-    if (!r.ok) { toast(r.error || 'Failed to load bibliography.', 'err'); return; }
-    let h = '<div class="st-sec open"><div class="st-h">Bibliography (' + r.count + ' entries)</div>';
-    r.entries.forEach(e => {
-      h += '<div class="st-note"><div class="st-t">' + esc(e.title || '') + '</div><div class="st-body">' + esc(e.citation || e.name || '') + '</div></div>';
-    });
-    h += '</div>';
-    modal('Bibliography', h, [{ label: 'Close', cls: 'btn' }]);
+  $('#tc-bibliography').onclick = () => {
+    // Cite.bibliography() is the richer path: style choice, flagged gaps and
+    // every export format. The old menu modal was a lossy duplicate of it.
+    Cite.bibliography();
   };
 
   $('#tc-books-search').onclick = async () => {
-    const q = prompt('Search books for:', '');
+    const q = (prompt('Search books for:', '') || '').trim();
     if (!q) return;
     const r = await api('books-search', { q: q, limit: 20 });
     if (!r.ok) { toast(r.error || 'Failed to search.', 'err'); return; }
     let h = '<div class="st-sec open"><div class="st-h">Books Search: "' + esc(q) + '"</div>';
-    r.results.forEach(r => {
-      h += '<div class="st-note"><div class="st-t">' + esc(r.ref) + '</div><div class="st-body">' + esc(r.text) + '</div><div class="tiny muted">' + esc(r.module) + '</div></div>';
+    if (!(r.results || []).length) h += '<div class="empty">No matches.</div>';
+    r.results.forEach(hit => {
+      h += '<div class="st-note"><div class="st-t"><a href="#" data-ref="'
+        + esc(hit.ref) + '">' + esc(hit.ref) + '</a></div><div class="st-body">'
+        + esc(hit.text) + '</div><div class="tiny muted">' + esc(hit.module) + '</div></div>';
     });
     h += '</div>';
     modal('Books Search', h, [{ label: 'Close', cls: 'btn' }]);
   };
 
   $('#tc-search-synopsis').onclick = async () => {
-    const q = prompt('Search synopsis for:', '');
+    const q = (prompt('Search synopsis for:', '') || '').trim();
     if (!q) return;
     const r = await api('search-synopsis', { q: q });
     if (!r.ok) { toast(r.error || 'Failed to get synopsis.', 'err'); return; }
     let h = '<div class="st-sec open"><div class="st-h">Search Synopsis: "' + esc(q) + '"</div>';
+    if (!(r.synopsis || []).length) h += '<div class="empty">No matches.</div>';
     r.synopsis.forEach(s => {
-      h += '<div class="st-note"><div class="st-t">' + esc(s.module) + '</div><div class="st-body">' + esc(s.sample) + '</div><div class="tiny muted">' + s.count + ' matches</div></div>';
+      h += '<div class="st-note"><div class="st-t">' + esc(s.module) + '</div><div class="st-body">'
+        + (s.sample_ref
+            ? '<a href="#" data-ref="' + esc(s.sample_ref) + '">' + esc(s.sample) + '</a>'
+            : esc(s.sample))
+        + '</div><div class="tiny muted">' + s.count + ' matches</div></div>';
     });
     h += '</div>';
     modal('Search Synopsis', h, [{ label: 'Close', cls: 'btn' }]);
   };
 
   $('#tc-insights').onclick = async () => {
-    const ref = prompt('Get insights for:', 'John 3:16');
+    const ref = (prompt('Get insights for:', Export.ref() || 'John 3:16') || '').trim();
     if (!ref) return;
     const r = await api('insights', { ref: ref });
     if (!r.ok) { toast(r.error || 'Failed to get insights.', 'err'); return; }
     let h = '<div class="st-sec open"><div class="st-h">Insights: ' + esc(r.ref) + '</div>';
+    if (!(r.sections || []).length) {
+      h += '<div class="empty">No insights for this reference.</div>';
+    }
     r.sections.forEach(s => {
       h += '<div class="st-sec"><div class="st-h">' + esc(s.title) + '</div><div class="st-body">' + esc(s.content) + '</div></div>';
     });
@@ -313,72 +522,111 @@ App.bind = function () {
     modal('Insights', h, [{ label: 'Close', cls: 'btn' }]);
   };
 
-  $('#tc-sermon-import').onclick = async () => {
-    const text = prompt('Enter sermon text:', '');
-    if (!text) return;
-    const title = prompt('Sermon title:', '');
-    if (!title) return;
-    const series = prompt('Sermon series (optional):', '');
-    const r = await api('sermon-import', { text: text, title: title, series: series });
-    if (!r.ok) { toast(r.error || 'Failed to import sermon.', 'err'); return; }
-    toast('Sermon imported: ' + r.title);
+  $('#tc-sermon-import').onclick = () => {
+    // A sermon is long and multi-line: prompts are single-line and the old
+    // api() call put the whole text in a GET URL, which fails on real sermons.
+    modal('Import a sermon',
+      '<div class="st-body">Paste the sermon text. The first non-empty line is '
+      + 'used as the title when you leave the title box blank.</div>'
+      + '<label class="st-lbl">Sermon text</label>'
+      + '<textarea id="si-text" rows="12" style="width:100%"></textarea>'
+      + '<label class="st-lbl">Title (optional)</label>'
+      + '<input id="si-title" style="width:100%">'
+      + '<label class="st-lbl">Series (optional)</label>'
+      + '<input id="si-series" style="width:100%">',
+      [{ label: 'Cancel', cls: 'btn' },
+       { label: 'Import', cls: 'btn primary', close: false, fn: async () => {
+         const text = ($('#si-text') || {}).value || '';
+         if (!text.trim()) { toast('Paste the sermon text first.', 'warn'); return; }
+         const r = await post('sermon-import', {
+           text, title: ($('#si-title') || {}).value || '',
+           series: ($('#si-series') || {}).value || '' });
+         if (!r || r.ok === false) {
+           toast((r && r.error) || 'Failed to import sermon.', 'err'); return;
+         }
+         closeModal();
+         toast('Sermon imported: ' + r.title);
+       } }]);
   };
 
   $('#tc-sermon-documents').onclick = async () => {
     const r = await api('sermon-documents', {});
     if (!r.ok) { toast(r.error || 'Failed to load sermons.', 'err'); return; }
-    let h = '<div class="st-sec open"><div class="st-h">Sermon Documents (' + r.count + ')</div>';
-    r.sermons.forEach(s => {
+    let h = '<div class="st-sec open"><div class="st-h">Sermon Documents ('
+      + esc(r.count) + ')</div>';
+    if (!(r.sermons || []).length) h += '<div class="empty">No sermons yet.</div>';
+    (r.sermons || []).forEach(s => {
       h += '<div class="st-note"><div class="st-t">' + esc(s.title) + '</div><div class="st-body">' + esc((s.text || '').slice(0, 200)) + '</div></div>';
     });
     h += '</div>';
     modal('Sermon Documents', h, [{ label: 'Close', cls: 'btn' }]);
+    wireModalFolds();
   };
 
   $('#tc-visual-copy').onclick = async () => {
-    const ref = prompt('Reference for visual copy:', 'John 3:16');
+    const ref = (prompt('Reference for visual copy:', Export.ref() || 'John 3:16') || '').trim();
     if (!ref) return;
-    const r = await api('visual-copy', { ref: ref });
+    // Use the Bible already on the focused pane; otherwise any installed Bible.
+    const focused = ((S.layout && S.layout.panes) || []).find(p => p.is_focus);
+    const bible = (focused && modById(focused.module_id) && modById(focused.module_id).is_bible
+        && modById(focused.module_id))
+      || (S.modules || []).find(m => m.is_bible && m.lang === 'eng')
+      || (S.modules || []).find(m => m.is_bible);
+    const r = await api('visual-copy', { ref, module_id: bible ? bible.id : '' });
     if (!r.ok) { toast(r.error || 'Failed to create visual copy.', 'err'); return; }
-    let h = '<div class="st-sec open"><div class="st-h">Visual Copy: ' + esc(r.ref) + '</div>';
-    h += '<div class="st-body"><pre style="font-family: monospace; font-size: 12px;">' + esc(r.content || '') + '</pre></div>';
-    h += '</div>';
-    modal('Visual Copy', h, [{ label: 'Close', cls: 'btn' }]);
+    const source = r.module || (bible ? bible.name : '');
+    VisualCopy.save(r.label || r.ref || ref, r.text || '', source);
+    if (r.note) toast(r.note, 'warn');
   };
 
   $('#tc-confessional-docs').onclick = async () => {
     const r = await api('confessional-documents', {});
     if (!r.ok) { toast(r.error || 'Failed to load confessional documents.', 'err'); return; }
-    let h = '<div class="st-sec open"><div class="st-h">Confessional Documents</div>';
-    r.documents.forEach(d => {
+    let h = '<div class="st-sec open"><div class="st-h">Confessional Documents'
+      + ((r.sources || []).length ? ' · ' + esc(r.sources.join(', ')) : '') + '</div>';
+    if (!(r.documents || []).length) h += '<div class="empty">No confessional documents found in the installed sources.</div>';
+    (r.documents || []).forEach(d => {
       h += '<div class="st-note"><div class="st-t">' + esc(d.title) + '</div><div class="st-body">' + esc(d.text) + '</div><div class="tiny muted">' + esc(d.module) + '</div></div>';
     });
     h += '</div>';
     modal('Confessional Documents', h, [{ label: 'Close', cls: 'btn' }]);
+    wireModalFolds();
   };
 
-  $('#tc-catholic-readings').onclick = async () => {
-    const date = prompt('Date (YYYY-MM-DD):', '');
-    if (!date) return;
-    const r = await api('catholic-daily-readings', { date: date });
-    if (!r.ok) { toast(r.error || 'Failed to load daily readings.', 'err'); return; }
-    let h = '<div class="st-sec open"><div class="st-h">Catholic Daily Readings' + (r.season ? ' - ' + esc(r.season) : '') + '</div>';
-    r.readings.forEach(r => {
-      h += '<div class="st-note"><div class="st-t">' + esc(r.title) + '</div><div class="st-body">' + esc(r.text) + '</div><div class="tiny muted">' + esc(r.module) + '</div></div>';
-    });
-    h += '</div>';
-    modal('Catholic Daily Readings', h, [{ label: 'Close', cls: 'btn' }]);
+  $('#tc-catholic-readings').onclick = () => {
+    const show = async (date) => {
+      if (!date) return;
+      const r = await api('catholic-daily-readings', { date: date });
+      if (!r.ok) { toast(r.error || 'Failed to load daily readings.', 'err'); return; }
+      let h = '<div class="st-sec open"><div class="st-h">Catholic Daily Readings'
+        + (r.season ? ' - ' + esc(r.season) : '') + '</div>';
+      if (!(r.readings || []).length) h += '<div class="empty">No readings for that date.</div>';
+      (r.readings || []).forEach(x => {
+        h += '<div class="st-note"><div class="st-t">' + esc(x.title) + '</div><div class="st-body">' + esc(x.text) + '</div><div class="tiny muted">' + esc(x.module) + '</div></div>';
+      });
+      h += '</div>';
+      modal('Catholic Daily Readings', h, [{ label: 'Close', cls: 'btn' }]);
+    wireModalFolds();
+    };
+    DatePicker.open({ anchor: $('#tc-catholic-readings'),
+      label: 'Date for daily readings', allowClear: false, onPick: show });
   };
 
   $('#tc-popular-quotes').onclick = async () => {
     const r = await api('popular-quotes', {});
     if (!r.ok) { toast(r.error || 'Failed to load popular quotes.', 'err'); return; }
-    let h = '<div class="st-sec open"><div class="st-h">Popular Quotes</div>';
-    r.quotes.forEach(q => {
-      h += '<div class="st-note"><div class="st-t">' + esc(q.ref) + '</div><div class="st-body">' + esc(q.text) + '</div><div class="tiny muted">' + q.count + ' occurrences</div></div>';
+    let h = '<div class="st-sec open"><div class="st-h">Popular Quotes</div>'
+      + '<div class="tiny muted">' + esc(r.metric || '') + '</div>';
+    if (!(r.quotes || []).length) h += '<div class="empty">No cross-references to rank.</div>';
+    (r.quotes || []).forEach(q => {
+      h += '<div class="st-note"><div class="st-t"><a href="#" data-ref="'
+        + esc(q.ref) + '">' + esc(q.ref) + '</a></div><div class="st-body">'
+        + esc(q.text) + '</div><div class="tiny muted">' + esc(q.count)
+        + ' cross-references' + (q.module ? ' · ' + esc(q.module) : '') + '</div></div>';
     });
     h += '</div>';
     modal('Popular Quotes', h, [{ label: 'Close', cls: 'btn' }]);
+    wireModalFolds();
   };
 
   const sf = debounce(() => Store.fetch(), 320);
@@ -396,7 +644,8 @@ App.bind = function () {
     if (!q) { toast('Nothing to save yet.', 'warn'); return; }
     const name = prompt('Name this search', q.slice(0, 40));
     if (!name) return;
-    await api('search/template', { action: 'save', name: name, query: q });
+    const s = await api('search/template', { action: 'save', name: name, query: q });
+    if (!s || s.ok === false) { toast((s && s.error) || 'Could not save.', 'err'); return; }
     toast('Saved as "' + name + '"');
     Search.loadTemplates();
   };
@@ -415,14 +664,15 @@ App.bind = function () {
      a parser should not be in the list at all when there is none. */
   const clPanel = $('#clause-panel');
   if (clPanel) {
-    Diagram.parser().then(r => { Diagram._parserOk = !!(r && r.available); });
+    Diagram.parser().then(r => { Diagram._parserOk = !!(r && r.available); })
+      .catch(() => { Diagram._parserOk = false; });
   }
   ['#cl-a', '#cl-b'].forEach(id => {
     const n = $(id);
     if (n) n.onkeydown = (e) => { if (e.key === 'Enter') clGo(); };
   });
   const clD = $('#cl-diagram');
-  if (clD) clD.onclick = () => Diagram.openFrom('#cl-book');
+  if (clD) clD.onclick = () => Diagram.openFrom('#cl-ref');
   /* Visual query builder: a verse's own words as dropdowns, so the query is
    * built by pointing. Every offered word is really in the verse. */
   const clLoad = $('#cl-load');
@@ -455,17 +705,18 @@ App.bind = function () {
   $('#o-word').onkeydown = (e) => { if (e.key === 'Enter') Organise.load(); };
   $('#v-organise').onclick = async (e) => {
     const t = e.target;
-    const go = async (fn) => { e.preventDefault(); await fn(); Organise.load(); };
     if (t.id === 'o-cadd') {
       const name = $('#o-cname').value.trim();
       if (!name) { toast('Give the collection a name.', 'warn'); return; }
-      await api('collection', { action: 'save', name: name });
+      const r = await api('collection', { action: 'save', name: name });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not create the collection.', 'err'); return; }
       Organise.load(); return;
     }
     if (t.id === 'o-ladd') {
       const name = $('#o-lname').value.trim();
       if (!name) { toast('Give the list a name.', 'warn'); return; }
-      await api('passagelist', { action: 'save', name: name });
+      const r = await api('passagelist', { action: 'save', name: name });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not create the list.', 'err'); return; }
       Organise.load(); return;
     }
     const cs = t.closest('a[data-csearch]');
@@ -484,9 +735,13 @@ App.bind = function () {
       return;
     }
     const cd = t.closest('a[data-cdel]');
-    if (cd) { if (!confirm('Delete this collection?')) return;
-              await api('collection', { action: 'delete', id: cd.dataset.cdel });
-              Organise.load(); }
+    if (cd) {
+      e.preventDefault();
+      if (!confirm('Delete this collection?')) return;
+      const r = await api('collection', { action: 'delete', id: cd.dataset.cdel });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not delete the collection.', 'err'); return; }
+      Organise.load();
+    }
     const lo = t.closest('a[data-lopen]');
     if (lo) { e.preventDefault(); await Organise.openList(lo.dataset.lopen); return; }
     const lr0 = t.closest('a[data-lread]');
@@ -515,20 +770,35 @@ App.bind = function () {
         || S.modules.find(m => m.is_bible && m.lang === 'eng')
         || S.modules.find(m => m.is_bible);
       if (!bible) { toast('No Bible is installed.', 'warn'); return; }
-      const list = (this.lists || []).find(x => x.id === lr0.dataset.lread);
+      const list = (Organise.lists || []).find(x => x.id === lr0.dataset.lread);
       await Study.readFiltered(bible.id, refs, (list && list.name) || 'Passages');
       return;
     }
     const lf = t.closest('a[data-lflash]');
     if (lf) { e.preventDefault(); Flashcards.open('passage', lf.dataset.lflash); return; }
     const ld = t.closest('a[data-ldel]');
-    if (ld) { if (!confirm('Delete this list and its passages?')) return;
-              await api('passagelist', { action: 'delete', id: ld.dataset.ldel }); }
+    if (ld) {
+      e.preventDefault();
+      if (!confirm('Delete this list and its passages?')) return;
+      const r = await post('passagelist', { action: 'delete', id: ld.dataset.ldel });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not delete the list.', 'err'); return; }
+      Organise.load(); return;
+    }
     const lr = t.closest('a[data-lrm]');
-    if (lr) { await api('passagelist', { action: 'remove', item: lr.dataset.lrm }); }
+    if (lr) {
+      e.preventDefault();
+      const r = await post('passagelist', { action: 'remove', item: lr.dataset.lrm });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not remove the item.', 'err'); return; }
+      Organise.load(); return;
+    }
     const lm = t.closest('a[data-lmove]');
-    if (lm) { await api('passagelist', { action: 'move', item: lm.dataset.lmove,
-                                         delta: lm.dataset.d }); }
+    if (lm) {
+      e.preventDefault();
+      const r = await post('passagelist', { action: 'move', item: lm.dataset.lmove,
+                                             delta: lm.dataset.d });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not move the item.', 'err'); return; }
+      Organise.load(); return;
+    }
     const tp = t.closest('a[data-tpl]');
     if (tp) {
       const tpl = Organise.templates.find(x => x.id === tp.dataset.tpl);
@@ -583,16 +853,7 @@ App.bind = function () {
   $('#n-prayer-filter').onchange = () => Notes.load();
   $('#n-q').oninput = debounce(() => Notes.load(), 250);
   $('#n-new').onclick = () => { App.show('notes'); Notes.new(); };
-  $('#n-export').onclick = async () => {
-    const r = await api('notes/export', {});
-    const blob = new Blob([r.markdown], { type: 'text/markdown' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'gbible-notes.md';
-    a.click();
-    URL.revokeObjectURL(a.href);
-    toast('Saved gbible-notes.md');
-  };
+  $('#n-export').onclick = () => Export.open('notes');
   $('#n-clear').onclick = async () => {
     /* Destructive, and the undo is not ours to offer: one confirmation naming
      * what will go, and then every kind the filter can reach — the current
@@ -604,19 +865,29 @@ App.bind = function () {
       : (kind === 'note' ? 'all notes' : 'all ' + kind + ' entries');
     if (!confirm('Delete ' + scope + '?\n\n' + count + ' item' + (count === 1 ? '' : 's')
       + ' will be permanently removed from this computer.')) return;
+    let deleted = 0;
     for (const n of Notes.items) {
-      await api('notes/delete', { id: n.id });
+      const r = await api('notes/delete', { id: n.id });
+      if (r && r.ok !== false) deleted++;
     }
     Notes.current = null;
     await Notes.load();
-    Notes.edit(Notes.blank());
     $('#notes-edit').innerHTML = '<div class="empty">Choose a note, or press <b>New</b>.</div>';
-    toast(count + ' deleted.');
+    if (deleted < count) {
+      toast((count - deleted) + ' could not be deleted.', 'err');
+    } else {
+      toast(deleted + ' deleted.');
+    }
   };
 
   $('#f-sync').onclick = async () => {
     const b = $('#f-sync'); b.disabled = true; b.textContent = 'Refreshing…';
-    await post('store/sync', {});
+    const r = await post('store/sync', {});
+    if (!r || r.ok === false) {
+      b.disabled = false; b.textContent = 'Refresh catalogues';
+      toast((r && r.error) || 'Could not refresh catalogues.', 'err');
+      return;
+    }
     Store._repos = null; await Store.load();
     b.disabled = false; b.textContent = 'Refresh catalogues';
     toast('Catalogues refreshed.');
@@ -626,27 +897,47 @@ App.bind = function () {
   if (fUpd) fUpd.onclick = async () => {
     const r = await api('store/updates');
     if (!r.ok) { toast(r.error || 'Could not check for updates.', 'err'); return; }
-    if (!r.count) { toast('All installed modules are up to date.', 'ok'); return; }
-    if (!confirm(r.count + ' update(s) available. Install them now?')) return;
-    let done = 0;
+    const unverified = r.unchecked || 0;
+    if (!r.count) {
+      toast(unverified
+        ? 'Nothing to update among the resources with recorded versions. '
+          + unverified + ' more could not be checked (no version recorded).'
+        : 'All installed modules are up to date.', 'ok');
+      return;
+    }
+    const caveat = unverified
+      ? '\n\n' + unverified + ' other resource(s) have no recorded version '
+        + 'and could not be checked.'
+      : '';
+    if (!confirm(r.count + ' update(s) available. Install them now?' + caveat)) return;
+    let done = 0, failed = 0;
     for (const u of (r.updates || [])) {
       toast('Updating ' + u.title + '…');
-      const jr = await api('store/install', { repo: u.repo, item: u.item });
-      if (jr && jr.job) {
-        // poll
-        let finished = false;
-        while (!finished) {
-          await new Promise(res => setTimeout(res, 500));
-          const js = await api('store/job', { job: jr.job });
-          const j = js && js.job;
-          if (!j) { finished = true; break; }
-          if (j.state === 'done' || j.state === 'error') { finished = true; }
+      const jr = await post('store/install', { repo: u.repo, item: u.item });
+      if (!jr || jr.ok === false || !jr.job) {
+        toast((jr && jr.error) || 'Could not start that update.', 'err');
+        failed++;
+        continue;
+      }
+      // Poll with a bound so a stuck job cannot hang the dialog forever.
+      let finished = false, error = '';
+      for (let attempt = 0; attempt < 120 && !finished; attempt++) {
+        await new Promise(res => setTimeout(res, 500));
+        const js = await api('store/job', { job: jr.job });
+        if (!js || js.ok === false || !js.job) { error = (js && js.error) || 'Job vanished.'; break; }
+        const j = js.job;
+        if (j.state === 'done') { finished = true; done++; }
+        else if (j.state === 'error' || j.state === 'cancelled') {
+          error = j.error || j.message || 'The update failed.'; break;
         }
       }
-      done++;
+      if (error) { toast(u.title + ': ' + error, 'err'); failed++; }
     }
-    toast('Finished ' + done + ' update(s). Refreshing library…');
+    toast(failed ? ('Updated ' + done + ' resource(s); ' + failed + ' failed.')
+                 : ('Finished ' + done + ' update(s). Refreshing library…'));
     await App.loadLibrary();
+    if (typeof Store !== 'undefined' && Store.fetch) Store.fetch();
+    if (typeof Store !== 'undefined') Store._repos = null;
   };
   ['#l-type', '#l-lang', '#l-src'].forEach(s => $(s).onchange = () => Library.paint());
   $('#l-q').oninput = debounce(() => Library.paint(), 250);
@@ -664,6 +955,7 @@ App.bind = function () {
     const heading = prompt('Name the new clip', 'Clip');
     if (!heading) return;
     const r = await post('clipping', { action: 'save', heading });
+    if (!r || r.ok === false) { toast((r && r.error) || 'Could not create the clip.', 'err'); return; }
     if (r.clipping) Clippings._id = r.clipping.id;
     Clippings.load();
   };
@@ -691,6 +983,7 @@ App.bind = function () {
    * citation cannot be better than the metadata behind it. */
   $('#l-cite').onclick = async () => {
     const c = await api('cite/completeness');
+    if (!c || c.ok === false) { toast((c && c.error) || 'Could not check citations.', 'err'); return; }
     modal('How citable this library is',
       '<div class="st-body">'
       + '<p>Of <b>' + c.total + '</b> installed resources, <b>' + c.complete
@@ -719,14 +1012,14 @@ App.bind = function () {
   const study = el('button', 'btn tiny', 'Study layout');
   study.onclick = async () => {
     const r = await post('workspace/study', {});
+    if (!r || r.ok === false) {
+      toast((r && r.error) || 'Could not build the study layout.', 'err');
+      return;
+    }
     await App.loadWorkspace();
     toast('Layout: Bible and commentary linked (set A); lexicon and FactBook '
       + 'look up on click, because they share no verse milestone with a Bible.');
   };
-
-  const layouts = el('button', 'btn', 'Layouts');
-  layouts.title = 'Rearrange panes, QuickStart layouts, clear link sets';
-  layouts.onclick = () => Workspace.layoutsDialog();
 
   /* Place the layout / study / preach buttons in the workspace bar, next to
      the Word study pane button, rather than beside the Settings menu. */
@@ -740,9 +1033,9 @@ App.bind = function () {
   }
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { closeModal(); Popup.hide(); }
+    // Escape and "/" are handled by the consolidated listener above; adding
+    // them here fired both handlers on every press.
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
-    if (e.key === '/') { e.preventDefault(); App.show('search'); $('#sq').focus(); }
     if (e.key === 's' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); App.show('store'); }
     if (e.key === 'w' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); App.show('workspace'); }
     /* Preaching mode. F is the mnemonic some platforms use for full screen, and
@@ -784,13 +1077,8 @@ App.bind = function () {
   }, true);
 };
 
-// Surface anything that escapes, so a silent dead UI cannot happen again.
-window.addEventListener('unhandledrejection', (e) => {
-  console.error('gbible: unhandled rejection', e.reason);
-});
-window.addEventListener('error', (e) => {
-  console.error('gbible: uncaught error', e.message, e.filename + ':' + e.lineno);
-});
+// Uncaught errors are logged by the global handlers in core.js; adding a
+// second pair here only doubled the console noise.
 
 /* ==================================================== preaching mode =====
    Full screen, one pane, no chrome, type you can read from the front.

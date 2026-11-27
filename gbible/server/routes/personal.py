@@ -37,6 +37,8 @@ def _highlights(parts, q):
         return _ok(ok=True)
     if q.get("action") == "delete":
         hid = q.get("hid", "")
+        if conn.execute("SELECT 1 FROM highlight WHERE id=?", (hid,)).fetchone() is None:
+            return {"ok": False, "error": "no such highlight"}
         cur = conn.execute("DELETE FROM highlight WHERE id=?", (hid,))
         conn.commit()
         if cur.rowcount:
@@ -53,7 +55,11 @@ def _highlights(parts, q):
         params.append(q.get("label"))
     sql += " ORDER BY created_at DESC LIMIT 500"
     rows = [dict(r) for r in conn.execute(sql, params)]
-    return _ok(highlights=rows, labels=[r[0] for r in conn.execute(
+    total = conn.execute("SELECT count(*) c FROM highlight"
+                         + (" WHERE label=?" if q.get("label") else ""),
+                         (params if q.get("label") else [])).fetchone()["c"]
+    return _ok(highlights=rows, total=total,
+               labels=[r[0] for r in conn.execute(
         "SELECT DISTINCT label FROM highlight WHERE label<>'' ORDER BY label")])
 
 
@@ -127,8 +133,18 @@ def _tags(parts, q):
             conn.commit()
             return _ok(ok=True, id=iid)
         if action == "remove":
-            conn.execute("DELETE FROM tag_item WHERE id=?", (q.get("id", ""),))
+            iid = q.get("id", "")
+            # The synced record is the parent tag with its items embedded, so
+            # the delete has to name the parent or restore would ignore it.
+            parent = conn.execute(
+                "SELECT tag_id FROM tag_item WHERE id=?", (iid,)).fetchone()
+            conn.execute("DELETE FROM tag_item WHERE id=?", (iid,))
             conn.commit()
+            if parent and parent["tag_id"]:
+                try:
+                    _sync.tombstone(parent["tag_id"], "tag")
+                except Exception:                       # noqa: BLE001
+                    pass
             return _ok(ok=True)
 
         tags = [{"id": r["id"], "name": r["name"], "color": r["color"] or ""}
@@ -229,6 +245,20 @@ def _app_reset(parts, q):
             modules_dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
             print("reset: could not clear modules:", e, file=sys.stderr)
+        # A "fresh, empty library" must not leave credentials, the error log
+        # or old backups behind: they are personal data too.
+        for name in ("api-credentials.json", "sync-credentials.json",
+                     "github-token.json", "error-log.jsonl"):
+            try:
+                (app_dir / name).unlink()
+            except FileNotFoundError:
+                pass
+            except Exception as e:
+                print(f"reset: could not remove {name}: {e}", file=sys.stderr)
+        try:
+            shutil.rmtree(app_dir / "backups", ignore_errors=True)
+        except Exception as e:
+            print("reset: could not clear backups:", e, file=sys.stderr)
         print("G-Bible reset complete. Restart the app.", flush=True)
         os._exit(0)
 

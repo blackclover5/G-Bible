@@ -48,6 +48,8 @@ installed and attributed locally.
 |---|---|---|---|---|
 | `gbible/data/outlines.json.gz` — the section headings of all 66 books, 1,192 chapters, 2,025 headings; no commentary prose, no word glosses, no verse notes (52 KB gzipped) | Christian Classics Ethereal Library, which distributes Jamieson–Fausset–Brown as an EPUB | Robert Jamieson, A. R. Fausset and David Brown, *Commentary Critical and Explanatory on the Whole Bible*, 1871 | **Public Domain** — out of copyright in every jurisdiction (published 1871; CrossWire records the same work as `DistributionLicense=Public Domain`) | Not required. The app prints the basis rather than just the source: *"Jamieson, Fausset and Brown, Critical and Explanatory Commentary on the Whole Bible (1871). Public domain: out of copyright in every jurisdiction. Only the authors' own section headings are used here — no commentary prose from any edition."* |
 
+| `gbible/data/eusebian_tables.json` — 1,161 section records across all ten canon tables: canon assignment, verse range and the associated sections in the other Gospels; no commentary prose | CrossWire SWORD module `Eusebian_num` 1.1 (2013-01-30), whose conf declares `DistributionLicense=Public Domain` | Eusebius of Caesarea, the canon tables, c. AD 340 | **Public Domain** — the tables themselves are ancient and carry no copyright; the modern transcription is released as Public Domain by its publisher | Not required. The app prints the source and licence in the Eusebian Tables health card. |
+
 Regenerate or re-audit it with:
 
 ```

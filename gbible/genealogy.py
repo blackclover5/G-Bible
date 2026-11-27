@@ -447,10 +447,6 @@ def extract_verse(text: str, ref: str,
                       "verb": "named", "text": whole, "confidence": "named"})
         revealed.append(child)
         break
-        if not parent or parent.lower() == r["child"].lower():
-            continue
-        edges.append({"parent": parent, "child": r["child"], "ref": r["ref"],
-                      "verb": "named", "text": r["text"], "confidence": "named"})
 
     # Who does the next verse inherit?  The most recently named child.  A
     # reveal wins, because "he named him Noah" is what advances the chain; then
@@ -615,11 +611,12 @@ def build(*, force: bool = False) -> dict:
                     continue
                 rec = edges.setdefault(k, {
                     "parent": e["parent"], "child": e["child"],
-                    "refs": [], "verbs": set(),
+                    "refs": [], "verbs": [],
                     "confidence": e["confidence"], "text": e["text"]})
                 if key not in rec["refs"]:
                     rec["refs"].append(key)
-                rec["verbs"].add(e["verb"])
+                if e["verb"] not in rec["verbs"]:
+                    rec["verbs"].append(e["verb"])
                 # stated beats partial beats named: the strongest evidence wins
                 order = {"named": 0, "partial": 1, "stated": 2}
                 if order[e["confidence"]] > order[rec["confidence"]]:
@@ -637,16 +634,16 @@ def build(*, force: bool = False) -> dict:
             found, carry = _inverse_chain(text, key, carry)
             for e in found:
                 k = (_norm(e["parent"]), _norm(e["child"]))
-                k = (_norm(e["parent"]), _norm(e["child"]))
                 if not k[0] or not k[1] or k[0] == k[1]:
                     continue
                 rec = edges.setdefault(k, {
                     "parent": e["parent"], "child": e["child"],
-                    "refs": [], "verbs": set(),
+                    "refs": [], "verbs": [],
                     "confidence": e["confidence"], "text": e["text"]})
                 if key not in rec["refs"]:
                     rec["refs"].append(key)
-                rec["verbs"].add(e["verb"])
+                if e["verb"] not in rec["verbs"]:
+                    rec["verbs"].append(e["verb"])
 
     people: dict[str, dict] = {}
     for (p, c), e in edges.items():
@@ -714,8 +711,10 @@ def build(*, force: bool = False) -> dict:
             "name": p["name"], "id": p["id"], "kind": kind,
             "parents": p["parents"], "refs": p["refs"],
             "parent_names": pnames,
-            "parent_refs": {people[q]["name"]: people[q]["refs"]
-                            for q in p["parents"]},
+            # Key by id: two different fathers with the same display name used
+            # to overwrite each other here.
+            "parent_refs": {q: people[q]["refs"]
+                            for q in p["parents"] if q in people},
         })
     conflicts.sort(key=lambda c: (c["kind"], c["name"]))
 
@@ -736,6 +735,8 @@ def build(*, force: bool = False) -> dict:
 
 def person(name: str) -> dict:
     g = build()
+    if not g.get("ok"):
+        return g
     p = g["people"].get(_norm(name))
     if not p:
         return {"ok": False, "error": f"no person called {name!r} in the text read"}
@@ -750,6 +751,8 @@ def person(name: str) -> dict:
 def ancestry(name: str, depth: int = 12) -> dict:
     """Walk up the parents, breadth first, one generation per level."""
     g = build()
+    if not g.get("ok"):
+        return g
     start = g["people"].get(_norm(name))
     if not start:
         return {"ok": False, "error": f"no person called {name!r} in the text read"}
@@ -777,6 +780,8 @@ def ancestry(name: str, depth: int = 12) -> dict:
 def subtree(name: str, depth: int = 3) -> dict:
     """Walk down the children, breadth first."""
     g = build()
+    if not g.get("ok"):
+        return g
     start = g["people"].get(_norm(name))
     if not start:
         return {"ok": False, "error": f"no person called {name!r} in the text read"}

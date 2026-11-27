@@ -124,7 +124,13 @@ def attribution_block(module_ids: list[str]) -> str:
         if m.get("rights") and m["rights"].strip() not in line:
             lines.append(f"      {m['rights'].strip()}")
     ccs = sorted({(m.get("license") or "").strip().upper() for m in metas} - {""})
-    if any("CC-BY" in x for x in ccs):
+    if any("CC-BY-SA" in x for x in ccs):
+        lines += ["",
+                  "CC BY-SA 4.0 requires attribution, a link to the licence, "
+                  "notice of changes, and sharing alike under the same terms. "
+                  "The list above is that notice; the licence text is at "
+                  "creativecommons.org/licenses/by-sa/4.0/."]
+    elif any("CC-BY" in x for x in ccs):
         lines += ["",
                   "CC BY 4.0 requires attribution, a link to the licence, and "
                   "notice of changes. The list above is that notice; the licence "

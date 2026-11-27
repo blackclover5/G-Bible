@@ -15,7 +15,7 @@ const Diagram = {
     modal('Sentence diagram', '<div class="st-loading">Analysing…</div>',
       [{ label: 'Export', cls: 'btn', close: false,
          fn: async () => {
-           const d = await api('clause/diagram_export', { ref });
+           const d = await api('clause/diagram_export', { ref, module: moduleId || '' });
            if (!d.ok) { toast(d.error || 'Nothing to export.', 'warn'); return; }
            const blob = new Blob([d.html], { type: 'text/html' });
            const a = document.createElement('a');
@@ -24,7 +24,7 @@ const Diagram = {
            a.click();
            setTimeout(() => URL.revokeObjectURL(a.href), 5000);
          } },
-       { label: 'Open it', cls: 'btn', close: false, fn: () => { /* set below */ } },
+       { label: 'Open it', cls: 'btn', close: false, fn: () => Diagram.openIt() },
        { label: 'Close', cls: 'btn' }]);
     const r = await api('clause/diagram', { ref, module: moduleId || '' });
     const body = $('#modal-body');
@@ -34,8 +34,18 @@ const Diagram = {
       if (btns[0]) btns[0].remove();
       return;
     }
+    this._last = r;
     body.innerHTML = this.paint(r);
-    this.wire(r);
+  },
+
+  /* Open the analysed verse in a pane. The button now owns its own handler:
+   * attaching it by button index used to overwrite Export's handler instead. */
+  openIt() {
+    const r = this._last || {};
+    const m = S.modules.find(x => x.id === r.module_id);
+    if (!m) { toast('That resource is not installed.', 'warn'); return; }
+    closeModal(); App.show('workspace');
+    Workspace.openModule(m.id, { key: r.key || '' });
   },
 
   async openFlow(ref, moduleId) {
@@ -147,14 +157,6 @@ const Diagram = {
     return h;
   },
 
-  wire(r) {
-    const btns = $$('#modal-foot button');
-    if (btns[0]) btns[0].onclick = () => {
-      closeModal();
-      const m = S.modules.find(x => x.id === r.module_id);
-      if (m) { App.show('workspace'); Workspace.openModule(m.id, { key: r.key }); }
-    };
-  },
 
   /* Open the diagram for whatever reference box the caller names. */
   async openFrom(boxId) {
@@ -170,6 +172,11 @@ const Diagram = {
     const host = $('#clause-parser');
     if (!host) return null;
     const r = await api('clause/parser');
+    if (!r || r.ok === false) {
+      host.innerHTML = '<span style="color:var(--warn,#d9a441)">'
+        + esc((r && r.error) || 'Could not check the grammar parser.') + '</span>';
+      return r;
+    }
     const sel = $('#cl-rel');
     if (sel) {
       const want = sel.value;
@@ -191,6 +198,7 @@ const Diagram = {
   async search(a, b, relation) {
     const host = $('#clause-results');
     if (!host) return;
+    const token = ++this._token;
     if (!a || !a.trim()) {
       host.innerHTML = '<div class="empty">Type a word to look for.</div>';
       return;
@@ -199,6 +207,7 @@ const Diagram = {
     const r = await api('clause/search', {
       a, b, relation: relation || 'same', book: ($('#cl-book') || {}).value || '',
       limit: 120 });
+    if (token !== this._token) return;
     if (!r.ok) {
       host.innerHTML = '<div class="warn">' + esc(r.error)
         + (r.needs === 'parser'

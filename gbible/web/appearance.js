@@ -66,20 +66,20 @@ const Appearance = {
       '<div class="st-body" style="margin-bottom:6px">Simple costuming for reading. Leave these alone unless you prefer something else.</div>'
       + '<label class="st-lbl">Theme</label><select id="app-theme">' + themeOpts.map(o => '<option value="'+o[0]+'"' + (o[0]===current.theme?' selected':'') + '>'+o[1]+'</option>').join('') + '</select>'
       + '<label class="st-lbl">Body font</label><select id="app-body-font">' + fontOpts.map(o => '<option value="'+o[0]+'"' + (o[0]===current.bodyFont?' selected':'') + '>'+o[1]+'</option>').join('') + '</select>'
-      + '<label class="st-lbl">Body size</label><input id="app-body-size" type="number" min="13" max="20" step="1" value="'+(current.bodySize||15)+'">'
-      + '<label class="st-lbl">Body color</label><input id="app-body-color" type="color" value="'+(current.bodyColor||'#e6e8f0')+'">'
+      + '<label class="st-lbl">Body size</label><input id="app-body-size" type="number" min="13" max="20" step="1" value="'+esc(String(current.bodySize||15))+'">'
+      + '<label class="st-lbl">Body color</label><input id="app-body-color" type="color" value="'+esc(String(current.bodyColor||'#e6e8f0'))+'">'
       + '<label class="st-lbl">Header font</label><select id="app-head-font">' + fontOpts.map(o => '<option value="'+o[0]+'"' + (o[0]===current.headingFont?' selected':'') + '>'+o[1]+'</option>').join('') + '</select>'
-      + '<label class="st-lbl">Header size</label><input id="app-head-size" type="number" min="14" max="26" step="1" value="'+(current.headerSize||18)+'">'
-      + '<label class="st-lbl">Header color</label><input id="app-head-color" type="color" value="'+(current.headerColor||'#ffd166')+'">'
+      + '<label class="st-lbl">Header size</label><input id="app-head-size" type="number" min="14" max="26" step="1" value="'+esc(String(current.headerSize||18))+'">'
+      + '<label class="st-lbl">Header color</label><input id="app-head-color" type="color" value="'+esc(String(current.headerColor||'#ffd166'))+'">'
       + '<div class="tiny muted" style="margin-top:8px">These affect the page layout and panes globally.</div>',
       [{ label: 'Save', cls: 'primary', hidePrint: true, fn: () => {
         const o = {
           theme: $('#app-theme').value,
           bodyFont: $('#app-body-font').value,
-          bodySize: Number($('#app-body-size').value || 15),
+          bodySize: Math.min(20, Math.max(13, Number($('#app-body-size').value || 15))),
           bodyColor: $('#app-body-color').value,
           headingFont: $('#app-head-font').value,
-          headerSize: Number($('#app-head-size').value || 18),
+          headerSize: Math.min(26, Math.max(14, Number($('#app-head-size').value || 18))),
           headerColor: $('#app-head-color').value,
         };
         this.apply(o);
@@ -87,6 +87,7 @@ const Appearance = {
         closeModal();
       } },
       { label: 'Reset', cls: 'btn', fn: () => {
+        if (!confirm('Reset all appearance settings to defaults?')) return;
         localStorage.removeItem(this.KEY);
         this.init();
         closeModal();

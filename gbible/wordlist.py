@@ -138,11 +138,15 @@ def remove(list_id: str) -> dict:
     return {"ok": cur.rowcount > 0}
 
 
-def rename(list_id: str, name: str) -> dict:
-    return save({"id": list_id, "name": name})
-
-
 # ----------------------------------------------------------------- filling
+
+def _canonical_order(alias: str = "u") -> str:
+    """An ORDER BY fragment that sorts book codes in canon order, not text order."""
+    books = sorted(canon.BOOK_BY_OSIS.values(), key=lambda b: b.ordinal)
+    return ("CASE " + alias + ".book "
+            + " ".join(f"WHEN '{b.osis}' THEN {b.ordinal}" for b in books)
+            + " ELSE 999 END")
+
 
 def occurrences(list_id: str, *, limit: int = 2000, offset: int = 0) -> dict:
     """Re-run the list's query and return what it finds now."""
@@ -150,7 +154,9 @@ def occurrences(list_id: str, *, limit: int = 2000, offset: int = 0) -> dict:
     if not w:
         return {"ok": False, "error": "no such word list"}
     opts = dict(w["options"] or {})
-    limit = int(opts.get("limit") or limit)
+    opts_limit = int(opts.get("limit") or 0)
+    if opts_limit:
+        limit = min(int(limit), opts_limit)   # never let a list option raise the cap
     try:
         if w["kind"] == "strongs":
             res = _from_strongs(w["query"], limit=limit, offset=offset,
@@ -176,7 +182,6 @@ def _from_query(query: str, opts: dict, *, limit: int, offset: int) -> dict:
         limit=limit, offset=offset,
         match_case=bool(opts.get("match_case")),
         match_all_forms=bool(opts.get("match_forms")),
-        search_headings=bool(opts.get("search_headings", False)),
         sort=opts.get("sort") or "passage")
     r = searchmod.search(query, so)
     if not r.get("ok"):
@@ -215,11 +220,16 @@ def _from_strongs(num: str, *, limit: int, offset: int,
     if module_id:
         sql += " AND m.module_id=?"
         a.append(module_id)
-    sql += " ORDER BY mo.priority DESC, u.book, u.chapter, u.verse, m.pos LIMIT ? OFFSET ?"
+    sql += (" ORDER BY mo.priority DESC, " + _canonical_order()
+            + ", u.chapter, u.verse, m.pos LIMIT ? OFFSET ?")
     a += [limit, offset]
     rows = conn.execute(sql, a).fetchall()
-    total = conn.execute("SELECT count(*) c FROM marker WHERE kind='strongs' "
-                         "AND value=?", (n,)).fetchone()["c"]
+    count_sql = ("SELECT count(*) c FROM marker m JOIN unit u "
+                 "ON u.module_id=m.module_id AND u.key=m.unit_key "
+                 "WHERE m.kind='strongs' AND m.value=?")
+    if module_id:
+        count_sql += " AND m.module_id=?"
+    total = conn.execute(count_sql, [n] + ([module_id] if module_id else [])).fetchone()["c"]
     row = conn.execute("SELECT word, lemma FROM strongs WHERE strongs=?",
                        (n,)).fetchone()
     items = [{"term": n, "surface": r["surface"] or "",
@@ -229,7 +239,7 @@ def _from_strongs(num: str, *, limit: int, offset: int,
               "verse": r["verse"] or 0,
               "snippet": (r["text"] or "")[:180]} for r in rows]
     out = {"ok": True, "source": "strongs", "number": n, "total": total,
-           "items": items,
+           "more": total > offset + len(items), "items": items,
            "word": (row["word"] if row else "") or "",
            "lemma": (row["lemma"] if row else "") or ""}
     if total and not items:
@@ -265,7 +275,7 @@ def _from_morph(code: str, *, kind: str, limit: int, offset: int,
               "verse": r["verse"] or 0,
               "snippet": (r["text"] or "")[:180]} for r in rows]
     out = {"ok": True, "source": kind, "code": code, "total": total,
-           "items": items}
+           "more": total > offset + len(items), "items": items}
     if kind == "morph":
         f = morphq.parse_code(code)
         out["features"] = {k: v for k, v in f.items() if v not in (None, "", [])}
@@ -319,9 +329,17 @@ def pin(list_id: str, item: dict) -> dict:
 
 
 def unpin(item_id: str) -> dict:
-    cur = db.connect().execute("DELETE FROM word_list_item WHERE id=?",
-                               (item_id,))
-    db.connect().commit()
+    conn = db.connect()
+    parent = conn.execute(
+        "SELECT list_id FROM word_list_item WHERE id=?", (item_id,)).fetchone()
+    cur = conn.execute("DELETE FROM word_list_item WHERE id=?", (item_id,))
+    conn.commit()
+    if cur.rowcount and parent and parent["list_id"]:
+        try:
+            from . import sync
+            sync.tombstone(parent["list_id"], "word-list")
+        except Exception:                               # noqa: BLE001
+            pass
     return {"ok": cur.rowcount > 0}
 
 
@@ -436,8 +454,10 @@ def export(list_id: str, fmt: str = "csv") -> dict:
 
     def _name(mid: str) -> str:
         if mid not in names:
-            m = library.get(mid) if mid else None
-            names[mid] = (m.name if m else mid) or ""
+            # The item and its reference are kept even if the module was
+            # removed; only the module column says so.
+            m = library.get_installed(mid) if mid else None
+            names[mid] = (m.name if m else ("(removed) " + mid if mid else "")) or ""
         return names[mid]
 
     rows = [{"term": i.get("term") or "", "surface": i.get("surface") or "",

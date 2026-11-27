@@ -119,13 +119,13 @@ def _strip_markup(text: str) -> str:
 
 def build(module_id: str, ref: str, *, word: str = "", tagged_only: bool = False) -> dict:
     """Every word in a chapter or range, or every use of one word in it."""
-    m = library.get(module_id)
+    m = library.get_installed(module_id)
     if m is None:
         return {"ok": False, "error": f"no such resource: {module_id}"}
     rr = canon.parse_ref(ref, m.v11n or "KJV")
     if rr is None:
         return {"ok": False, "error": f"cannot read {ref!r} as a reference"}
-    verses = list(rr.refs())
+    verses = list(rr.refs(m.v11n or "KJV"))
     if not verses:
         return {"ok": False, "error": "no verse in that reference"}
     if len(verses) > 400:
@@ -262,9 +262,10 @@ def completeness(module_id: str) -> dict:
 
     So the two are counted separately and reported differently.
     """
-    m = library.get(module_id)
+    m = library.get_installed(module_id)
     if m is None or m.type != "Bible":
         return {"ok": False}
+    v11n = m.v11n or "KJV"
     conn = db.connect()
     have = {(c["book"], c["chapter"]): (c["m"] or 0)
             for c in conn.execute(
@@ -272,10 +273,10 @@ def completeness(module_id: str) -> dict:
                 "GROUP BY book, chapter", (module_id,))}
     expected, short = set(), []
     for bk in {b for b, _c in have}:
-        for ch in range(1, (canon.chapter_count("KJV", bk) or 0) + 1):
+        for ch in range(1, (canon.chapter_count(v11n, bk) or 0) + 1):
             expected.add((bk, ch))
     for (bk, ch), maxv in have.items():
-        want = canon.verse_count("KJV", bk, ch)
+        want = canon.verse_count(v11n, bk, ch)
         if want and maxv < want:
             short.append((bk, ch, maxv, want))
     missing = expected - set(have)

@@ -49,8 +49,10 @@ it does not have.
 """
 from __future__ import annotations
 
+import json
 import re
 from collections import defaultdict
+from pathlib import Path
 
 from . import db, library
 
@@ -88,6 +90,15 @@ EXPECTED = {"Matt": 355, "Mark": 235, "Luke": 343, "John": 232}
 
 _NUM = re.compile(r"^(\d+)\.(\d+)$")
 _KEY = re.compile(r"^([A-Za-z]+)\.(\d+)\.(\d+)$")
+_RANGE = re.compile(r"^([A-Za-z]+)\.(\d+)\.(\d+)[a-z]?(?:-(?:(\d+)\.)?(\d+)[a-z]?)?$")
+
+#: A curated, public-domain transcription of the ten canon tables themselves.
+#: The installed SWORD module is the other half of the apparatus -- verse to
+#: section number -- and labels its first column 1/2/3/4 by *Gospel*, so it can
+#: never produce a shared section.  This file is what makes the tables real.
+_TABLES_FILE = Path(__file__).parent / "data" / "eusebian_tables.json"
+_ROMAN = {c["roman"]: c["n"] for c in CANONS}
+_GOSPEL = {"1": "Matt", "2": "Mark", "3": "Luke", "4": "John"}
 
 #: Parsed once against the module ids, then reused.  Parsing 3,783 rows per
 #: request would be absurd; the library changing bumps the generation.
@@ -131,27 +142,151 @@ def _signature(conn, module_id: str) -> str:
     return f"{rows['c']}:{rows['a']}:{rows['b']}:{rows['s']}"
 
 
+def _bundled() -> dict | None:
+    """The curated canon-table file, parsed once."""
+    if "bundled" in _CACHE:
+        return _CACHE["bundled"]
+    try:
+        doc = json.loads(_TABLES_FILE.read_text(encoding="utf-8"))
+        if not doc.get("entries"):
+            raise ValueError("the file has no entries")
+    except Exception:
+        doc = None
+    _CACHE["bundled"] = doc
+    return doc
+
+
+def _expand(ref: str) -> list[str]:
+    """An osisRef range such as Matt.3.7-10 or John.10.41-11.52 to verse keys."""
+    m = _RANGE.match((ref or "").strip())
+    if not m:
+        return []
+    book, c1, v1, c2, v2 = m.groups()
+    c1, v1 = int(c1), int(v1)
+    if c2:
+        c2, v2 = int(c2), int(v2)
+    elif v2:
+        c2, v2 = c1, int(v2)
+    else:
+        return [f"{book}.{c1}.{v1}"]
+    out = []
+    for ch in range(c1, c2 + 1):
+        lo = v1 if ch == c1 else 1
+        hi = v2 if ch == c2 else 200
+        out.extend(f"{book}.{ch}.{v}" for v in range(lo, hi + 1))
+    return out
+
+
+def _curated() -> dict | None:
+    """Turn the curated entries into the same shape the module parser returns.
+
+    Associates are symmetric (1.10 points at 3.8 and back), so the associate
+    network is folded into groups and each parallel is emitted once.  The row's
+    number is the section of the first Gospel in that canon; canon X has one row
+    per Gospel, so its gospel is folded into the key to keep them distinct.
+    """
+    doc = _bundled()
+    if doc is None:
+        return None
+    byid = {e["id"]: e for e in doc["entries"]}
+    parent = {k: k for k in byid}
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    for e in doc["entries"]:
+        for other in (e.get("assocates") or "").split():
+            if other in byid:
+                a, b = find(e["id"]), find(other)
+                if a != b:
+                    parent[b] = a
+
+    groups: dict[str, list[str]] = defaultdict(list)
+    for k in byid:
+        groups[find(k)].append(k)
+
+    sections: dict[tuple[int, int], dict] = {}
+    by_verse: dict[str, tuple[int, int]] = {}
+    counts: dict[str, set] = defaultdict(set)
+    labels: dict[tuple[int, int], str] = {}
+    bad: list[dict] = []
+    for members in groups.values():
+        members.sort(key=lambda k: (int(k.split(".")[0]), int(k.split(".")[1])))
+        t = _ROMAN.get(byid[members[0]]["table"])
+        if not t:
+            bad.append({"verse": byid[members[0]]["id"],
+                        "value": byid[members[0]]["table"],
+                        "why": "table is not one of the ten canons"})
+            continue
+        canon = next(c for c in CANONS if c["n"] == t)
+        if t == 10:
+            e = byid[members[0]]
+            gospel = e["id"].split(".")[0]
+            section = int(e["id"].split(".")[1])
+            s = int(gospel) * 1000 + section
+            label = f"{BOOK_NAME.get(_GOSPEL[gospel], gospel)} {section}"
+        else:
+            first = canon["books"][0]
+            prim = next((k for k in members if _GOSPEL.get(k.split(".")[0]) == first),
+                        members[0])
+            s = int(prim.split(".")[1])
+            label = str(s)
+        row: dict[str, list[str]] = {}
+        for k in members:
+            e = byid[k]
+            book = _GOSPEL.get(e["id"].split(".")[0])
+            if not book:
+                continue
+            verses = _expand(e.get("osisRef") or "")
+            row.setdefault(book, []).extend(verses)
+            for v in verses:
+                by_verse[v] = (t, s)
+            counts[book].add(int(e["id"].split(".")[1]))
+        sections[(t, s)] = row
+        labels[(t, s)] = label
+    return {"sections": sections, "by_verse": by_verse,
+            "counts": {b: len(v) for b, v in counts.items()},
+            "labels": labels, "bad": bad, "doc": doc}
+
+
 def data() -> dict:
     """The parsed apparatus: sections, verse lookups, and what is wrong.
 
-    Keys are `(table, section)`, values are `{book: [verse keys]}`.  Built on
-    first use and cached against the library generation, so a re-index is
-    picked up without anything having to remember to clear a cache.
+    The curated canon tables are used when present; the installed verse-to-number
+    module is a fallback for installations without the bundled file.  Keys are
+    ``(table, section)`` and values are ``{book: [verse keys]}``.
     """
     from . import db as _db
     key = ("eusebian", _db.GENERATION)
     hit = _CACHE.get(key)
     if hit is not None:
         return hit
+    curated = _curated()
+    if curated is not None and curated["sections"]:
+        doc = curated["doc"]
+        out = {
+            "modules": [doc.get("title") or doc.get("source") or "curated tables"],
+            "sections": curated["sections"],
+            "by_verse": curated["by_verse"],
+            "bad": curated["bad"],
+            "counts": curated["counts"],
+            "labels": curated["labels"],
+            "source": {k: doc.get(k, "") for k in
+                       ("source", "title", "attribution", "note", "license",
+                        "year", "rights", "module", "module_version")},
+            "available": True,
+            "curated": True,
+        }
+        _CACHE[key] = out
+        return out
     conn = db.connect()
     mods = _modules()
     sections: dict[tuple[int, int], dict] = defaultdict(dict)
     by_verse: dict[str, tuple[int, int]] = {}
     bad: list[dict] = []
-    # Distinct *sections* per book, not verses.  These are different quantities
-    # and confusing them reads as 300% coverage: Matthew has about 1,070 verses
-    # but only about 350 sections, because a section spans a paragraph and most
-    # of them are several verses long.
     counts: dict[str, set] = defaultdict(set)
     seen_keys: set[str] = set()
     for m in mods:
@@ -172,10 +307,6 @@ def data() -> dict:
                 continue
             t, s = int(nm.group(1)), int(nm.group(2))
             if not 1 <= t <= 10:
-                # A table number above ten is not a variant reading of Eusebius;
-                # there are ten tables.  These are dropped and reported, because
-                # treating "144" as canon 144 would file five verses under a
-                # table that has never existed.
                 bad.append({"verse": vk, "value": num,
                             "why": f"table {t} does not exist; there are ten"})
                 continue
@@ -192,7 +323,10 @@ def data() -> dict:
         "by_verse": by_verse,
         "bad": bad,
         "counts": {b: len(v) for b, v in counts.items()},
+        "labels": {k: str(k[1]) for k in sections},
+        "source": {},
         "available": bool(mods),
+        "curated": False,
     }
     _CACHE[key] = out
     return out
@@ -246,11 +380,12 @@ def lookup(notation_: str) -> dict:
         })
     return {
         "ok": True, "table": t, "section": s,
-        "notation": f"{t}.{s}",
+        "notation": d.get("labels", {}).get((t, s), f"{t}.{s}"),
+        "key": f"{t}.{s}",
         "canon": canon,
         "columns": columns,
         "in_table": [c["book"] for c in columns if c["present"]],
-        "missing_from_table": [c["book"] for c in canon["books"]]
+        "missing_from_table": [b for b in canon["books"]]
                               if canon and not
                               [c for c in columns if c["present"]] else [],
     }
@@ -286,7 +421,7 @@ def harmony(*, canon: int | None = None, limit: int = 400,
                 continue
             row = d["sections"][(c["n"], s)]
             rows.append({
-                "section": s,
+                "section": d.get("labels", {}).get((c["n"], s), str(s)),
                 "notation": f"{c['n']}.{s}",
                 "cells": [
                     {"book": b, "verses": [_ref_for(v) for v in
@@ -350,6 +485,8 @@ def health() -> dict:
                         if total_expected else 0.0,
         "malformed": d["bad"],
         "malformed_count": len(d["bad"]),
+        "source": d.get("source", {}),
+        "curated": d.get("curated", False),
         "notes": _notes(d, books, dupes, tables_here, shared),
     }
     return out
@@ -361,7 +498,15 @@ def _notes(d, books, dupes, tables_here, shared) -> list[str]:
         return ["The Eusebian canon table is not installed, so there are no "
                 "Ammonian section numbers here. Install 'Eusebian Numbers By "
                 "Verse' from the Modules tab."]
-    if not shared:
+    if d.get("curated"):
+        src = d.get("source") or {}
+        out.append(
+            "The ten canon tables come from a curated, public-domain "
+            "transcription of the Eusebian apparatus"
+            + (f" ({src['source']})" if src.get("source") else "")
+            + ". Each row shows the sections the tables actually place side by "
+              "side; a blank column means that Gospel has no section in that row.")
+    elif not shared:
         out.append(
             "This module does not contain the Eusebian canon table. Every "
             "number in it belongs to exactly one Gospel -- Matthew's are all "
@@ -369,18 +514,14 @@ def _notes(d, books, dupes, tables_here, shared) -> list[str]:
             "-- so no number is shared and no verse here can be matched to a "
             "parallel in another Gospel. Tables V to X, the ones that actually "
             "compare Gospels, are absent entirely. "
-            "It is a per-Gospel section numbering, not the canon table, and the "
-            "harmonies below show one column where they should show two or "
-            "four. The numbers themselves are real Ammonian section numbers and "
-            "worth keeping as a way of citing a pericope; they just cannot do "
-            "the one job the tables exist for.")
+            "It is a per-Gospel section numbering, not the canon table.")
     for b in books:
         if b["missing"]:
             out.append(
                 f"{b['name']} has {b['have']} of the {b['expected']} sections "
                 f"usually counted, so {b['missing']} are missing here. The "
-                f"numbers that are present are sound; the gaps are in the "
-                f"module, not in the table.")
+                f"numbers that are present are sound; this source does not "
+                f"carry the rest.")
     if dupes:
         out.append(
             f"{len(dupes) + 1} copies of this table are installed and they are "

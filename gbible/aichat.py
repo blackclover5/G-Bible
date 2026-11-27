@@ -19,9 +19,9 @@ is that a claim can be checked.
 What is not kept
 ----------------
 Nothing leaves the machine.  A conversation is a local record like the usage
-record, and it is not synced: it is a transcript of what the reader asked and
-what was said back, and a reader who does not want one on another machine
-should not have one there.
+record.  Unlike the usage record it is part of a `.gbz` backup; AI conversations
+are deliberately excluded unless the backup opts in to AI data.  Deleting a
+conversation records a tombstone so the delete can propagate on restore.
 """
 
 from __future__ import annotations
@@ -111,9 +111,13 @@ def save(chat_id: str, turns: list[dict], title: str = "") -> dict:
             cites_json = json.dumps(cites, ensure_ascii=False)
         except (TypeError, ValueError):
             cites_json = "[]"
+        backend = str(t.get("backend") or "").strip()
+        if backend not in ("local", "api"):
+            backend = ""
         conn.execute(
-            "INSERT INTO ai_chat_turn(chat_id,ord,role,content,cites) "
-            "VALUES(?,?,?,?,?)", (chat_id, i, role, content, cites_json))
+            "INSERT INTO ai_chat_turn(chat_id,ord,role,content,cites,backend) "
+            "VALUES(?,?,?,?,?,?)",
+            (chat_id, i, role, content, cites_json, backend))
     name = (title or "").strip() or title_for(turns)
     if name:
         conn.execute("UPDATE ai_chat SET title=?, updated_at=? WHERE id=?",
@@ -154,7 +158,7 @@ def get(chat_id: str) -> dict | None:
         return None
     turns = []
     for t in db.connect().execute(
-            "SELECT role,content,cites FROM ai_chat_turn WHERE chat_id=? "
+            "SELECT role,content,cites,backend FROM ai_chat_turn WHERE chat_id=? "
             "ORDER BY ord", (chat_id,)):
         try:
             cites = json.loads(t["cites"]) if t["cites"] else []
@@ -163,7 +167,7 @@ def get(chat_id: str) -> dict | None:
         if not isinstance(cites, list):
             cites = []
         turns.append({"role": t["role"], "content": t["content"] or "",
-                      "citations": cites})
+                      "citations": cites, "backend": t["backend"] or ""})
     return {"id": row["id"], "title": row["title"] or "Untitled",
             "created_at": row["created_at"], "updated_at": row["updated_at"],
             "turns": turns}
@@ -175,6 +179,9 @@ def remove(chat_id: str) -> bool:
     cur = conn.execute("DELETE FROM ai_chat WHERE id=?", (chat_id,))
     conn.execute("DELETE FROM ai_chat_turn WHERE chat_id=?", (chat_id,))
     conn.commit()
+    if cur.rowcount:
+        from . import sync
+        sync.tombstone(chat_id, "ai-chat")
     return bool(cur.rowcount)
 
 

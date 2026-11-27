@@ -3,9 +3,6 @@ from .common import *
 # ---------------------------------------------------------------------- meta
 @endpoint("status")
 def _status(parts, q):
-    conn = db.connect()
-    n = conn.execute("SELECT COUNT(*) c FROM module WHERE installed_at>0"
-                     ).fetchone()["c"]
     from ... import posindex
     return _ok(**store.installed_summary(), database=str(db.db_path()),
                version=VERSION, api_summary=apireg.summary(),
@@ -62,14 +59,34 @@ def _ai_context(q: dict) -> dict:
     }
 
 
+@endpoint("ai/status")
+def _ai_setup_status(parts, q):
+    """Whether the AI Assistant exists in this app yet.
+
+    This one endpoint is always available, even when AI is disabled, because
+    the setup card needs to know what to offer.
+    """
+    from ... import aisetup
+    return _ok(**aisetup.status())
+
+
+@endpoint("ai/setup/start")
+def _ai_setup_start(parts, q):
+    from ... import aisetup
+    return _ok(**aisetup.start_install())
+
+
+@endpoint("ai/setup/disable")
+def _ai_setup_disable(parts, q):
+    from ... import aisetup
+    return _ok(**aisetup.disable())
+
+
 @endpoint("ai/providers")
 def _ai_providers(parts, q):
+    """The provider picker data: external providers, settings and usage counts."""
     return _ok(providers=ai.providers_view(),
                settings=ai.get_settings(),
-               # How much of the reader's own material there is to cite.  The
-               # settings screen shows it, because a switch that says "include
-               # my own material" and then quietly includes nothing is a lie
-               # told by omission.
                mine=mine.count(),
                summary={"total": len(ai.PROVIDERS),
                         "local": sum(1 for p in ai.PROVIDERS if p.local),
@@ -86,12 +103,28 @@ def _ai_settings(parts, q):
             use_mine=(_flag(q.get("use_mine"))
                       if "use_mine" in q else None),
             scope=q.get("scope") if "scope" in q else None,
-            semantic=(_flag(q.get("semantic"))
-                      if "semantic" in q else None),
             smart_query=(_flag(q.get("smart_query"))
                          if "smart_query" in q else None),
-            max_sources=q.get("max_sources")))
+            max_sources=q.get("max_sources"),
+            resolve_refs=(_flag(q.get("resolve_refs"))
+                          if "resolve_refs" in q else None),
+            multi_hop=(_flag(q.get("multi_hop"))
+                       if "multi_hop" in q else None),
+            deep_research=(_flag(q.get("deep_research"))
+                           if "deep_research" in q else None),
+            review_backend=(q.get("review_backend")
+                            if "review_backend" in q else None)))
     return _ok(settings=ai.get_settings())
+
+
+@endpoint("ai/web-check")
+def _ai_web_check(parts, q):
+    """Should the reader be offered web research for this question?
+
+    Advisory only: it never fetches and never bypasses the permission dialog.
+    It is just a word count, so there is no provider call and nothing to fail.
+    """
+    return _ok(need=ai.needs_web_research(q.get("question", "")))
 
 
 @endpoint("ai/scope")
@@ -147,12 +180,13 @@ def _ai_chat(parts, q):
                          if "use_library" in q else None),
             use_mine=(_flag(q["use_mine"]) if "use_mine" in q else None),
             scope=q.get("scope") if "scope" in q else None,
-            semantic=(_flag(q.get("semantic"))
-                      if "semantic" in q else None),
             smart_query=(_flag(q.get("smart_query"))
                          if "smart_query" in q else None),
             context=_ai_context(q),
             max_sources=int(q["max_sources"]) if q.get("max_sources") else None,
+            web_token=q.get("web_token", ""),
+            deep_research=(_flag(q.get("deep_research"))
+                           if "deep_research" in q else None),
         )
     except ai.AiError as e:
         return _ai_error(e)
@@ -196,8 +230,6 @@ def _ai_action(parts, q):
             use_library=(_flag(q["use_library"]) if "use_library" in q else None),
             use_mine=(_flag(q["use_mine"]) if "use_mine" in q else None),
             scope=q.get("scope") if "scope" in q else None,
-            semantic=(_flag(q.get("semantic"))
-                      if "semantic" in q else None),
             smart_query=(_flag(q.get("smart_query"))
                          if "smart_query" in q else None),
             max_sources=int(q["max_sources"]) if q.get("max_sources") else None,
@@ -263,6 +295,7 @@ def _ai_topic(parts, q):
             provider_id=q.get("provider") or None,
             model=q.get("model") or None,
             max_sources=int(q["max_sources"]) if q.get("max_sources") else None,
+            module_ids=ai.guide_scope_modules(q.get("scope") or ""),
         )
     except ai.AiError as e:
         return _ai_error(e)
@@ -286,6 +319,7 @@ def _ai_topic_questions(parts, q):
             provider_id=q.get("provider") or None,
             model=q.get("model") or None,
             max_sources=int(q["max_sources"]) if q.get("max_sources") else None,
+            module_ids=ai.guide_scope_modules(q.get("scope") or ""),
         )
     except ai.AiError as e:
         return _ai_error(e)
@@ -308,6 +342,7 @@ def _ai_fact_questions(parts, q):
             provider_id=q.get("provider") or None,
             model=q.get("model") or None,
             max_sources=int(q["max_sources"]) if q.get("max_sources") else None,
+            module_ids=ai.guide_scope_modules(q.get("scope") or ""),
         )
     except ai.AiError as e:
         return _ai_error(e)
@@ -351,7 +386,7 @@ def _ai_usage(parts, q):
 def _library(parts, q):
     mods = library.list_all(
         type_=q.get("type"), lang=q.get("lang"), source=q.get("source"),
-        search=q.get("q"), installed_only=q.get("installed_only", True),
+        search=q.get("q"), installed_only=_flag(q.get("installed_only", True)),
         subject=q.get("subject"),
         order=q.get("order", "priority DESC, name ASC"))
     out = []
@@ -424,8 +459,21 @@ def _library_remove(parts, q):
 
 @endpoint("library/priority")
 def _library_priority(parts, q):
+    """Set a module's reading priority.
+
+    This used to also call set_favorite(id, bool(q.get('favorite'))).  The
+    Prioritise dialog never sent `favorite`, so every Save cleared that
+    module's favourite and wrote a sync tombstone — an ordinary reordering
+    silently deleted the reader's favourites.  Favourites have their own
+    endpoint now and are never touched here.
+    """
     library.set_priority(q.get("id", ""), int(q.get("value") or 0))
-    library.set_favorite(q.get("id", ""), bool(q.get("favorite")))
+    return _ok(id=q.get("id"))
+
+
+@endpoint("library/favorite")
+def _library_favorite(parts, q):
+    library.set_favorite(q.get("id", ""), _flag(q.get("favorite", False)))
     return _ok(id=q.get("id"))
 
 
@@ -443,7 +491,9 @@ def _outline(parts, q):
         return _ok(kind="chapters", books=library.chapter_list(m))
     if m.reader == "date":
         return _ok(kind="dates", dates=library.date_list(m))
-    return _ok(kind="sections", sections=library.outline(m)[:4000])
+    sections = library.outline(m)
+    return _ok(kind="sections", sections=sections[:4000],
+               total=len(sections), truncated=len(sections) > 4000)
 
 
 # -------------------------------------------------------------------- read
@@ -454,13 +504,17 @@ def _read(parts, q):
         return {"ok": False, "error": "no module"}
     cursor = _obj(q.get("cursor"), {}) or {}
     opts = _obj(q.get("options"), {}) or {}
+    installed = library.get_installed(mid)
+    if installed is None:
+        return {"ok": False, "error": "not installed",
+                "removed": library.get(mid) is not None}
     c = library.read(mid, cursor, opts, span=q.get("span", "chapter"),
-                     context=int(q.get("context") or 0))
+                     context=_bounded_int(q.get("context"), 0, low=0, high=5))
     out = {k: v for k, v in c.__dict__.items() if k != "items"}
     out["items"] = [_item_dict(i) for i in c.items]
     return _ok(**out, module={
         "id": mid, "name": c.module_name, "reader": c.kind,
-        "type": library.get(mid).type if library.get(mid) else "",
+        "type": installed.type,
     })
 
 
@@ -476,7 +530,7 @@ def _article_index(parts, q):
     if m is None or not m.installed_at:
         return {"ok": False, "error": "not installed"}
     return _ok(**library.article_index(m, q.get("bucket", ""),
-                                       limit=int(q.get("limit") or 400)))
+                                       limit=_bounded_int(q.get("limit"), 400)))
 
 
 @endpoint("read/around")
@@ -489,7 +543,7 @@ def _read_around(parts, q):
     cur = q.get("ref") or ""
     rr = canon.parse_ref(cur, m.v11n)
     if rr is None:
-        rr = canon.parse_ref("Gen 1", m.v11n)
+        return {"ok": False, "error": f"cannot read {cur!r} as a reference"}
     r = rr.start
     act = q.get("action", "next")
     if act == "next":
@@ -505,7 +559,8 @@ def _read_around(parts, q):
     elif act == "prevbook":
         n = canon.prev_book(r, m.v11n)
     elif act == "verse":
-        n = canon.Ref(r.book, r.chapter, r.verse + 1)
+        top = canon.verse_count(m.v11n, r.book, r.chapter) or r.verse
+        n = canon.Ref(r.book, r.chapter, min(r.verse + 1, top))
     else:
         n = r
     return _ok(ref=canon.format_ref(n),
@@ -540,18 +595,23 @@ def _strongs(parts, q):
         # take the whole lookup down
         mods = [x.strip().strip('"') for x in
                 (r["modules"] if r else "").split(",") if x.strip().strip('"')]
-    mods = [m for m in mods if library.get(m)]
-    names = [library.get(m).name for m in mods]
+    mods = [m for m in mods if library.get_installed(m)]
+    names = [library.get_installed(m).name for m in mods]
     occurrences = []
     if mods:
         occurrences = [dict(x) for x in conn.execute(
             "SELECT module_id, unit_key, surface FROM marker "
             "WHERE kind='strongs' AND value=? AND module_id IN "
             f"({','.join('?' * len(mods))}) LIMIT 300", [num, *mods])]
+    occ_count = conn.execute(
+        "SELECT count(*) c FROM marker WHERE kind='strongs' AND value=? "
+        f"AND module_id IN ({','.join('?' * len(mods))})",
+        [num, *mods]).fetchone()["c"] if mods else 0
     return _ok(strongs=num, word=(r["word"] if r else "") or "",
                lemma=(r["lemma"] if r else "") or "",
-               count=(r["count"] if r else 0), modules=names,
-               occurrences=occurrences,
+               count=occ_count, modules=names,
+               occurrences=occurrences, occurrence_total=occ_count,
+               occurrences_truncated=occ_count > len(occurrences),
                prefix=num[0], gloss=gloss_for(num))
 
 
@@ -574,6 +634,7 @@ def _study_verse(parts, q):
 def _study_word(parts, q):
     """Everything installed that bears on one Strong's number."""
     return study.word_bundle(q.get("number", ""),
+                             word=q.get("word", ""),
                              module_ids=[x for x in (q.get("modules") or "").split(",")
                                          if x] or None)
 
@@ -581,14 +642,16 @@ def _study_word(parts, q):
 @endpoint("study/topic")
 def _study_topic(parts, q):
     """Every installed resource on one topic, gathered under one heading."""
-    return study.topic_guide(q.get("q", ""),
-                             per_section=int(q.get("n") or 6))
+    return study.topic_guide(
+        q.get("q", ""), per_section=int(q.get("n") or 6),
+        modules=ai._guide_modules(ai.guide_scope_modules(
+            q.get("scope") or "")))
 
 
-@endpoint("wordtip")
-def _wordtip(parts, q):
-    """The hover tooltip for a Strong's number (headword + one-line gloss)."""
-    return _ok(**study.word_tip(q.get("num", "")))
+@endpoint("definition")
+def _definition(parts, q):
+    """Word definition: Strong's gloss plus headword dictionary entries."""
+    return _ok(**study.definition(word=q.get("word", ""), num=q.get("num", "")))
 
 
 @endpoint("study/wordfind")
@@ -637,9 +700,11 @@ def _study_tags(parts, q):
 @endpoint("study/fact")
 def _study_fact(parts, q):
     """The fact-book entries on one term, sorted into name, place and article."""
-    return study.fact_guide(q.get("q", ""),
-                            per_section=int(q.get("n") or 8),
-                            lens=q.get("lens", ""))
+    return study.fact_guide(
+        q.get("q", ""), per_section=int(q.get("n") or 8),
+        lens=q.get("lens", ""),
+        modules=ai._guide_modules(ai.guide_scope_modules(
+            q.get("scope") or "")))
 
 
 @endpoint("compare")
@@ -648,7 +713,7 @@ def _compare(parts, q):
     ids = [x for x in (q.get("modules") or "").split(",") if x]
     if not ids:
         ids = [m.id for m in library.list_all()
-               if m.type == "Bible" and m.lang == "eng"][:6]
+               if m.type in library.VERSE_TEXT_TYPES and m.lang == "eng"][:6]
     return study.compare(q.get("ref", ""), ids)
 
 
@@ -706,10 +771,15 @@ def _rp_overview(parts, q):
 def _rp_mark(parts, q):
     """Mark a day read or unread."""
     plan = q.get("plan", "")
-    n = int(q.get("day") or 0)
+    try:
+        n = int(q.get("day") or 0)
+    except (TypeError, ValueError):
+        n = 0
     done = str(q.get("done", "1")).lower() not in ("0", "false", "no")
     if not plan:
         return {"ok": False, "error": "which plan?"}
+    if n < 1:
+        return {"ok": False, "error": "a plan day starts at 1"}
     return _ok(**readingplan.set_progress(plan, n, done))
 
 
@@ -739,6 +809,16 @@ def _rp_delete(parts, q):
 def _timeline_spans(parts, q):
     """The chronology as a number line, for drawing."""
     return timeline.spans()
+
+
+@endpoint("timeline/at")
+def _timeline_at(parts, q):
+    """Events whose cited passages cover this reference."""
+    try:
+        limit = max(0, min(200, int(q.get("limit") or 20)))
+    except (TypeError, ValueError):
+        limit = 20
+    return timeline.at(q.get("ref", ""), limit=limit)
 
 
 

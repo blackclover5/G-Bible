@@ -52,10 +52,13 @@ const Quotations = {
     });
     out.querySelectorAll('[data-qnote]').forEach(b => b.onclick = async () => {
       const q = items[+b.dataset.qnote];
-      await post('notes/save', { kind: 'note',
+      const r = await post('notes/save', { kind: 'note',
         title: q.title || q.source || 'Quotation',
         body: '> ' + q.quote.split('\n').join('\n> ') + '\n\n— '
           + [q.source, q.title, q.ref].filter(Boolean).join(', ') });
+      if (!r || r.ok === false) {
+        toast((r && r.error) || 'Could not save the note.', 'err'); return;
+      }
       toast('Saved as a note.');
     });
   },
@@ -89,6 +92,13 @@ const SyntaxTree = {
     // dropdown is a real answer -- "you have none" -- rather than a guess at
     // which installed module might be one.
     const probe = await api('syntax/search', { limit: 200 });
+    if (!probe || probe.ok === false) {
+      $('#sx-out').innerHTML = '<div class="warn">'
+        + esc((probe && probe.error) || 'Could not check the treebanks.')
+        + '</div>';
+      $('#sx-go').disabled = true;
+      return;
+    }
     const sel = $('#sx-mod');
     const mods = [...new Map((probe.items || [])
       .map(i => [i.module_id, i.module])).entries()];
@@ -162,6 +172,11 @@ const SyntaxTree = {
 const Counsel = {
   async load(body) {
     const t = await api('counsel/topics');
+    if (!t || t.ok === false) {
+      body.innerHTML = '<div class="warn">'
+        + esc((t && t.error) || 'Could not load counseling topics.') + '</div>';
+      return;
+    }
     const topics = t.topics || [];
     const wanted = ($('#g-term').value || '').trim();
     body.innerHTML = '<div class="dash-card"><div class="dash-h">Counseling'
@@ -219,11 +234,17 @@ const Counsel = {
     }
     if ((r.books || []).length) {
       h += sec('In your books', r.books.length + ' hits',
-        r.books.map(b => '<div class="st-note"><div class="st-src">'
-          + esc(b.module_id ? ((modById(b.module_id) || {}).name || b.module_id)
-            : '') + '</div>'
-          + (b.ref ? '<div class="st-t">' + esc(b.ref) + '</div>' : '')
-          + '<div class="st-body">' + esc(b.snippet) + '</div></div>').join(''));
+        r.books.map(b => {
+          const mod = modById(b.module_id);
+          const key = b.ref || b.key || '';
+          return '<div class="st-note cs-book" data-cs-mod="' + esc(b.module_id)
+            + '" data-cs-key="' + esc(key) + '" role="button" tabindex="0"'
+            + ' title="Open this entry in a pane">'
+            + '<div class="st-src">' + esc(mod ? mod.name : (b.module_id || ''))
+            + '</div>'
+            + (key ? '<div class="st-t">' + esc(key) + '</div>' : '')
+            + '<div class="st-body">' + esc(b.snippet) + '</div></div>';
+        }).join(''));
     }
     h += '<div class="tiny muted" style="margin-top:8px">' + esc(r.note) + '</div>';
     out.innerHTML = h;
@@ -231,6 +252,20 @@ const Counsel = {
       e.preventDefault();
       App.show('workspace');
       Reader.openRefAnywhere(a.textContent);
+    });
+    /* Book hits carry a dictionary headword, not a Bible reference, so the
+     * reference router cannot open them.  Open the resource at its own key. */
+    out.querySelectorAll('.cs-book').forEach(n => {
+      const open = () => {
+        const mod = modById(n.dataset.csMod);
+        if (!mod) { toast('That resource is not installed.', 'warn'); return; }
+        App.show('workspace');
+        const key = n.dataset.csKey || '';
+        Workspace.openModule(mod.id, mod.is_bible
+          ? { ref: key, span: 'verse' } : { key });
+      };
+      n.onclick = open;
+      n.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } };
     });
   },
 };

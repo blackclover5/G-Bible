@@ -12,10 +12,14 @@ const Favorites = {
         const mods = (S.modules || []).filter(m => m.favorite);
         if (!mods.length) { toast('There is nothing to unfavorite.', 'warn'); return; }
         if (!confirm('Unfavorite all ' + mods.length + ' modules?')) return;
-        await Promise.all(mods.map(m =>
+        const rs = await Promise.all(mods.map(m =>
           api('favorites', { action: 'set', id: m.id, value: '0' })));
-        mods.forEach(m => { m.favorite = false; });
-        toast('Cleared favorites.', 'ok');
+        if (rs.some(r => !r || r.ok === false)) {
+          toast('Some modules could not be unfavorited.', 'err');
+        } else {
+          mods.forEach(m => { m.favorite = false; });
+          toast('Cleared favorites.', 'ok');
+        }
         this.load();
         if (Library && Library.paint) Library.paint();
       };
@@ -25,6 +29,11 @@ const Favorites = {
     if (!host) return;
     host.innerHTML = '<div class="st-loading">Loading…</div>';
     const q = (($('#fv-q') || {}).value || '').trim().toLowerCase();
+    const r = await api('favorites');
+    if (r && r.ok !== false) {
+      const ids = new Set((r.favorites || []).map(f => f.id || f.module_id || f));
+      (S.modules || []).forEach(m => { m.favorite = ids.has(m.id); });
+    }
     const mods = (S.modules || []).filter(m => m.favorite);
     const rows = q
       ? mods.filter(m => (m.name + ' ' + (m.description || '') + ' ' + (m.author || ''))

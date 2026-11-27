@@ -28,7 +28,7 @@ from pathlib import Path
 
 from . import native
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 8
 
 _local = threading.local()
 
@@ -175,6 +175,25 @@ CREATE TABLE IF NOT EXISTS marker (
 -- That made a single word-study panel take seconds and was the whole cost of
 -- building a verse's word list.  This is the index that query needs.
 CREATE INDEX IF NOT EXISTS ix_marker_kindval ON marker(kind, value);
+-- Clause-level roles decoded from a CoNLL-U treebank at import time.  Kept
+-- separate from `marker`: a role is a relation ("subject:Jesus"), not a tag on
+-- a word, and the primary key is shaped for the lookup the search engine does
+-- -- all units carrying one role and one value.
+CREATE TABLE IF NOT EXISTS syntax_role (
+    module_id  TEXT NOT NULL,
+    role       TEXT NOT NULL,
+    value      TEXT NOT NULL,
+    unit_key   TEXT NOT NULL,
+    pos        INTEGER NOT NULL,
+    surface    TEXT,
+    resolved   INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (module_id, role, value, unit_key, pos)
+) WITHOUT ROWID;
+-- The primary key starts (module_id, kind, value, ...), so a lookup for one
+-- unit's tags can only narrow by module and kind and then scans every value.
+-- Analysis asks for exactly those per-unit tag sets; this index makes it a
+-- seek instead of a scan of the module's markers.
+CREATE INDEX IF NOT EXISTS ix_marker_unit ON marker(module_id, unit_key, kind, value);
 
 -- Strong's -> lemma word list, and lemma -> Strong's, built from imported text.
 CREATE TABLE IF NOT EXISTS strongs (
@@ -651,21 +670,11 @@ CREATE TABLE IF NOT EXISTS ai_chat_turn (
     role     TEXT NOT NULL,           -- user | assistant
     content  TEXT,
     cites    TEXT,                    -- JSON array of citation records
+    backend  TEXT,                    -- local | api; where the answer came from
     PRIMARY KEY (chat_id, ord)
 );
 CREATE INDEX IF NOT EXISTS ix_ai_chat_updated ON ai_chat(updated_at DESC);
 
--- ------------------------------------------------------------------- tags
--- A tag is a named category the reader puts things into, and a thing can be
--- in more than one: a passage can be "grace", "Romans" and "sermon series" at
--- the same time.  The old answer was one label per highlight, which meant a
--- passage could only be in one place, and a second label meant a second
--- highlight.
---
--- An item is a verse or any other unit.  A verse is stored the same way a
--- highlight's verse is -- by book, chapter and verse -- so a tag follows the
--- passage from one translation to the next, which is the whole point of
--- tagging it rather than highlighting it.
 CREATE TABLE IF NOT EXISTS tag (
     id         TEXT PRIMARY KEY,
     name       TEXT NOT NULL,
@@ -706,6 +715,8 @@ CREATE TABLE IF NOT EXISTS canvas_node (
     text       TEXT DEFAULT '',
     ref        TEXT DEFAULT '',
     color      TEXT DEFAULT '',
+    module_id  TEXT,                     -- translation a verse card was written against
+    data       TEXT,                     -- original JSON for unknown element kinds
     created_at REAL
 );
 CREATE INDEX IF NOT EXISTS ix_canvas_node_board ON canvas_node(board_id);
@@ -734,13 +745,21 @@ def connect() -> sqlite3.Connection:
     # and protects against later connection configuration changes.
     conn.execute("PRAGMA busy_timeout=120000")
     conn.row_factory = sqlite3.Row
-    conn.executescript(SCHEMA)
-    conn.commit()
+    # Building the schema and running migrations both need a write lock.  Doing
+    # either on *every* new thread-local connection made ordinary reads contend
+    # with each other (and with the background indexer) until SQLite raised
+    # "database is locked" in the middle of an AI-gate setting lookup.  Both are
+    # one-time operations now: schema only on a brand-new file, migrations only
+    # when the stored version is actually behind.
+    needed = set(_ADDED_COLUMNS) | {"meta", "module", "unit", "marker"}
+    present = {r["name"] for r in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table'")}
+    if not needed <= present:
+        # A brand-new file, or a hand-built legacy database missing tables that
+        # later migrations expect.  SCHEMA is idempotent and runs once.
+        conn.executescript(SCHEMA)
+        conn.commit()
     _run_migrations(conn)
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS ix_item_year ON store_item(year_from)"
-    )
-    conn.commit()
     _local.conn = conn
     _local.path = str(p)
     return conn
@@ -774,8 +793,15 @@ def maybe_checkpoint(conn: sqlite3.Connection | None = None,
 
 
 def init() -> sqlite3.Connection:
+    # connect() already runs _run_migrations; doing it again here was harmless
+    # but wasted a full schema pass on every startup.
     conn = connect()
-    _run_migrations(conn)
+    # Bring the old setting-based canvases into the board tables.  Idempotent
+    # and non-destructive, so a restore of an older backup is migrated too.
+    from . import canvases as _canvases
+    _canvases.migrate_legacy_canvases()
+    from . import sermon_migrate as _sermon_migrate
+    _sermon_migrate.migrate_legacy_sermons()
     return conn
 
 
@@ -787,6 +813,7 @@ _ADDED_COLUMNS = {
         ("priority", "INTEGER DEFAULT 0"),
         ("favorite", "INTEGER DEFAULT 0"),
         ("v11n_source", "TEXT"),
+        ("attribution", "TEXT"),
     ],
     "unit": [
         ("char_start", "INTEGER DEFAULT 0"),
@@ -796,6 +823,9 @@ _ADDED_COLUMNS = {
     "marker": [
         ("span_start", "INTEGER DEFAULT 0"),
         ("span_end", "INTEGER DEFAULT 1000"),
+    ],
+    "syntax_role": [
+        ("resolved", "INTEGER NOT NULL DEFAULT 0"),
     ],
     "highlight": [
         ("updated_at", "REAL"),
@@ -817,8 +847,12 @@ _ADDED_COLUMNS = {
     "repo": [
         ("item_count", "INTEGER DEFAULT 0"),
     ],
-    "module": [
-        ("attribution", "TEXT"),
+    "canvas_node": [
+        # A verse card remembers which translation it was written against, and
+        # every node keeps its original JSON so a legacy element kind is never
+        # lost when an old setting-based canvas is migrated into a board.
+        ("module_id", "TEXT"),
+        ("data", "TEXT"),
     ],
 }
 
@@ -851,31 +885,78 @@ def _migrate_to_4(conn: sqlite3.Connection) -> None:
     conn.execute("DELETE FROM marker WHERE kind='field' AND value='red-letter'")
 
 
-_MIGRATIONS = {2: _migrate_to_2, 3: _migrate_to_3, 4: _migrate_to_4}
+def _migrate_to_5(conn: sqlite3.Connection) -> None:
+    # Record which generator produced each answer, so the provenance chip on a
+    # saved conversation survives a restart.  Old turns simply have no value.
+    have = {r["name"] for r in conn.execute("PRAGMA table_info(ai_chat_turn)")}
+    if "backend" not in have:
+        conn.execute("ALTER TABLE ai_chat_turn ADD COLUMN backend TEXT")
+
+
+def _migrate_to_6(conn: sqlite3.Connection) -> None:
+    # Kept for upgrade numbering only.  A v5 semantic-index table is dropped
+    # outright by v8, so there is no intermediate work to do here.
+    pass
+
+
+def _migrate_to_7(conn: sqlite3.Connection) -> None:
+    """Carry module ids and raw element data on canvas cards."""
+    for table, cols in _ADDED_COLUMNS.items():
+        have = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+        for name, decl in cols:
+            if name not in have:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
+    # These two indexes were once created on every connection.  They belong to
+    # the one-time schema upgrade instead, so an established database gets them
+    # here and normal connections never need a write lock.
+    conn.execute("CREATE INDEX IF NOT EXISTS ix_item_year "
+                 "ON store_item(year_from)")
+    conn.execute("CREATE INDEX IF NOT EXISTS ix_marker_unit "
+                 "ON marker(module_id, unit_key, kind, value)")
+
+
+def _migrate_to_8(conn: sqlite3.Connection) -> None:
+    """The semantic index is retired with the bundled embedding model."""
+    conn.execute("DROP TABLE IF EXISTS ai_embedding")
+
+
+_MIGRATIONS = {2: _migrate_to_2, 3: _migrate_to_3, 4: _migrate_to_4,
+               5: _migrate_to_5, 6: _migrate_to_6, 7: _migrate_to_7,
+               8: _migrate_to_8}
 
 
 def _run_migrations(conn: sqlite3.Connection) -> None:
+    """Bring an established database up to SCHEMA_VERSION.
+
+    The version is read *before* taking a write lock.  On an up-to-date library
+    this is a single SELECT and returns immediately: the server opens a fresh
+    thread-local connection for many requests, and a BEGIN IMMEDIATE on each of
+    them was enough to produce "database is locked" during ordinary reads.
+    """
+    row = conn.execute(
+        "SELECT value FROM meta WHERE key='schema_version'"
+    ).fetchone()
+    if row is None:
+        version = 1
+    else:
+        try:
+            version = int(row["value"])
+        except (TypeError, ValueError) as exc:
+            raise RuntimeError(
+                f"invalid database schema version: {row['value']!r}") from exc
+    if version > SCHEMA_VERSION:
+        raise RuntimeError(
+            f"database schema version {version} is newer than supported "
+            f"version {SCHEMA_VERSION}")
+    if row is not None and version == SCHEMA_VERSION:
+        return                       # the common case: no write lock at all
+    conn.execute("BEGIN IMMEDIATE")
     try:
-        conn.execute("BEGIN IMMEDIATE")
-        row = conn.execute(
-            "SELECT value FROM meta WHERE key='schema_version'"
-        ).fetchone()
         if row is None:
-            version = 1
             conn.execute("INSERT INTO meta(key,value) VALUES('schema_version',?)",
                          (str(version),))
             conn.execute("INSERT OR REPLACE INTO meta(key,value) VALUES"
                          "('created_at',?)", (str(time.time()),))
-        else:
-            try:
-                version = int(row["value"])
-            except (TypeError, ValueError) as exc:
-                raise RuntimeError(
-                    f"invalid database schema version: {row['value']!r}") from exc
-        if version > SCHEMA_VERSION:
-            raise RuntimeError(
-                f"database schema version {version} is newer than supported "
-                f"version {SCHEMA_VERSION}")
         while version < SCHEMA_VERSION:
             target = version + 1
             migration = _MIGRATIONS.get(target)

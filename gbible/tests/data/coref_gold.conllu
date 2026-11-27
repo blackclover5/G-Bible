@@ -1,0 +1,118 @@
+# A hand-labelled evaluation set for the conservative pronoun resolver.
+# Each `# expect` line names the resolutions that SHOULD happen in that
+# sentence, as `pronoun>antecedent:role`, separated by semicolons.  A sentence
+# with no expect line should produce no resolution at all.  Deliberately
+# includes ambiguous, distant, first/second person and gender-mismatch cases:
+# the point is precision, not recall.
+# This is a synthetic set written by hand, not a published annotated corpus.
+
+# sent_id = 1
+1	Jesus	Jesus	PROPN	NNP	Gender=Masc|Number=Sing	2	nsubj	_
+2	came	come	VERB	VBD	_	0	root	_
+
+# sent_id = 2
+# expect = he>Jesus:subject
+1	He	he	PRON	PRP	Person=3|Gender=Masc|Number=Sing	2	nsubj	_
+2	taught	teach	VERB	VBD	_	0	root	_
+
+# sent_id = 3
+1	Mary	Mary	PROPN	NNP	Gender=Fem|Number=Sing	2	nsubj	_
+2	came	come	VERB	VBD	_	0	root	_
+
+# sent_id = 4
+# expect = she>Mary:subject
+1	She	she	PRON	PRP	Person=3|Gender=Fem|Number=Sing	2	nsubj	_
+2	smiled	smile	VERB	VBD	_	0	root	_
+
+# sent_id = 5
+1	They	they	PRON	PRP	Person=3|Number=Plur	2	nsubj	_
+2	left	leave	VERB	VBD	_	0	root	_
+
+# sent_id = 6
+1	I	I	PRON	PRP	Person=1|Number=Sing	2	nsubj	_
+2	waited	wait	VERB	VBD	_	0	root	_
+
+# sent_id = 7
+1	You	you	PRON	PRP	Person=2|Number=Sing	2	nsubj	_
+2	came	come	VERB	VBD	_	0	root	_
+
+# sent_id = 8
+1	Jesus	Jesus	PROPN	NNP	Gender=Masc|Number=Sing	2	nsubj	_
+2	and	and	CCONJ	CC	_	3	cc	_
+3	Mary	Mary	PROPN	NNP	Gender=Fem|Number=Sing	4	conj	_
+4	stayed	stay	VERB	VBD	_	0	root	_
+
+# sent_id = 9
+# expect = he>Jesus:subject
+1	He	he	PRON	PRP	Person=3|Gender=Masc|Number=Sing	2	nsubj	_
+2	spoke	speak	VERB	VBD	_	0	root	_
+
+# sent_id = 10
+1	Peter	Peter	PROPN	NNP	Gender=Masc|Number=Sing	2	nsubj	_
+2	arrived	arrive	VERB	VBD	_	0	root	_
+
+# sent_id = 11
+# expect = he>Peter:subject
+1	He	he	PRON	PRP	Person=3|Gender=Masc|Number=Sing	2	nsubj	_
+2	listened	listen	VERB	VBD	_	0	root	_
+
+# sent_id = 12
+# expect = him>Peter:object
+1	Him	him	PRON	PRP	Person=3|Gender=Masc|Number=Sing	2	obj	_
+2	saw	see	VERB	VBD	_	0	root	_
+
+# sent_id = 13
+1	The	the	DET	DT	_	2	det	_
+2	dog	dog	NOUN	NN	Gender=Masc|Number=Sing	3	nsubj	_
+3	came	come	VERB	VBD	_	0	root	_
+
+# sent_id = 14
+1	He	he	PRON	PRP	Person=3|Gender=Masc|Number=Sing	2	nsubj	_
+2	slept	sleep	VERB	VBD	_	0	root	_
+
+# sent_id = 15
+1	Mary	Mary	PROPN	NNP	Gender=Fem|Number=Sing	2	nsubj	_
+2	sang	sing	VERB	VBD	_	0	root	_
+
+# sent_id = 16
+# expect = she>Mary:subject
+1	She	she	PRON	PRP	Person=3|Gender=Fem|Number=Sing	2	nsubj	_
+2	sang	sing	VERB	VBD	_	0	root	_
+
+# sent_id = 17
+1	Jesus	Jesus	PROPN	NNP	Gender=Masc|Number=Sing	2	nsubj	_
+2	healed	heal	VERB	VBD	_	0	root	_
+
+# sent_id = 18
+# expect = him>Jesus:object
+1	They	they	PRON	PRP	Person=3|Number=Plur	2	nsubj	_
+2	praised	praise	VERB	VBD	_	0	root	_
+3	him	him	PRON	PRP	Person=3|Gender=Masc|Number=Sing	2	obj	_
+
+# sent_id = 19
+1	A	a	DET	DT	_	2	det	_
+2	man	man	NOUN	NN	Gender=Masc|Number=Sing	3	nsubj	_
+3	came	come	VERB	VBD	_	0	root	_
+
+# sent_id = 20
+1	He	he	PRON	PRP	Person=3|Gender=Masc|Number=Sing	2	nsubj	_
+2	spoke	speak	VERB	VBD	_	0	root	_
+
+# sent_id = 21
+1	Mary	Mary	PROPN	NNP	Gender=Fem|Number=Sing	2	nsubj	_
+2	and	and	CCONJ	CC	_	3	cc	_
+3	Jesus	Jesus	PROPN	NNP	Gender=Masc|Number=Sing	4	conj	_
+4	walked	walk	VERB	VBD	_	0	root	_
+
+# sent_id = 22
+# expect = he>Jesus:subject
+1	He	he	PRON	PRP	Person=3|Gender=Masc|Number=Sing	2	nsubj	_
+2	ran	run	VERB	VBD	_	0	root	_
+
+# sent_id = 23
+1	It	it	PRON	PRP	Person=3|Gender=Neut|Number=Sing	2	nsubj	_
+2	rained	rain	VERB	VBD	_	0	root	_
+
+# sent_id = 24
+1	She	she	PRON	PRP	Person=3|Gender=Fem|Number=Sing	2	nsubj	_
+2	left	leave	VERB	VBD	_	0	root	_

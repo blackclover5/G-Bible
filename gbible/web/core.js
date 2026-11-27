@@ -13,8 +13,9 @@ window.addEventListener('error', (e) => {
   try { console.error('uncaught', e.error || e.message); } catch (_) {}
 });
 window.addEventListener('unhandledrejection', (e) => {
-  try { console.error('unhandled rejection', e.reason); } catch (_) {}
   e.preventDefault();
+  try { console.error('Unhandled rejection:', e.reason); } catch (_) {}
+  try { toast('Something went wrong. Please retry, or restart G-Bible if it persists.', 'err'); } catch (_) {}
 });
 
 const S = {
@@ -30,11 +31,18 @@ const S = {
   store: { repo: '', lang: '', category: '', subject: '', q: '', installed: false,
            sort: 'title', items: [], facets: {}, total: 0 },
   api: { items: [], summary: {}, category: '' },
-  search: { q: '', opts: { match_case: false, match_all_forms: false,
+  search: { q: '', opts: { match_case: false, match_all_forms: false, include_resolved: true,
                           context: 0, sort: 'relevance', scope: '' } },
   lib: { type: '', lang: '', source: '', q: '', detail: false },
   popups: {},
+  // A fresh app has no AI.  App.boot() reads ai/status and this one flag then
+  // decides which controls exist in the interface at all.
+  aiEnabled: false,
 };
+function aiOff() { return !S.aiEnabled; }
+function applyAiGate() {
+  document.body.classList.toggle('ai-off', aiOff());
+}
 let CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content || '';
 /* The server mints its CSRF token per process, but this meta tag is baked in
  * when the page was written.  A server restart leaves the window holding a
@@ -202,6 +210,62 @@ const fmtBytes = (n) => {
   return (i ? n.toFixed(1) : n) + ' ' + u[i];
 };
 const modById = (id) => S.modules.find(m => m.id === id);
+/* S.modules holds installed resources only.  A personal note or highlight can
+ * still name a module that was removed, so never show its raw id as though it
+ * were a usable resource.  The underlying row is left untouched. */
+const modLabel = (id) => {
+  const m = modById(id);
+  if (m) return m.name || id;
+  return id ? 'Removed resource (' + id + ')' : 'Unknown resource';
+};
+
+/* The two "Visual copy" buttons — the pane's Visual and Tools → Visual copy —
+ * share one renderer.  Both download a real PNG; keeping the drawing here is
+ * what stops the Tools path from drifting back to a text preview. */
+const VisualCopy = {
+  save(ref, text, source) {
+    if (!text) { toast('Nothing to render.', 'warn'); return; }
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080; canvas.height = 540;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) { toast('Cannot render image.', 'warn'); return; }
+    const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    grad.addColorStop(0, '#1e2a3a'); grad.addColorStop(1, '#0f1724');
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#f5f1e8';
+    ctx.font = 'italic 34px Georgia, serif';
+    ctx.textAlign = 'center';
+    const lines = []; let line = '';
+    const maxW = canvas.width - 120;
+    String(text).split(/\s+/).forEach(w => {
+      if (!w) return;
+      const test = line ? line + ' ' + w : w;
+      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+      else line = test;
+    });
+    if (line) lines.push(line);
+    const lineH = 46;
+    const startY = (canvas.height - lines.length * lineH) / 2 - 10;
+    lines.forEach((ln, i) => ctx.fillText(ln, canvas.width / 2, startY + i * lineH));
+    ctx.font = 'bold 22px Georgia, serif';
+    ctx.fillStyle = '#c9a961';
+    ctx.fillText((ref || '') + (source ? '  ·  ' + source : ''),
+                 canvas.width / 2, startY + lines.length * lineH + 30);
+    const done = (blob) => {
+      if (!blob) { toast('Could not create the image.', 'warn'); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = ((ref || 'verse').replace(/[^a-z0-9]+/gi, '-') || 'verse') + '.png';
+      document.body.appendChild(a); a.click(); a.remove();
+      // Revoking synchronously can cancel the download in some browsers.
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast('Saved image.');
+    };
+    if (canvas.toBlob) canvas.toBlob(done, 'image/png');
+    else done(canvas.msToBlob ? canvas.msToBlob() : null);
+  },
+};
 
 /* Dismissal is not one path: the footer button, the Escape key and a click on
  * the backdrop all close a dialog, but only the first one runs a button's `fn`.
@@ -243,10 +307,133 @@ const closeModal = () => {
 };
 $('#modal-bg').onclick = (e) => { if (e.target.id === 'modal-bg') closeModal(); };
 
+/* One door for exporting what is on screen.  It does not replace the exporters
+ * inside individual tools; it reuses them with formats the backend declares. */
+const Export = {
+  ref() {
+    const p = (S.layout && S.layout.panes || []).find(x => x.selectedVerse);
+    const first = (S.layout && S.layout.panes || [])[0];
+    return (p && p.selectedVerse && p.selectedVerse.label)
+      || (first && first.cursor && first.cursor.ref)
+      || '';
+  },
+  moduleIds() {
+    return (S.layout && S.layout.panes || []).map(p => p.module_id).filter(Boolean);
+  },
+  /* One export button per open pane, each named after the resource the reader
+   * already sees on that pane's tab.  Printing a pane means printing only it. */
+  paneById(id) {
+    return (S.layout && S.layout.panes || []).find(p => p.id === id);
+  },
+  nodeFor(id) {
+    const pane = $$('.pane[data-pane]').find(e => e.dataset.pane === id);
+    return pane && pane.querySelector('.pane-body');
+  },
+  focusedPaneId() {
+    const rendered = $$('.pane[data-pane]').map(e => e.dataset.pane);
+    const focused = ((S.layout && S.layout.panes) || [])
+      .find(p => p.is_focus && rendered.indexOf(p.id) >= 0);
+    if (focused) return focused.id;
+    const tab = document.querySelector('.tile-tab.on');
+    const tile = tab && tab.closest('.tile');
+    const tid = tile && tile.dataset.tile;
+    if (tid) {
+      const inTile = (S.layout && S.layout.panes || [])
+        .filter(p => App.tileKey(p.tile_id) === tid);
+      const active = inTile.find(p => rendered.indexOf(p.id) >= 0);
+      if (active) return active.id;
+    }
+    return rendered[0] || ((S.layout && S.layout.panes || [])[0] || {}).id || '';
+  },
+  async printPane(id) {
+    const p = this.paneById(id);
+    if (!p) { toast('That pane is no longer open.', 'warn'); return; }
+    let node = this.nodeFor(id);
+    if (!node) {
+      /* A pane behind a tab has no rendered body until it is selected. */
+      App.showPane(p.tile_id || 't0', id);
+      await new Promise(r => setTimeout(r, 700));
+      node = this.nodeFor(id);
+    }
+    if (!node) { toast('Could not open that pane.', 'warn'); return; }
+    const label = App.paneLabel(p);
+    const m = p.module_id ? modById(p.module_id) : null;
+    const meta = { moduleName: (m && m.name) || 'G-Bible',
+      section: label, refLabel: this.ref() };
+    if (confirm('Print ' + label + '?\n\n'
+        + 'Other content (passages, notes, sermons, word lists) has its own '
+        + 'export buttons inside those tools.')) {
+      Print.printNode(node, meta);
+    }
+  },
+  async open(kind) {
+    if (kind === 'notes') {
+      const r = await api('notes/export', {});
+      if (!r.ok) { toast(r.error || 'Export failed.', 'err'); return; }
+      const blob = new Blob([r.markdown || ''], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'gbible-notes.md';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast('Saved gbible-notes.md');
+      return;
+    }
+    if (kind === 'pane') {
+      await this.printPane(this.focusedPaneId());
+      return;
+    }
+  },
+  dialog() {
+    const ref = this.ref();
+    const panes = (S.layout && S.layout.panes || []);
+    const paneButtons = S.view === 'workspace' ? panes.map(p => {
+      const where = (p.cursor && (p.cursor.ref || p.cursor.key)) || '';
+      return '<button class="ct-fmt" data-export="pane" data-pane-id="'
+        + esc(p.id) + '">' + esc(App.paneLabel(p))
+        + (where ? ' <span class="tiny muted">' + esc(where) + '</span>' : '')
+        + '</button>';
+    }).join('') : '';
+    modal('Export / print',
+      '<div class="st-body">Export preserves the licence of every source it '
+      + 'quotes. Choose the content you want; each tool also has its own '
+      + 'format buttons for finer control.</div>'
+      + '<div class="ct-exports" style="margin-top:8px">'
+      + (ref ? '<button class="ct-fmt" data-export="passage">All Panes</button>' : '')
+      + '<button class="ct-fmt" data-export="notes">Notes</button>'
+      + paneButtons
+      + '</div>',
+      [{ label: 'Close', cls: 'btn' }]);
+    $$('#modal-body [data-export]').forEach(b => b.onclick = async () => {
+      const kind = b.dataset.export;
+      closeModal();
+      if (kind === 'passage') {
+        await Cite.exportPassage(ref, this.moduleIds());
+        return;
+      }
+      if (kind === 'pane') {
+        await this.printPane(b.dataset.paneId);
+        return;
+      }
+      await this.open(kind);
+    });
+  },
+};
+
+/* Several study reports render .st-h headers, which the stylesheet makes
+ * look clickable. Wire them uniformly so the affordance is not a dead end. */
+function wireModalFolds() {
+  $$('#modal-body .st-h').forEach(h => {
+    h.title = 'Click to fold or unfold this section';
+    h.onclick = () => h.parentElement.classList.toggle('open');
+  });
+}
+
 const Shortcuts = {
   show() {
     const body = '<div class="st-body">'
       + '<table class="kv"><tbody>'
+      + '<tr><td><kbd>Ctrl/⌘ K</kbd></td><td>Command palette — go to any view or tool</td></tr>'
       + '<tr><td><kbd>Ctrl/⌘ F</kbd></td><td>Open search</td></tr>'
       + '<tr><td><kbd>Esc</kbd></td><td>Close modal / cancel</td></tr>'
       + '<tr><td><kbd>?</kbd></td><td>Show this list</td></tr>'
@@ -259,58 +446,74 @@ const Shortcuts = {
 };
 const About = {
   async checkForUpdates() {
-    const meta = document.querySelector('meta[name="gbible-version"]');
-    const current = (meta && meta.content) ? meta.content.trim() : '';
-    // Desktop builds provide a native updater; prefer it.
-    const nativeUpdater = (window.gbible && typeof window.gbible.checkForUpdates === 'function')
-      ? window.gbible
-      : (window.pywebview && window.pywebview.api && typeof window.pywebview.api.checkForUpdates === 'function')
-        ? window.pywebview.api
-        : null;
-    if (nativeUpdater) {
-      try { await nativeUpdater.checkForUpdates(); return; }
-      catch (e) { toast((e && e.message) || 'Could not check for updates.', 'err'); return; }
+    /* Check and install through the app itself. The old path opened a browser
+     * on an AppImage -- a separate application to download and install by hand,
+     * which is not what "update" means for a source-tree installation. */
+    modal('Checking for updates',
+      '<div class="st-loading">Asking the release list…</div>',
+      [{ label: 'Close', cls: 'btn' }]);
+    const r = await api('app/update/check');
+    if (!r || r.ok === false) {
+      closeModal();
+      toast((r && r.error) || 'Could not check for updates.', 'err');
+      return;
     }
-    try {
-      const r = await fetch('https://api.github.com/repos/blackclover5/G-Bible/releases/latest', {
-        headers: { 'Accept': 'application/vnd.github+json' } });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const data = await r.json();
-      const latestTag = (data.tag_name || '').trim();
-      const latestVer = latestTag.replace(/^v\.?/i, '');
-      const currentVer = current.replace(/^v\.?/i, '');
-      const cmp = (a, b) => {
-        const pa = String(a || '').split('.').map(x => parseInt(x, 10) || 0);
-        const pb = String(b || '').split('.').map(x => parseInt(x, 10) || 0);
-        const n = Math.max(pa.length, pb.length);
-        for (let i = 0; i < n; i++) {
-          const x = pa[i] || 0, y = pb[i] || 0;
-          if (x !== y) return x - y;
-        }
-        return 0;
-      };
-      if (currentVer && currentVer !== '__GBIBLE_VERSION__' && cmp(latestVer, currentVer) <= 0) {
-        toast('All up to date (' + (current || latestTag) + ').'); return;
-      }
-      const asset = (data.assets || []).find(a => /appimage|\.exe|\.msi|\.dmg|\.zip/i.test(a.name || ''))
-        || (data.assets || [])[0];
-      const link = asset ? asset.browser_download_url : data.html_url;
-      let notes = (data.body || '').trim();
-      if (notes.length > 500) {
-        const cut = notes.lastIndexOf(' ', 500);
-        notes = notes.slice(0, cut > 200 ? cut : 500).trim() + '…';
-      }
-      modal('Update available',
-        '<div class="st-body" style="margin-bottom:8px"><b>' + esc(latestTag || 'New version') + '</b>'
-        + (currentVer ? ' <span class="tiny muted">(you have ' + esc(current || 'unknown') + ')</span>' : '') + '</div>'
-        + (notes ? '<div class="tiny muted" style="white-space:pre-wrap;margin-bottom:8px">' + esc(notes) + '</div>' : '')
-        + '<div class="tiny muted">Download the latest build and replace your current one.</div>',
-        [ { label: 'Download', cls: 'btn primary', fn: () => { if (link) window.open(link, '_blank'); } },
-          { label: 'Close', cls: 'btn' } ]);
-    } catch (e) {
-      toast('Could not check for updates: ' + (e && e.message ? e.message : e), 'err');
+    if (!r.available) {
+      closeModal();
+      toast('All up to date (' + (r.current || r.latest) + ').');
+      return;
     }
+    let notes = (r.notes || '').trim();
+    if (notes.length > 500) {
+      const cut = notes.lastIndexOf(' ', 500);
+      notes = notes.slice(0, cut > 200 ? cut : 500).trim() + '…';
+    }
+    const body = '<div class="st-body" style="margin-bottom:8px"><b>'
+      + esc(r.tag || r.latest) + '</b>'
+      + (r.current ? ' <span class="tiny muted">(you have '
+        + esc(r.current) + ')</span>' : '') + '</div>'
+      + (notes ? '<div class="tiny muted" style="white-space:pre-wrap;margin-bottom:8px">'
+        + esc(notes) + '</div>' : '')
+      + '<div class="tiny muted">This updates the app you are running now, in '
+      + 'place. Your database, installed modules, notes, settings and keys are '
+      + 'not touched. Every replaced app file is backed up first, and the app '
+      + 'restarts itself when the files are in place.</div>'
+      + '<div class="tiny muted" id="upd-status" style="margin-top:6px"></div>';
+    modal('Update available', body, [
+      { label: 'Update in place', cls: 'btn primary', close: false, fn: async () => {
+          const status = $('#upd-status');
+          if (status) status.textContent = 'Downloading the source release…';
+          const prep = await post('app/update/prepare', { tag: r.tag });
+          if (!prep || prep.ok === false) {
+            if (status) status.textContent = '';
+            toast((prep && prep.error) || 'Could not download the update.', 'err');
+            return;
+          }
+          if (status) status.textContent = 'Staged ' + prep.files + ' files.';
+          if (!confirm('Replace this installation’s app files with '
+              + r.tag + '?\n\nYour data and installed resources are kept, and '
+              + 'every replaced file is backed up. The app will restart.')) return;
+          const ap = await post('app/update/apply',
+                                { tag: r.tag, confirm: 'APPLY' });
+          if (!ap || ap.ok === false) {
+            if (status) status.textContent = '';
+            toast((ap && ap.error) || 'Could not apply the update.', 'err');
+            return;
+          }
+          modal('Installing update',
+            '<div class="st-body">Installed ' + ap.applied + ' files; '
+            + ap.unchanged + ' were already current and ' + ap.protected
+            + ' data/environment files were left alone.<br><br>'
+            + 'Backup: <code>' + esc(ap.backup || '') + '</code><br><br>'
+            + (ap.restarting
+                ? 'G-Bible is restarting now.'
+                : 'Close and restart G-Bible to run the new version.')
+            + '</div>',
+            ap.restarting ? [] : [{ label: 'Close', cls: 'btn primary' }]);
+        } },
+      { label: 'Close', cls: 'btn' }]);
   },
+
   show() {
     const meta = document.querySelector('meta[name="gbible-version"]');
     const version = meta ? meta.content : '';
@@ -353,38 +556,61 @@ const About = {
   },
 };
 
-/* Surface unexpected errors instead of failing silently. */
-window.addEventListener('unhandledrejection', (e) => {
-  try { console.error('Unhandled rejection:', e.reason); } catch (err) {}
-  try { toast('Something went wrong. Please retry, or restart G-Bible if it persists.', 'err'); } catch (err) {}
-});
 /* Any reference-shaped link anywhere follows the reference, even in containers
  * that never called wire() -- so a Bible reference is never a dead link. */
 document.addEventListener('click', (e) => {
+  // Cross-references inside dictionary entries point at another entry in the
+  // same module, not at a Bible passage.  Handle them before the data-ref
+  // router, which would otherwise try to parse "CHILDREN" as scripture.
+  const er = e.target && e.target.closest ? e.target.closest('a[data-entry]') : null;
+  if (er) {
+    e.preventDefault();
+    try { closeModal(); } catch (err) { /* not in a modal */ }
+    const m = modById(er.dataset.module);
+    if (m) {
+      App.show('workspace');
+      Reader.focusRef(m, er.dataset.entry);
+    } else {
+      toast('That resource is not installed.', 'warn');
+    }
+    return;
+  }
   const r = e.target && e.target.closest ? e.target.closest('a[data-ref]') : null;
   if (r) {
     e.preventDefault();
     try { closeModal(); } catch (err) { /* not in a modal */ }
+    // A reference followed from Maps, Search or a tool panel has to land where
+    // the reader can see it; openRefAnywhere might otherwise fill a hidden pane.
+    App.show('workspace');
     if (typeof Reader !== 'undefined' && Reader.openRefAnywhere) {
-      Reader.openRefAnywhere((r.dataset.ref || '').replace(/\./g, ' '));
+      // The reference parser accepts dotted OSIS keys ("1Chr.6.3") directly.
+      // Turning every dot into a space made them unparseable, so genealogy
+      // and cross-reference links looked clickable but always failed.
+      Reader.openRefAnywhere(r.dataset.ref || '');
     }
     return;
   }
-  /* Power Lookup: click a Strong's number or lemma in verse text to open
-   * a Word Study pane for that word.  Works anywhere a tagged word appears.
-   * The word text (.tword) deliberately does NOT open the study here: it
-   * hovers a tooltip instead, so plain reading clicks still select the
-   * verse like any other text. */
+  /* Power Lookup: a Strong's number opens the definition popup (which now
+   * includes headword dictionaries), and a morph code shows its decode.  The
+   * old code sent both to a Word Study pane; a morph code is not a Strong's
+   * number, so that path always answered "no word or Strong's number". */
   const snum = e.target && e.target.closest ? e.target.closest('a.snum') : null;
   const morph = e.target && e.target.closest ? e.target.closest('.morphs') : null;
   if (snum || morph) {
     e.preventDefault();
-    try { closeModal(); } catch (err) { /* not in a modal */ }
-    const num = snum ? (snum.dataset.s || snum.textContent)
-      : (morph.textContent || '').trim();
-    if (num && typeof Reader !== 'undefined' && Reader.openWordStudyPane) {
-      Reader.openWordStudyPane(num);
+    if (morph) {
+      Popup.morph((morph.textContent || '').trim(), e.clientX, e.clientY);
+      return;
     }
+    const tw = snum.closest('.tword');
+    let word = '';
+    if (tw) {
+      const copy = tw.cloneNode(true);
+      copy.querySelectorAll('.snum, .morphs').forEach(x => x.remove());
+      word = (copy.textContent || '').trim();
+    }
+    Popup.strongs((snum.dataset.s || snum.textContent || '').trim(),
+                  e.clientX, e.clientY, word);
   }
 });
 
@@ -431,29 +657,37 @@ function _placeTip(t, anchor) {
   t.style.left = left + 'px';
   t.style.visibility = '';
 }
-async function _paintStrongsTip(num, anchor) {
+async function _paintStrongsTip(num, anchor, word) {
   /* The $ helper never returns null (it returns a Proxy), so it cannot be used
    * to test for existence here. */
   let t = _strongsTipEl();
-  t.innerHTML = '<div class="stip-head">' + esc(num)
+  t.innerHTML = '<div class="stip-head">' + esc(word || num)
     + ' <span class="muted">…</span></div>';
   _placeTip(t, anchor);
-  let data = _strongsTipCache.get(num);
+  const key = (num || '') + '|' + (word || '');
+  let data = _strongsTipCache.get(key);
   if (!data) {
-    data = await api('wordtip', { num });
-    _strongsTipCache.set(num, data);
+    data = await api('definition', { num: num || '', word: word || '' });
+    if (data && data.ok !== false) _strongsTipCache.set(key, data);
     /* If the element was hidden while the fetch was in flight, leave it alone. */
     if (t.style.display === 'none') return;
   }
-  const gloss = data && data.ok ? (data.gloss || '').trim() : '';
-  const form = data && data.ok ? (data.form || '').trim() : '';
-  t.innerHTML = '<div class="stip-head">' + esc(num)
+  const s = data && data.strongs;
+  const gloss = s ? (s.gloss || '').trim() : '';
+  const form = s ? (s.form || '').trim() : '';
+  let html = '<div class="stip-head">' + esc(word || num)
     + (form ? ' <span class="stip-form">' + esc(form) + '</span>' : '')
-    + '</div>'
-    + (gloss
-      ? '<div class="stip-gloss">' + esc(gloss) + '</div>'
-      : '<div class="stip-gloss stip-empty">No lexicon installed for this number.</div>')
-    + '<div class="stip-hint">Click for the full word study</div>';
+    + (num ? ' <span class="muted">' + esc(num) + '</span>' : '') + '</div>';
+  if (gloss) html += '<div class="stip-gloss">' + esc(gloss) + '</div>';
+  (data && data.entries || []).slice(0, 3).forEach(e => {
+    html += '<div class="stip-gloss"><b>' + esc(e.module) + '</b>: '
+      + esc(e.text.slice(0, 150)) + '</div>';
+  });
+  if (!gloss && !(data && data.entries && data.entries.length)) {
+    html += '<div class="stip-gloss stip-empty">No dictionary entry installed for this word.</div>';
+  }
+  html += '<div class="stip-hint">Click the number for definitions · right-click for more</div>';
+  t.innerHTML = html;
   _placeTip(t, anchor);
 }
 async function _paintMorphTip(code, anchor) {
@@ -464,7 +698,7 @@ async function _paintMorphTip(code, anchor) {
   let data = _morphTipCache.get(code);
   if (!data) {
     data = await api('morph/decode', { code });
-    _morphTipCache.set(code, data);
+    if (data && data.ok !== false) _morphTipCache.set(code, data);
     if (t.style.display === 'none') return;
   }
   const label = data && data.ok ? data.label : '';
@@ -488,11 +722,17 @@ document.addEventListener('mouseover', (e) => {
   }
   const a = e.target && e.target.closest ? (e.target.closest('a.snum') || e.target.closest('.tword')) : null;
   if (!a) return;
-  const num = (a.dataset.s || a.textContent || '').trim();
-  const anchor = a;
-  if (!num) return;
+  const tw = a.closest('.tword');
+  let word = '';
+  if (tw) {
+    const copy = tw.cloneNode(true);
+    copy.querySelectorAll('.snum, .morphs').forEach(x => x.remove());
+    word = (copy.textContent || '').trim();
+  }
+  const num = (a.dataset.s || '').trim();
+  if (!num && !word) return;
   clearTimeout(_strongsTipTimer);
-  _strongsTipTimer = setTimeout(() => _paintStrongsTip(num, anchor), 130);
+  _strongsTipTimer = setTimeout(() => _paintStrongsTip(num, a, word), 130);
 });
 document.addEventListener('mouseout', (e) => {
   const anchor = e.target && e.target.closest
@@ -517,7 +757,10 @@ document.addEventListener('click', (e) => {
  * chapter index, so the verse has to come off before the reference means
  * anything -- and the book may carry a number of its own ("1Cor.13.4"). */
 function chapterOf(ref) {
-  const s = String(ref || '').trim();
+  // Drop the trailing verse first.  Without this, "1 John 3:16" matched the
+  // spaced pattern as book "1 John 3" + verse 16 and became "1 John 3 16",
+  // which the reference parser rejects (same for "Song of Songs 2:1").
+  const s = String(ref || '').trim().replace(/:\s*\d+\s*$/, '');
   // The spaced form has to be tried first: on "John 3:16" the dotted pattern
   // matches non-greedily as book "John 3" + colon + 16, giving "John 3 16".
   let m = s.match(/^(\S+)\s+(\d+)/);         // John 3:16 / John 3 / Ps 119
@@ -555,7 +798,7 @@ const Memorise = {
   words() { return this.text.split(/(\s+)/); },   // keeps whitespace tokens
 
   render() {
-    const toks = this.text.split(/(\s+)/);
+    const toks = this.words();
     const words = toks.filter(t => t.trim().length > 0);
     let body = '<div class="mem-wrap">';
     body += '<div class="mem-title">' + esc(this.title) + '</div>';
@@ -612,7 +855,7 @@ const Memorise = {
   },
 
   check() {
-    const toks = this.text.split(/(\s+)/);
+    const toks = this.words();
     const words = toks.filter(t => t.trim().length > 0);
     let wi = 0, right = 0, total = 0;
     $$('#modal-body .mem-blank').forEach(inp => {
@@ -637,11 +880,11 @@ const Memorise = {
  * this object drives the review loop: show the reference, reveal the text,
  * rate 0-5 via four buttons, advance to the next due card. */
 const SRS = {
-  cards: [], i: 0,
-  async open() {
+  cards: [], i: 0, busy: false,
+  async open(cardId) {
     const r = await api('srs/due');
     this.cards = (r && r.cards) ? r.cards : [];
-    this.i = 0;
+    this.i = cardId ? Math.max(0, this.cards.findIndex(c => c.id === cardId)) : 0;
     if (!this.cards.length) {
       toast('No cards due. Add some with the SRS button on a passage.', 'warn');
       return;
@@ -650,6 +893,7 @@ const SRS = {
   },
   show() {
     if (this.i >= this.cards.length) {
+      if (typeof Memorization !== 'undefined') Memorization.load();
       modal('Spaced repetition', '<div class="empty">All done for today.</div>',
             [{ label: 'Close', cls: 'btn primary' }]);
       return;
@@ -672,17 +916,17 @@ const SRS = {
                                      { label: 'Close', cls: 'btn' }]);
     $$('#modal-body [data-g]').forEach(b => {
       b.onclick = async () => {
-        await api('srs/review', { id: c.id, grade: b.dataset.g });
+        if (this.busy) return;   // a rapid double-click must not skip two cards
+        this.busy = true;
+        const r = await api('srs/review', { id: c.id, grade: b.dataset.g });
+        this.busy = false;
+        if (!r || r.ok === false) { toast((r && r.error) || 'Could not save that grade.', 'err'); return; }
         this.i++;
         this.show();
       };
     });
   }
 };
-/* ================================================================ Sermon calendar */
-/* A month grid over the sermon calendar setting.  Scheduling itself lives in
- * SermonManager (prompt for a date); this view just reads the calendar and
- * shows what is where, so a preacher can see the month at a glance. */
 const Memorization = {
   async load() {
     const body = $('#mem-body');
@@ -694,7 +938,7 @@ const Memorization = {
     const allCards = (all && all.cards) ? all.cards : [];
     const st = (all && all.stats) ? all.stats : (r && r.stats) || {};
     if (stats) stats.textContent = (st.total || 0) + ' cards · '
-      + (st.due || 0) + ' due today · ' + (st.today || '');
+      + (st.due || 0) + ' due today · as of ' + (st.today || '');
     let h = '';
     if (dueCards.length) {
       h += '<h3>Due now</h3><div class="org-items">';
@@ -722,120 +966,18 @@ const Memorization = {
     }
     body.innerHTML = h;
     body.querySelectorAll('[data-mrev]').forEach(a => a.onclick = (e) => {
-      e.preventDefault(); SRS.open();
+      e.preventDefault(); SRS.open(a.dataset.mrev);
     });
     body.querySelectorAll('[data-mrm]').forEach(a => a.onclick = async (e) => {
       e.preventDefault();
       await api('srs/remove', { id: a.dataset.mrm });
       this.load();
     });
-    const addBtn = $('#mem-add');
-    if (addBtn) addBtn.onclick = async () => {
-      const ref = ($('#mem-ref').value || '').trim();
-      if (!ref) { toast('Type a reference first.', 'warn'); return; }
-      const r = await api('srs/add', { ref });
-      if (r && r.ok) { toast(r.already ? 'Already a card.' : 'Card added.', r.already ? 'warn' : ''); $('#mem-ref').value = ''; this.load(); }
-      else toast((r && r.error) || 'Could not add.', 'err');
-    };
-    const revBtn = $('#mem-review');
-    if (revBtn) revBtn.onclick = () => SRS.open();
+    // #mem-add, #mem-review and Enter on #mem-ref are bound once in
+    // tools-bind.js, so they work while this list is still loading.
   },
 };
 
-const SermonCal = {
-  y: new Date().getFullYear(), m: new Date().getMonth(),
-  async open() {
-    const r = await api('sermon', { action: 'calendar' });
-    this.cal = (r && r.calendar) ? r.calendar : {};
-    // also fetch sermon titles for the scheduled ids
-    const mgr = await api('sermon', { action: 'manager' });
-    const byId = {};
-    (mgr.sermons || []).forEach(s => { byId[s.id] = s; });
-    this.byId = byId;
-    this.render();
-  },
-  render() {
-    const first = new Date(this.y, this.m, 1);
-    const last = new Date(this.y, this.m + 1, 0);
-    const startDow = first.getDay();
-    const days = last.getDate();
-    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    let h = '<div class="sc-wrap">';
-    h += '<div class="sc-nav">';
-    h += '<button class="btn" id="sc-prev">◀</button>';
-    h += '<span class="sc-title">' + months[this.m] + ' ' + this.y + '</span>';
-    h += '<button class="btn" id="sc-next">▶</button>';
-    h += '</div>';
-    h += '<div class="sc-grid">';
-    ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => { h += '<div class="sc-dow">' + d + '</div>'; });
-    for (let i = 0; i < startDow; i++) h += '<div class="sc-cell empty"></div>';
-    for (let d = 1; d <= days; d++) {
-      const key = this.y + '-' + String(this.m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
-      const nid = this.cal[key];
-      const s = nid ? this.byId[nid] : null;
-      h += '<div class="sc-cell' + (nid ? ' has' : '') + '">';
-      h += '<div class="sc-day">' + d + '</div>';
-      if (s) h += '<div class="sc-sermon" title="' + esc(s.ref_label || '') + '">' + esc(s.title) + '</div>';
-      h += '</div>';
-    }
-    h += '</div></div>';
-    modal('Sermon calendar', h, [{ label: 'Close', cls: 'btn' }]);
-    $('#sc-prev').onclick = () => { this.m--; if (this.m < 0) { this.m = 11; this.y--; } this.render(); };
-    $('#sc-next').onclick = () => { this.m++; if (this.m > 11) { this.m = 0; this.y++; } this.render(); };
-  }
-};
-/* ================================================================ Passage analysis */
-/* Visuals over study/passage: translations side by side (version river /
- * compare pericopes) and a word-frequency table (word tree).  SVG-grade
- * charts are out of scope for a text-first app, so the data is rendered as
- * structured HTML that a screen reader can walk. */
-const PassageAnalysis = {
-  async open(ref) {
-    ref = ref || prompt('Passage to analyse (e.g. John 3:16):', '');
-    if (!ref) return;
-    const r = await api('study/passage', { ref: ref });
-    if (!r || !r.ok) { toast(r && r.error ? r.error : 'No data.', 'warn'); return; }
-    let h = '<div class="pa-wrap">';
-    h += '<div class="pa-ref">' + esc(r.ref || ref) + '</div>';
-    h += '<div class="pa-section"><div class="pa-h">Translations (version river)</div>';
-    (r.texts || []).forEach(t => {
-      h += '<div class="pa-trans"><b>' + esc(t.module || t.module_id || '') + '</b>'
-        + '<div class="pa-text">' + esc(t.text || '') + '</div></div>';
-    });
-    h += '</div>';
-    // word frequency
-    const words = {};
-    (r.texts || []).forEach(t => {
-      String(t.text || '').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).forEach(w => {
-        if (w.length < 3) return;
-        words[w] = (words[w] || 0) + 1;
-      });
-    });
-    const top = Object.entries(words).sort((a,b) => b[1]-a[1]).slice(0, 25);
-    h += '<div class="pa-section"><div class="pa-h">Word frequency (word tree)</div>';
-    h += '<table class="pa-tbl"><tr><th>word</th><th>n</th></tr>';
-    top.forEach(([w,n]) => { h += '<tr><td>' + esc(w) + '</td><td>' + n + '</td></tr>'; });
-    h += '</table></div>';
-    if (r.xrefs && r.xrefs.length) {
-      h += '<div class="pa-section"><div class="pa-h">Cross-references (compare pericopes)</div><ul>';
-      r.xrefs.forEach(x => { h += '<li>' + esc(typeof x === 'string' ? x : (x.label || x.ref || JSON.stringify(x))) + '</li>'; });
-      h += '</ul></div>';
-    }
-    if (r.people && r.people.length) {
-      h += '<div class="pa-section"><div class="pa-h">People</div><ul>';
-      r.people.forEach(p => { h += '<li>' + esc(p.name || p) + '</li>'; });
-      h += '</ul></div>';
-    }
-    if (r.places && r.places.length) {
-      h += '<div class="pa-section"><div class="pa-h">Places</div><ul>';
-      r.places.forEach(p => { h += '<li>' + esc(p.name || p) + '</li>'; });
-      h += '</ul></div>';
-    }
-    h += '</div>';
-    modal('Passage analysis', h, [{ label: 'Close', cls: 'btn' }]);
-  }
-};
-/* ================================================================ I18n */
 const I18n = {
   locale: 'en', dict: {},
   en: {
@@ -867,6 +1009,7 @@ const Notes = {
     const q = ($('#n-q').value || '').trim();
     const pf = $('#n-prayer-filter').value;
     const r = await api('notes/list', { kind, q, limit: 500 });
+    if (!r || r.ok === false) { toast((r && r.error) || 'Could not load notes.', 'err'); return; }
     let items = r.notes || [];
     if ((kind === '' || kind === 'prayer') && pf === 'answered') items = items.filter(n => n.kind === 'prayer' && n.meta && n.meta.answered);
     if ((kind === '' || kind === 'prayer') && pf === 'unanswered') items = items.filter(n => n.kind === 'prayer' && !(n.meta && n.meta.answered));
@@ -939,7 +1082,7 @@ const Notes = {
         + '">open and edit</a>'
         + (n.module_id && n.unit_key
            ? ' · <span class="muted">on '
-             + esc(((modById(n.module_id) || {}).name || n.module_id))
+             + esc(modLabel(n.module_id))
              + '</span>' : '')
         + '</div></div>').join('')
       || '<div class="empty">No notes on that verse.</div>',
@@ -955,8 +1098,12 @@ const Notes = {
   async edit(id) {
     let n;
     if (typeof id === 'object') n = id;
-    else n = (await api('notes/get', { id })).note;
-    if (!n) return;
+    else {
+      const r = await api('notes/get', { id });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not load that note.', 'err'); return; }
+      n = r.note;
+    }
+    if (!n) { toast('That note no longer exists.', 'warn'); return; }
     this.current = n;
     this.paintList();
     const host = $('#notes-edit');
@@ -972,10 +1119,10 @@ const Notes = {
       + '<button class="btn" id="ne-del">Delete</button>'
       + '<button class="btn" id="ne-pdf">PDF</button></div>'
       + (n.ref_label ? '<div class="tiny muted" style="margin-bottom:6px">'
-        + esc(n.ref_label) + ' · ' + esc(n.module_id || '') + '</div>' : '')
+        + esc(n.ref_label) + ' · ' + esc(n.module_id ? modLabel(n.module_id) : '') + '</div>' : '')
       + (n.kind === 'prayer'
         ? '<div class="row wrap" style="margin-bottom:6px"><label><input type="checkbox" id="ne-prayer-answered" ' + (n.meta && n.meta.answered ? 'checked' : '') + '> Answered</label>'
-          + '<input type="date" id="ne-prayer-date" value="' + esc((n.meta && n.meta.answered_date) || '') + '" style="margin-left:8px"></div>'
+          + '<input type="text" id="ne-prayer-date" placeholder="YYYY-MM-DD" value="' + esc((n.meta && n.meta.answered_date) || '') + '" style="margin-left:8px"></div>'
         : '')
       + '<textarea id="ne-body" rows="16" style="width:100%;background:var(--bg-3);'
       + 'border:1px solid var(--line-2);color:var(--fg);padding:10px;'
@@ -991,6 +1138,8 @@ const Notes = {
           ? ' · <a href="#" id="ne-slides">Slides</a>'
             + ' · <a href="#" id="ne-hand">Handout</a>' : ''))
       + '</div>';
+    if (n.kind === 'prayer') DatePicker.attach($('#ne-prayer-date'),
+      { label: 'Date answered' });
     /* The sermon-save path above collects passages with a regular expression
      * over the body.  That is a guess: it matches anything shaped like a
      * reference, including a date or a verse range inside a quotation of
@@ -1087,10 +1236,17 @@ const Notes = {
       if (n.kind === 'sermon') {
         n.meta = n.meta || {};
         n.meta.text = n.body;
-        n.meta.passages = (n.body.match(/\b[A-Za-z0-9]+\s+\d+:\d+[^\n]*/g) || [])
-          .slice(0, 40);
+        // Keep passages curated by the "Find references" button. A regex on
+        // every save used to replace them with guesses.
+        if (!n.meta.passages || !n.meta.passages.length) {
+          n.meta.passages = (n.body.match(/\b[A-Za-z0-9]+\s+\d+:\d+[^\n]*/g) || [])
+            .slice(0, 40);
+        }
       }
-      const r = await post('notes/save', n);
+      // The loaded timestamp must not be echoed: the server stamps the edit.
+      const payload = Object.assign({}, n);
+      delete payload.created_at; delete payload.updated_at;
+      const r = await post('notes/save', payload);
       if (!r || r.ok === false) {
         toast((r && r.error) || 'Could not save. Try again.', 'err');
         return;
@@ -1117,7 +1273,9 @@ const Notes = {
     };
     $('#ne-del').onclick = async () => {
       if (!n.id) return;
-      await post('notes/delete', { id: n.id });
+      if (!confirm('Delete this note? This cannot be undone.')) return;
+      const r = await post('notes/delete', { id: n.id });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not delete the note.', 'err'); return; }
       this.current = null;
       host.innerHTML = '<div class="empty">Choose a note, or press <b>New</b>.</div>';
       await this.load();
@@ -1125,10 +1283,11 @@ const Notes = {
     $('#ne-md').onclick = async (e) => {
       e.preventDefault();
       const r = await api('notes/export', { kind: n.kind });
-      const blob = new Blob([r.markdown], { type: 'text/markdown' });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not export notes.', 'err'); return; }
+      const blob = new Blob([r.markdown || ''], { type: 'text/markdown' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'gbible-notes.md';
+      a.download = r.filename || 'gbible-notes.md';
       a.click();
       URL.revokeObjectURL(a.href);
     };
@@ -1150,11 +1309,12 @@ const Notes = {
   },
 
   /* Attach a note to whatever the reader is looking at. */
-  async addHere(m, unitKey, refLabel, quote) {
+  async addHere(m, unitKey, refLabel, quote, anchor) {
+    App.show('notes');
     return this.edit({
       id: '', kind: 'note', title: quote ? quote.slice(0, 60) : (refLabel || ''),
       body: quote || '', module_id: m ? m.id : '', unit_key: unitKey || '',
-      ref_label: refLabel || '', tags: [], meta: {},
+      ref_label: refLabel || '', tags: [], meta: anchor || {},
     });
   },
 };
@@ -1495,7 +1655,7 @@ const Atlas = {
     img.referrerPolicy = 'origin';
     img.src = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/'
       + z + '/' + y + '/' + x;
-    img.addEventListener('load', () => this.draw());
+    img.addEventListener('load', () => { if (this._host) this.draw(); });
     img.addEventListener('error', () => {});
     this._tiles[key] = img;
     this._tileN++;
@@ -1525,6 +1685,7 @@ const Atlas = {
       e.preventDefault();
     });
     window.addEventListener('mousemove', (e) => {
+      if (this._host !== host) return;   // a mount replaced this handler's map
       if (!drag) {
         /* Hover: find the pin nearest the pointer; Atlas.draw() paints the
          * label and stores nothing else -- the tooltip is canvas text. */
@@ -1566,6 +1727,7 @@ const Atlas = {
       this._scheduleDraw();
     });
     window.addEventListener('mouseup', (e) => {
+      if (this._host !== host) return;
       if (!drag) return;
       const moved = drag.moved;
       drag = null;
@@ -1635,7 +1797,7 @@ const Atlas = {
       else if (b.dataset.a === 'measure') this.setMeasure(!this._st.measureOn);
       else if (b.dataset.a === 'grid') this.setBasemap(this._st.basemap === 'grid' ? 'standard' : 'grid');
     });
-    window.addEventListener('resize', () => this.draw());
+    window.addEventListener('resize', () => { if (this._host === host) this.draw(); });
   },
 
   /* Great-circle distance in km, for the measure tool. */
@@ -1667,11 +1829,6 @@ const Atlas = {
     const btn = this._host && this._host.querySelector('[data-a="measure"]');
     if (btn) btn.classList.toggle('on', st.measureOn);
     this.draw();
-  },
-
-  clearMeasure() {
-    const st = this._st;
-    if (st) { st.measure = null; this.draw(); }
   },
 
   /* Called by the Maps view to switch basemap without remounting. */
@@ -1824,15 +1981,34 @@ const Atlas = {
 /* ============================================================== Dashboard */
 const Dashboard = {
   async load() {
+    // Boot and clicking Home can both ask for a load at once.  Two loads
+    // repaint the same cards and can interleave their results.
+    if (this._loading) return;
+    this._loading = true;
+    this._planDay = null;
+    this.showLoading();
+    try {
     const d = await api('dashboard');
     if (!d || !d.ok) {
-  const r = $('#d-reading');
-  if (r) r.innerHTML = '<div class="dash-h">Dashboard</div>'
-    + '<div class="empty">Could not load the dashboard. '
-    + '<button class="btn tiny" id="dash-retry">Retry</button></div>';
-  const rb = $('#dash-retry'); if (rb) rb.onclick = () => Dashboard.load();
-  return;
-}
+      $('#d-title').textContent = 'Home';
+      $('#d-lib').textContent = 'Could not load your study day';
+      // Hiding six cards with their spinners still in place looked like an
+      // app that had hung.  Say plainly which tiles did not load instead.
+      $$('#v-today .dash-card').forEach(c => {
+        this.cardReady(c);
+        if (c.id === 'd-reading' || c.id === 'd-sponsor' || c.id === 'd-community') return;
+        c.innerHTML = '<div class="dash-h">' + esc(this.TITLES[c.id] || 'Tile')
+          + '</div><div class="empty">Could not load this tile.</div>';
+      });
+      const r = $('#d-reading');
+      if (r) r.innerHTML = '<div class="dash-h">Dashboard</div>'
+        + '<div class="empty">Could not load the dashboard'
+        + ((d && d.error) ? ': ' + esc(d.error) : '')
+        + '. <button class="btn tiny" id="dash-retry">Retry</button></div>';
+      const rb = $('#dash-retry');
+      if (rb) rb.onclick = () => Dashboard.load();
+      return;
+    }
     $('#d-title').textContent = d.date || (d.weekday + ' ' + d.day);
     $('#d-lib').textContent = `${d.library.modules} modules · `
       + `${d.library.units.toLocaleString()} units`
@@ -1848,7 +2024,13 @@ const Dashboard = {
         + '<a href="#" data-goto="store">Open Store</a>'
         + '<a href="#" id="d-rec">Install recommended</a></div>';
       const rec = $('#d-rec');
-      if (rec) rec.onclick = (e) => { e.preventDefault(); (async () => { const st = await api('recommended/status'); if (st && st.ok && st.total > 0) RecommendedPrompt.show(st); })(); };
+      if (rec) rec.onclick = async (e) => {
+        e.preventDefault();
+        const st = await api('recommended/status');
+        if (!st || st.ok === false) { toast('Could not check the recommended set.', 'err'); return; }
+        if (!st.total) { toast('Nothing is recommended just now.', 'warn'); return; }
+        RecommendedPrompt.show(st);
+      };
       // fall through to the rest
     } else if ((d.readings || []).length) {
       r.innerHTML = '<div class="dash-h">Today’s reading</div>'
@@ -1863,13 +2045,14 @@ const Dashboard = {
               + (x.text.length > 900 ? '…' : '') + '</div>')
           + '<div class="tiny"><a href="#" '
           + (x.plan_id ? 'data-plan="' + esc(x.plan_id) + '">Start reading' : 'data-open="'
-            + esc(x.module_id) + '" data-key="' + esc(x.title || '') + '">Open')
+            + esc(x.module_id) + '" data-key="' + esc(x.key || '') + '">Open')
           + '</a></div></div>').join('');
     } else {
       r.innerHTML = '<div class="dash-h">Today’s reading</div>'
         + '<div class="empty">No devotional is installed. '
-        + '<a href="#" data-goto="store">Install one</a> from Modules.</div>';
+        + '<a href="#" data-goto="store">Install one from the Store</a>.</div>';
     }
+    this.cardReady(r);
 
     /* -- the reading plan, which is a different thing from a devotional.
      *
@@ -1877,6 +2060,24 @@ const Dashboard = {
      * day numbers, because the question a reader actually has is "how far
      * through am I" and "what was day 90", and a date answers neither.  It also
      * names the passages, so pressing a day takes you to the text. */
+    /* -- what is due, in one place.
+     *
+     * A plan with an unread day and a prayer that has come round again are two
+     * different tables.  This card renders both, placed under the reading plan
+     * card rather than the prayer card so the grouping makes sense.  It is
+     * computed before the plan is painted so every later re-render of that card
+     * puts the same section back. */
+    const due = await api('reminders').catch(() => ({ ok: false }));
+    const plansDue = (due.plans_due || []), prayersDue = (due.prayers_due || []);
+    this.dueHtml = (plansDue.length || prayersDue.length)
+      ? '<div class="dash-h" style="margin-top:10px">Needs attention</div>'
+        + plansDue.map(x => '<div class="dash-row"><a href="#" data-goto="plans">'
+          + esc(x.title || 'Reading plan') + '</a> '
+          + '<span class="muted tiny">day ' + esc(x.next_day) + '</span></div>').join('')
+        + prayersDue.map(x => '<div class="dash-row"><a href="#" data-goto="prayer">'
+          + esc(x.title || 'Prayer') + '</a> '
+          + '<span class="muted tiny">due again</span></div>').join('')
+      : '';
     await this.planCard();
 
     // -- prayer list for the day
@@ -1884,31 +2085,14 @@ const Dashboard = {
     const pr = d.prayer;
     p.innerHTML = '<div class="dash-h">Prayer</div>' + (pr && pr.body
       ? '<div class="st-body">' + esc(pr.body) + '</div>'
-        + '<div class="tiny"><a href="#" data-goto="notes">Edit</a></div>'
+        + (pr.dated === false
+          ? '<div class="tiny muted">Last written '
+            + esc(pr.for_date || pr.ref_label || 'on another day') + '.</div>' : '')
+        + '<div class="tiny"><a href="#" data-editprayer="'
+          + esc(pr.id) + '">Edit</a></div>'
       : '<div class="empty">Nothing for today. '
         + '<a href="#" data-newprayer>Add a list</a>.</div>');
-
-    /* -- what is due, in one place.
-     *
-     * A plan with an unread day and a prayer that has come round again are two
-     * different tables.  This card renders both, placed under the reading plan
-     * card rather than the prayer card so the grouping makes sense. */
-    const due = await api('reminders').catch(() => ({ ok: false }));
-    const plans = (due.plans_due || []), prayers = (due.prayers_due || []);
-    if (plans.length || prayers.length) {
-      const planCard = $('#d-plan');
-      if (planCard) {
-        planCard.insertAdjacentHTML('beforeend',
-          '<div class="dash-h" style="margin-top:10px">Due</div>'
-          + plans.map(x => '<div class="dash-row"><a href="#" data-goto="plans">'
-            + esc(x.title || 'Reading plan') + '</a> '
-            + '<span class="muted tiny">day ' + esc(x.next_day) + '</span></div>')
-            .join('')
-          + prayers.map(x => '<div class="dash-row"><a href="#" data-goto="prayer">'
-            + esc(x.title || 'Prayer') + '</a> '
-            + '<span class="muted tiny">due again</span></div>').join(''));
-      }
-    }
+    this.cardReady(p);
 
     // -- where you were
     const w = $('#d-where');
@@ -1924,10 +2108,14 @@ const Dashboard = {
               + (x.span ? ' · ' + esc(x.span) : '') + '</span>'
             : '<span class="muted tiny">not opened yet</span>')
           + '</div>').join('')
+          + ((d.where || []).length > 8
+            ? '<div class="tiny muted">and ' + ((d.where || []).length - 8)
+              + ' more in the workspace.</div>' : '')
         : '<div class="empty">No panes in this layout.</div>');
+    this.cardReady(w);
 
     // -- highlights (client-side; the endpoint already existed)
-    this.paintHighlights();
+    await this.paintHighlights();
 
     // -- tags
     const tg = $('#d-tags');
@@ -1940,9 +2128,10 @@ const Dashboard = {
         + (Tags.tags.length
           ? Tags.tags.map(t => '<div class="dash-row"><a href="#" '
             + 'data-tagopen="' + esc(t.id) + '">' + esc(t.name) + '</a> '
-            + '<span class="muted tiny">· ' + t.count + '</span></div>').join('')
+            + '<span class="muted tiny">· ' + esc(t.count) + '</span></div>').join('')
           : '<div class="empty">Nothing tagged yet. Right-click a verse '
             + '&rarr; <b>Tag this verse</b>.</div>');
+      this.cardReady(tg);
     }
 
     // -- what you wrote
@@ -1957,10 +2146,17 @@ const Dashboard = {
           + '<span class="muted tiny">' + esc(x.kind)
           + (x.ref_label ? ' · ' + esc(x.ref_label) : '') + '</span></div>').join('')
         : '<div class="empty">Nothing written yet. '
-        + '<a href="#" data-goto="notes">Start a note</a>.</div>');
+        + '<a href="#" data-newnote>Start a note</a>.</div>');
+    this.cardReady(n);
 
+    this.decorate();
     this.wire();
     DashLayout.apply();
+    } finally {
+      // No thrown await may leave a card spinning forever.
+      this._loading = false;
+      $$('#v-today .dash-card').forEach(c => this.cardReady(c));
+    }
   },
 
   /* Which plan the card is showing, read from the control rather than from a
@@ -1986,6 +2182,37 @@ const Dashboard = {
    * every morning -- which is the difference between a plan and a calendar, and
    * the reason a plan is worth having separately from a devotional.
    */
+  /* One study menu for a plan's passages, used from the Today card and the
+   * day panel so the two doors cannot drift apart. */
+  planStudyMenu(ps, ev) {
+    if (!(ps || []).length) { toast('No passages in this day.', 'warn'); return; }
+    const r = ev.currentTarget && ev.currentTarget.getBoundingClientRect();
+    Study.menu(ev.clientX || (r && r.left) || 200,
+               ev.clientY || (r && r.bottom) || 200, [
+      { section: 'STUDY THIS DAY' },
+      { label: 'Passage Guide: ' + esc(ps[0]),
+        fn: () => Reader.openGuidePane(ps[0], 'passage') },
+      { label: 'Concordance for this chapter', fn: () => {
+        const mod = S.modules.find(m => m.is_bible && m.reader === 'verse');
+        if (mod) $('#cg-mod').value = mod.id;
+        $('#cg-ref').value = chapterOf(ps[0]);
+        $('#cg-word').value = '';
+        App.show('concordance');
+      } },
+      { label: 'Search these passages', fn: async () => {
+        const keys = await Promise.all(ps.map(x => api('reference', { ref: x })));
+        const q = keys.filter(x => x && x.ok && x.key)
+          .map(x => 'ref:' + x.key).join(' OR ');
+        if (!q) { toast('No passages to search.', 'warn'); return; }
+        $('#sq').value = q;
+        Search.type = 'all';
+        $$('.stype-btn').forEach(b => b.classList.toggle('active', b.dataset.type === 'all'));
+        App.show('search');
+        Search.go();
+      } },
+    ]);
+  },
+
   async planCard() {
     const card = $('#d-plan');
     if (!card) return;
@@ -1993,16 +2220,23 @@ const Dashboard = {
     if (!p.ok || !(p.plans || []).length) {
       card.innerHTML = '<div class="dash-h">Reading plan</div>'
         + '<div class="empty">No plan can be built from this library yet. A plan '
-        + 'needs a Bible to read or a devotional to number.</div>';
+        + 'needs a Bible to read or a devotional to number.</div>'
+        + (this.dueHtml || '');
+      this.decorateCard(card);
       return;
     }
     const plan = (S.plan || 'bible');
     const known = p.plans.some(x => x.id === plan) ? plan : p.plans[0].id;
-    const d = await api('readingplan/day', { plan: known, day: 0 });
+    // Day overrides come from the ◀/▶ buttons.  Without them the card always
+    // re-rendered at "today", so stepping through a plan appeared to do nothing.
+    const useDay = (this._planDay && this._planDay.plan === known)
+      ? this._planDay.day : 0;
+    const d = await api('readingplan/day', { plan: known, day: useDay });
     if (!d.ok) {
       card.innerHTML = '<div class="dash-h">Reading plan</div>'
         + '<div class="empty">' + esc(d.error || 'Could not read the plan.')
-        + '</div>';
+        + '</div>' + (this.dueHtml || '');
+      this.decorateCard(card);
       return;
     }
     const doneN = (p.progress && p.progress[known] || []).length;
@@ -2027,14 +2261,23 @@ const Dashboard = {
       + '<button class="btn tiny" id="rp-prev">◀ Day ' + (d.day - 1) + '</button>'
       + '<button class="btn tiny" id="rp-next">Day ' + (d.day + 1) + ' ▶</button>'
       + '<button class="btn tiny" id="rp-all">All days</button>'
+      + '<button class="btn tiny" id="rp-study" title="Open a study tool on this day’s passages">Study…</button>'
       + '</div></div>'
-      + '<div class="tiny muted">' + doneN + ' of ' + d.total + ' marked read</div>';
+      + '<div class="tiny muted">' + doneN + ' of ' + d.total + ' marked read</div>'
+      + (this.dueHtml || '');
 
+    this.decorateCard(card);
     const sel = $('#rp-plan');
-    if (sel) sel.onchange = () => { S.plan = sel.value; this.planCard(); };
+    if (sel) sel.onchange = () => {
+      S.plan = sel.value; this._planDay = null; this.planCard();
+    };
     $('#rp-mark').onclick = async () => {
-      await api('readingplan/mark',
+      const r = await api('readingplan/mark',
         { plan: this.planShown(), day: d.day, done: d.done ? 0 : 1 });
+      if (!r || r.ok === false) {
+        toast((r && r.error) || 'Could not save your progress.', 'err'); return;
+      }
+      this._planDay = null;
       this.planCard();
     };
     $('#rp-prev').onclick = () =>
@@ -2042,6 +2285,7 @@ const Dashboard = {
     $('#rp-next').onclick = () =>
       this.showPlanDay(this.planShown(), Math.min(d.total, d.day + 1));
     $('#rp-all').onclick = () => this.planOverview(this.planShown());
+    $('#rp-study').onclick = (ev) => this.planStudyMenu(d.passages, ev);
     $$('#d-plan a[data-openref]').forEach(a => a.onclick = (e) => {
       e.preventDefault();
       const selected = (p.plans || []).find(x => x.id === this.planShown());
@@ -2055,9 +2299,13 @@ const Dashboard = {
   /* One numbered day, opened as a panel so the passage can be read beside it. */
   async showPlanDay(plan, n) {
     const d = await api('readingplan/day', { plan, day: n });
-    if (!d.ok) { toast(d.error || 'No such day.', 'warn'); return; }
+    if (!d || d.ok === false) {
+      toast((d && d.error) || 'No such day.', 'err'); return;
+    }
+    this._planDay = { plan, day: n };
     if (d.kind === 'devotional' && d.source_id && typeof DevotionalContext !== 'undefined') {
       await DevotionalContext.activate(plan, n);
+      this.planCard();
       return;
     }
     S.plan = plan;
@@ -2072,9 +2320,15 @@ const Dashboard = {
             + esc(d.passages[0]) + '">' + esc(d.passages.join(' · '))
             + '</a></div>' : ''),
         [{ label: 'Mark as read', fn: async () => {
-            await api('readingplan/mark', { plan, day: d.day, done: 1 });
+            const r = await api('readingplan/mark',
+              { plan, day: d.day, done: 1 });
+            if (!r || r.ok === false) {
+              toast((r && r.error) || 'Could not save your progress.', 'err'); return;
+            }
+            this._planDay = null;
             this.planCard();
           } },
+         { label: 'Study…', cls: 'btn', fn: (ev) => this.planStudyMenu(d.passages, ev || {}) },
          { label: 'Close', cls: 'btn' }]);
       $$('#modal-body a[data-openref]').forEach(a => a.onclick = (e) => {
         e.preventDefault();
@@ -2082,18 +2336,22 @@ const Dashboard = {
         Reader.openRefAnywhere(a.dataset.openref);
       });
     }
+    this.planCard();
   },
 
   /* The whole plan, so its shape is visible rather than discovered one day at a
-   * time -- which is what a 638-day plan needs, since the alternative is not
+   * time -- which is what a long plan needs, since the alternative is not
    * knowing whether the thing is 90 days long or 900. */
   async planOverview(plan) {
     const o = await api('readingplan/overview', { plan });
     if (!o.ok) { toast(o.error || 'Could not read the plan.', 'warn'); return; }
     const done = await api('readingplan/plans');
+    if (!done || done.ok === false) {
+      toast((done && done.error) || 'Could not load your progress.', 'err'); return;
+    }
     const marks = new Set((done.progress && done.progress[plan]) || []);
     /* The cells are built as one string rather than by appending, so a
-       638-day plan is one innerHTML write instead of 638 of them -- the dialog
+       long plan is one innerHTML write instead of hundreds of them -- the dialog
        then appears at once instead of filling in. */
     modal('Reading plan — ' + o.total + ' days',
       '<div class="rp-grid">' + o.items.map(it =>
@@ -2126,22 +2384,209 @@ const Dashboard = {
     // row to a function expecting an id found no module and printed the row
     // itself, which rendered as "[object Object]".
     const modName = (row) => {
-      const m = modById(row && row.module_id);
-      return m ? (m.name || m.title || m.id) : ((row && row.module_id) || '');
+      const id = row && row.module_id;
+      return id ? modLabel(id) : '';
     };
     const h = await Highlights.list(modName);
     box.innerHTML = h || '<div class="dash-h">Highlights</div>'
       + '<div class="empty">Select text in a Bible pane, then right-click '
       + '&rarr; <b>Highlight selection</b>. It comes back marked in the text.</div>';
+    this.decorateCard(box);
+  },
+
+  /* ------------------------------------------------------- remove / restore
+   * A reader who does not want a tile on Home can close it.  The choice is
+   * kept locally, like the tile order, and the Hidden tiles button in the
+   * header brings any closed tile back.
+   */
+  HIDDEN_KEY: 'gbible:dash-hidden',
+  TITLES: {
+    'd-reading': 'Today’s reading',
+    'd-where': 'Continue',
+    'd-notes': 'Your notes',
+    'd-prayer': 'Prayer',
+    'd-tags': 'Tags',
+    'd-hl': 'Highlights',
+    'd-plan': 'Reading plan',
+    'd-sponsor': 'Sponsor · eStudySource',
+    'd-community': 'Free modules · BibleSupport',
+  },
+
+  /* Cards filled by load(), in the order they are usually answered.  A spinner
+   * covers each one until its own content arrives, not until the whole Home
+   * view is done -- a slow plan should not hide a fast reading. */
+  LOADING_IDS: ['d-reading', 'd-where', 'd-notes', 'd-prayer',
+                'd-tags', 'd-hl', 'd-plan'],
+
+  showLoading() {
+    this.LOADING_IDS.forEach(id => {
+      const card = document.getElementById(id);
+      if (!card) return;
+      const hasContent = [...card.children].some(c =>
+        !c.classList.contains('dash-x') && !c.classList.contains('dash-busy'));
+      if (hasContent) { this.cardReady(card); return; }
+      card.classList.add('dash-loading');
+      if (!card.querySelector(':scope > .dash-busy')) {
+        const busy = document.createElement('div');
+        busy.className = 'dash-busy';
+        busy.setAttribute('role', 'status');
+        busy.setAttribute('aria-label', 'Loading tile');
+        busy.innerHTML = '<span class="dash-spinner"></span>'
+          + '<span class="tiny muted">Loading…</span>';
+        card.appendChild(busy);
+      }
+    });
+  },
+
+  cardReady(card) {
+    if (!card) return;
+    card.classList.remove('dash-loading');
+    const busy = card.querySelector(':scope > .dash-busy');
+    if (busy) busy.remove();
+  },
+
+  hiddenIds() {
+    try {
+      const a = JSON.parse(localStorage.getItem(this.HIDDEN_KEY) || '[]');
+      const ids = Array.isArray(a) ? a : [];
+      /* A card id can disappear between builds.  Dropping it here keeps the
+       * badge, the menu and the saved state in agreement. */
+      const live = ids.filter(id => document.getElementById(id));
+      if (live.length !== ids.length) this.saveHidden(live);
+      return live;
+    } catch (e) { return []; }
+  },
+  saveHidden(ids) {
+    try { localStorage.setItem(this.HIDDEN_KEY, JSON.stringify(ids)); } catch (e) {}
+  },
+  liveHidden() {
+    return this.hiddenIds().filter(id => document.getElementById(id));
+  },
+
+  decorateCard(card) {
+    if (!card) return;
+    this.cardReady(card);
+    if (!card.querySelector(':scope > button.dash-x')) {
+      const x = document.createElement('button');
+      x.type = 'button';
+      x.className = 'dash-x';
+      x.textContent = '\u00d7';
+      x.title = 'Remove this tile from Home';
+      x.setAttribute('aria-label', 'Remove tile: ' + (this.TITLES[card.id] || card.id));
+      x.dataset.hidecard = card.id;
+      card.appendChild(x);
+    }
+    card.hidden = this.hiddenIds().indexOf(card.id) !== -1;
+  },
+
+  decorate() {
+    $$('#v-today .dash-card').forEach(c => this.decorateCard(c));
+    this.updateHiddenUI();
+  },
+
+  updateHiddenUI() {
+    const btn = $('#d-hidden');
+    if (!btn) return;
+    const n = this.liveHidden().length;
+    const count = $('#d-hidden-count');
+    if (count) { count.textContent = n; count.hidden = n === 0; }
+    btn.title = 'Hidden tiles (' + n + ') — click to restore';
+    btn.setAttribute('aria-label', 'Hidden tiles (' + n + ')');
+    btn.hidden = n === 0;
+    if (n === 0) this.closeHiddenMenu();
+  },
+
+  closeHiddenMenu() {
+    const menu = $('#d-hidden-menu');
+    if (!menu || menu.hidden) return;
+    menu.hidden = true;
+    const btn = $('#d-hidden');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+  },
+
+  paintHiddenMenu() {
+    const menu = $('#d-hidden-menu');
+    if (!menu) return;
+    const hidden = this.liveHidden();
+    if (!hidden.length) {
+      menu.innerHTML = '<span class="tiny muted">No hidden tiles.</span>';
+      return;
+    }
+    menu.innerHTML = hidden.map(id =>
+      '<button class="btn tiny" data-restore="' + esc(id) + '">'
+      + 'Restore ' + esc(this.TITLES[id] || id) + '</button>').join('')
+      + '<button class="btn tiny" data-restore-all>Restore all</button>';
+  },
+
+  hideCard(id) {
+    const card = document.getElementById(id);
+    if (!card) return;
+    const ids = this.hiddenIds();
+    if (ids.indexOf(id) === -1) ids.push(id);
+    this.saveHidden(ids);
+    card.hidden = true;
+    this.updateHiddenUI();
+  },
+
+  restoreCard(id) {
+    this.saveHidden(this.hiddenIds().filter(x => x !== id));
+    const card = document.getElementById(id);
+    if (card) card.hidden = false;
+    this.updateHiddenUI();
+    const menu = $('#d-hidden-menu');
+    if (menu && !menu.hidden) this.paintHiddenMenu();
+  },
+
+  restoreAll() {
+    this.saveHidden([]);
+    $$('#v-today .dash-card').forEach(c => { c.hidden = false; });
+    this.updateHiddenUI();
+  },
+
+  toggleHiddenMenu() {
+    const menu = $('#d-hidden-menu');
+    if (!menu) return;
+    menu.hidden = !menu.hidden;
+    const btn = $('#d-hidden');
+    if (btn) btn.setAttribute('aria-expanded', String(!menu.hidden));
+    if (!menu.hidden) this.paintHiddenMenu();
   },
 
   wire() {
+    if (!this._escWired) {
+      this._escWired = true;
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') Dashboard.closeHiddenMenu();
+      });
+    }
     const root = $('#v-today');
     root.onclick = (e) => {
+      if (!e.target.closest('#d-hidden, #d-hidden-menu')) Dashboard.closeHiddenMenu();
+      const hide = e.target.closest('button[data-hidecard]');
+      if (hide) { e.preventDefault(); e.stopPropagation(); Dashboard.hideCard(hide.dataset.hidecard); return; }
+      if (e.target.closest('#d-refresh')) {
+        e.preventDefault(); Dashboard.load(); return;
+      }
+      if (e.target.closest('#d-hidden')) {
+        e.preventDefault(); Dashboard.toggleHiddenMenu(); return;
+      }
+      const restore = e.target.closest('button[data-restore]');
+      if (restore) { e.preventDefault(); Dashboard.restoreCard(restore.dataset.restore); return; }
+      if (e.target.closest('button[data-restore-all]')) {
+        e.preventDefault(); Dashboard.restoreAll(); return;
+      }
       const g = e.target.closest('a[data-goto]');
       if (g) { e.preventDefault(); App.show(g.dataset.goto); return; }
+      if (e.target.closest('a[data-newnote]')) {
+        e.preventDefault(); App.show('notes'); Notes.edit(Notes.blank()); return;
+      }
       const n = e.target.closest('a[data-note]');
       if (n) { e.preventDefault(); App.show('notes'); Notes.edit(n.dataset.note); return; }
+      const ep = e.target.closest('a[data-editprayer]');
+      if (ep) {
+        e.preventDefault(); App.show('notes'); Notes.edit(ep.dataset.editprayer);
+        return;
+      }
       if (e.target.closest('a[data-newprayer]')) {
         e.preventDefault();
         App.show('notes');
@@ -2149,13 +2594,17 @@ const Dashboard = {
         return;
       }
       const del = e.target.closest('a[data-hid]');
-      if (del) { e.preventDefault(); Highlights.remove(del.dataset.hid); return; }
+      if (del) {
+        e.preventDefault();
+        if (!confirm('Delete this highlight? This cannot be undone.')) return;
+        Highlights.remove(del.dataset.hid);
+        return;
+      }
       if (e.target.closest('a#hl-pal')) {
         e.preventDefault(); Highlights.palettesDialog(); return;
       }
-      if (e.target.closest('a[data-tagopen]')) {
-        e.preventDefault(); Tags.browse(); return;
-      }
+      const tag = e.target.closest('a[data-tagopen]');
+      if (tag) { e.preventDefault(); Tags.browse(tag.dataset.tagopen); return; }
       const go = e.target.closest('a[data-m]');
       if (go) {
         e.preventDefault();
@@ -2163,6 +2612,8 @@ const Dashboard = {
         if (m) {
           App.show('workspace');
           Workspace.openModule(m.id, { ref: go.dataset.k });
+        } else {
+          toast('That resource is not installed.', 'warn');
         }
         return;
       }
@@ -2184,7 +2635,11 @@ const Dashboard = {
       if (o) {
         e.preventDefault();
         const mod = modById(o.dataset.open);
-        if (mod) { App.show('workspace'); Workspace.openModule(mod.id, {}); }
+        if (mod) {
+          App.show('workspace');
+          const cursor = o.dataset.key ? { key: o.dataset.key } : {};
+          Workspace.openModule(mod.id, cursor);
+        }
       }
     };
   },
@@ -2192,7 +2647,7 @@ const Dashboard = {
 
 /* =========================================================== Today, moved =
  *
- * The six cards of the Today pane, rearranged.
+ * The cards of the Today pane, rearranged.
  *
  * A press held on a card arms it -- the border turns yellow -- and from then on
  * the card follows the pointer until it is dropped between two others, in
@@ -2217,20 +2672,28 @@ const DashLayout = {
   _st: null,
 
   /* Two columns of ids, as saved.  A card that exists but was never saved (one
-   * added by a newer build) is reported in `rest` and lands at the end. */
+   * added by a newer build) is reported in `rest` and goes back to the column
+   * it was written in, not blindly to the end of the left one. */
   load() {
-    const all = $$('#v-today .dash-card').map(c => c.id);
+    const cards = $$('#v-today .dash-card');
+    const all = cards.map(c => c.id);
+    const cols = $$('#v-today .dash-col');
+    const intended = new Map(cards.map(c =>
+      [c.id, cols.indexOf(c.closest('.dash-col')) === 1 ? 1 : 0]));
     let o = null;
     try {
       const raw = localStorage.getItem(this.KEY);
       if (raw) o = JSON.parse(raw);
     } catch (e) {}
-    const keep = (a) => (Array.isArray(a) ? a : []).filter(x => all.includes(x));
-    const left = keep(o && o.left), right = keep(o && o.right);
+    const keep = (a) => [...new Set(
+      (Array.isArray(a) ? a : []).filter(x => all.includes(x)))];
+    const right = keep(o && o.right);
+    const left = keep(o && o.left).filter(x => !right.includes(x));
     return {
       left,
       right,
       rest: all.filter(x => !left.includes(x) && !right.includes(x)),
+      intended,
     };
   },
 
@@ -2269,7 +2732,7 @@ const DashLayout = {
     }
     for (const id of o.rest) {
       const c = byId.get(id);
-      if (c) cols[0].appendChild(c);
+      if (c) cols[o.intended.get(id) || 0].appendChild(c);
     }
   },
 
@@ -2615,7 +3078,8 @@ const Organise = {
         + '<span class="muted tiny"> · ' + notes.length + ' note'
         + (notes.length === 1 ? '' : 's') + '</span>'
         + '<span class="org-a">'
-        + '<a href="#" data-nbopen="' + esc(n.id) + '">show</a>'
+        // The notes are already listed under the card; a "show" link with no
+        // notebook filter behind it was a dead control that only jumped to top.
         + '<a href="#" data-nbdel="' + esc(n.id) + '" class="danger">delete</a>'
         + '</span></div>'
         + '<div class="tiny muted">'
@@ -2635,14 +3099,17 @@ const Organise = {
     $('#nb-add').onclick = async () => {
       const name = $('#nb-name').value.trim();
       if (!name) { toast('Give the notebook a name.', 'warn'); return; }
-      await post('notebook', { action: 'save', name,
+      const r = await post('notebook', { action: 'save', name,
         kind: $('#nb-kind').value, tag: $('#nb-tag').value.trim(),
         query: $('#nb-query').value.trim() });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not create the notebook.', 'err'); return; }
       this.notebooksView(main);
     };
     main.querySelectorAll('a[data-nbdel]').forEach(a => a.onclick = async (e) => {
       e.preventDefault();
-      await post('notebook', { action: 'delete', id: a.dataset.nbdel });
+      if (!confirm('Delete this notebook?')) return;
+      const r = await post('notebook', { action: 'delete', id: a.dataset.nbdel });
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not delete the notebook.', 'err'); return; }
       this.notebooksView(main);
     });
     main.querySelectorAll('a[data-nbnote]').forEach(a => a.onclick = (e) => {
@@ -2653,206 +3120,52 @@ const Organise = {
   },
 
   async canvasesView(main) {
-    /* A canvas is boxes of your own words and verses, arranged by hand. The
-     * board is plain positioned divs — no drawing library, nothing to
-     * license. Element kinds the renderer knows: heading, text, verse.
-     * Anything else is kept in the save and listed, never drawn. */
-    const r = await api('canvas', {}).catch(() => ({ canvases: [] }));
-    const all = r.canvases || [];
+    /* The board model is now the one canvas implementation.  This tab lists
+     * boards and hands editing to the Canvas view, so there is a single
+     * renderer and a single save path for both entry points. */
+    const r = await api('canvas/boards').catch(() => ({ boards: [], default: '' }));
+    const boards = r.boards || [];
     let h = '<div class="dash-card"><div class="dash-h">Canvases '
-      + '<span class="muted">· ' + all.length + '</span></div>'
+      + '<span class="muted">· ' + boards.length + '</span></div>'
       + '<div class="tiny muted" style="margin-bottom:8px">Arrange your own '
-      + 'notes and verses on a board. Nothing here is generated.</div>'
+      + 'notes and verses on a board. Open one to edit it in the Canvas view.'
+      + '</div>'
       + '<div class="org-new"><input id="o-vname" placeholder="New canvas name"'
       + ' style="flex:1"><button class="btn primary" id="o-vadd">Create</button></div>';
-    all.forEach(c => {
-      h += '<div class="org-card"><div class="org-h"><b>' + esc(c.name) + '</b>'
-        + '<span class="muted tiny"> · ' + ((c.elements || []).length) + ' elements</span>'
-        + '<span class="org-a"><a href="#" data-vopen="' + esc(c.id) + '">open</a>'
-        + '<a href="#" data-vdel="' + esc(c.id) + '" class="danger">delete</a></span></div></div>';
+    boards.forEach(b => {
+      h += '<div class="org-card"><div class="org-h"><b>' + esc(b.name) + '</b>'
+        + '<span class="org-a"><a href="#" data-vopen="' + esc(b.id) + '">open</a>'
+        + '<a href="#" data-vrename="' + esc(b.id) + '">rename</a>'
+        + '<a href="#" data-vdel="' + esc(b.id) + '" class="danger">delete</a>'
+        + '</span></div></div>';
     });
-    main.innerHTML = h + '</div><div id="o-vboard"></div>';
+    main.innerHTML = h + '</div>';
+    const refresh = () => this.canvasesView(main);
     $('#o-vadd').onclick = async () => {
       const name = $('#o-vname').value.trim() || 'Untitled canvas';
-      const s = await post('canvas', { action: 'save', name });
-      if (s.canvas) this.editCanvas(s.canvas.id);
-      else this.canvasesView(main);
+      const s = await post('canvas/board', { action: 'create', name });
+      if (s && s.ok) refresh();
+      else toast('Could not create a canvas.', 'warn');
     };
-    main.querySelectorAll('a[data-vdel]').forEach(a => a.onclick = async (e) => {
-      e.preventDefault();
-      await post('canvas', { action: 'delete', id: a.dataset.vdel });
-      this.canvasesView(main);
-    });
     main.querySelectorAll('a[data-vopen]').forEach(a => a.onclick = (e) => {
       e.preventDefault();
-      this.editCanvas(a.dataset.vopen);
+      Canvas.board = a.dataset.vopen;
+      App.show('canvas');
     });
-  },
-
-  async editCanvas(id) {
-    const r = await api('canvas', {}).catch(() => ({ canvases: [] }));
-    const c = (r.canvases || []).find(x => x.id === id);
-    if (!c) { toast('Canvas not found.', 'warn'); return; }
-    const host = $('#o-vboard');
-    host.innerHTML = '<div class="dash-card"><div class="dash-h">' + esc(c.name)
-      + ' <span class="muted tiny" id="o-vmsg"></span></div>'
-      + '<div class="row wrap"><button class="btn" id="o-vt">+ Text</button>'
-      + '<button class="btn" id="o-vh">+ Heading</button>'
-      + '<input id="o-vref" placeholder="verse ref, e.g. Jn 3:16" style="width:150px">'
-      + '<button class="btn" id="o-vv">+ Verse</button>'
-      + '<span class="tiny muted">link:</span>'
-      + '<select id="o-va" style="max-width:110px"></select>'
-      + '<select id="o-vb" style="max-width:110px"></select>'
-      + '<button class="btn" id="o-varr" title="Draw a connector between two boxes">+ Arrow</button>'
-      + '<button class="btn primary" id="o-vsave">Save</button></div>'
-      + '<div id="o-vcv" style="position:relative;min-height:420px;border:1px solid var(--line);'
-      + 'border-radius:8px;margin-top:8px;overflow:auto;background:var(--bg-1)"></div>'
-      + '<div class="tiny muted">Drag boxes by their header. Double-click text to edit. '
-      + 'Unknown element kinds are kept in the save and listed below, never drawn.</div>'
-      + '<div id="o-varrows" style="margin-top:4px"></div>'
-      + '<div id="o-vunknown" class="tiny muted"></div></div>';
-    const board = $('#o-vcv');
-    let els = (c.elements || []).map(e => Object.assign({}, e));
-    const draw = () => {
-      board.innerHTML = '';
-      const unknown = [];
-      const boxes = els.filter(e => ['heading', 'text', 'verse'].includes(e.kind));
-      /* Connectors first, so boxes paint over the line ends. Positions are
-       * box centres from the stored geometry — no measuring needed. */
-      const arrows = els.filter(e => e.kind === 'arrow' && e.from && e.to);
-      if (arrows.length) {
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none';
-        const ctr = (id) => {
-          const b = boxes.find(x => x.id === id);
-          if (!b) return null;
-          return { x: (b.x || 20) + (b.w || 220) / 2, y: (b.y || 20) + 24 };
-        };
-        arrows.forEach(a => {
-          const A = ctr(a.from), B = ctr(a.to);
-          if (!A || !B) return;
-          const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-          ln.setAttribute('x1', A.x); ln.setAttribute('y1', A.y);
-          ln.setAttribute('x2', B.x); ln.setAttribute('y2', B.y);
-          ln.setAttribute('stroke', 'var(--fg-3)');
-          ln.setAttribute('stroke-width', '1.5');
-          ln.setAttribute('marker-end', 'url(#vh)');
-          svg.appendChild(ln);
-        });
-        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-        defs.innerHTML = '<marker id="vh" markerWidth="8" markerHeight="8" '
-          + 'refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" '
-          + 'fill="none" stroke="var(--fg-3)" stroke-width="1.5"/></marker>';
-        svg.appendChild(defs);
-        board.appendChild(svg);
-      }
-      const fillArrowLists = () => {
-        const opts = boxes.map(b => '<option value="' + esc(b.id) + '">'
-          + esc((b.text || b.kind).slice(0, 24)) + '</option>').join('');
-        $('#o-va').innerHTML = opts; $('#o-vb').innerHTML = opts;
-      };
-      fillArrowLists();
-      els.forEach(e => {
-        if (e.kind === 'arrow') return;
-        if (['heading', 'text', 'verse'].indexOf(e.kind) < 0) { unknown.push(e); return; }
-        const d = document.createElement('div');
-        d.style.cssText = 'position:absolute;left:' + (e.x || 20) + 'px;top:' + (e.y || 20)
-          + 'px;width:' + (e.w || 220) + 'px;border:1px solid var(--line);border-radius:6px;'
-          + 'background:var(--bg-0);padding:0;';
-        const hd = document.createElement('div');
-        hd.style.cssText = 'cursor:move;padding:2px 6px;font-size:11px;color:var(--fg-3);'
-          + 'border-bottom:1px solid var(--line);display:flex;justify-content:space-between';
-        hd.innerHTML = '<span>' + esc(e.kind) + '</span><span data-x style="cursor:pointer">✕</span>';
-        const bd = document.createElement('div');
-        bd.style.cssText = 'padding:6px;white-space:pre-wrap;'
-          + (e.kind === 'heading' ? 'font-weight:bold;font-size:1.1em' : '');
-        bd.textContent = e.text || '';
-        if (e.kind === 'verse' && e.ref) {
-          const a = document.createElement('a');
-          a.href = '#'; a.textContent = ' — ' + e.ref;
-          a.onclick = (ev) => {
-            ev.preventDefault();
-            const bibles = (S.modules || []).filter(m => m.is_bible);
-            const mid = e.module_id || (bibles[0] && bibles[0].id) || '';
-            if (mid) { App.show('workspace'); Workspace.openModule(mid, { ref: e.ref, span: 'chapter' }); }
-          };
-          bd.appendChild(a);
-        }
-        const ta = document.createElement('textarea');
-        ta.value = e.text || '';
-        ta.style.cssText = 'width:100%;box-sizing:border-box;display:none';
-        ta.oninput = () => { e.text = ta.value; };
-        bd.ondblclick = () => { bd.style.display = 'none'; ta.style.display = ''; ta.focus(); };
-        ta.onblur = () => { ta.style.display = 'none'; bd.style.display = ''; draw(); };
-        d.appendChild(hd); d.appendChild(bd); d.appendChild(ta);
-        hd.querySelector('[data-x]').onclick = () => {
-          els = els.filter(x => x !== e); draw();
-        };
-        hd.onpointerdown = (ev) => {
-          if (ev.target.hasAttribute('data-x')) return;
-          const sx = ev.clientX - (e.x || 0), sy = ev.clientY - (e.y || 0);
-          const mv = (me) => { e.x = me.clientX - sx; e.y = me.clientY - sy;
-            d.style.left = e.x + 'px'; d.style.top = e.y + 'px'; };
-          const up = () => {
-            window.removeEventListener('pointermove', mv);
-            window.removeEventListener('pointerup', up);
-          };
-          window.addEventListener('pointermove', mv);
-          window.addEventListener('pointerup', up);
-        };
-        board.appendChild(d);
-      });
-      $('#o-vunknown').textContent = unknown.length
-        ? unknown.length + ' unsupported element(s) kept but not drawn.' : '';
-      const arrHost = $('#o-varrows');
-      if (arrHost) {
-        arrHost.innerHTML = arrows.map(a => {
-          const nm = (id) => {
-            const b = boxes.find(x => x.id === id);
-            return esc(((b && (b.text || b.kind)) || id).slice(0, 24));
-          };
-          return '<span class="chip">' + nm(a.from) + ' → ' + nm(a.to)
-            + ' <a href="#" data-arr="' + esc(a.id) + '">✕</a></span> ';
-        }).join('');
-        arrHost.querySelectorAll('a[data-arr]').forEach(x => x.onclick = (ev) => {
-          ev.preventDefault();
-          els = els.filter(y => y.id !== x.dataset.arr);
-          draw();
-        });
-      }
-    };
-    const place = () => {
-      const n = els.length;
-      return { x: 20 + (n % 4) * 40, y: 20 + (n % 4) * 40, w: 220 };
-    };
-    $('#o-vt').onclick = () => { els.push(Object.assign({ id: 'e' + Date.now(), kind: 'text', text: 'New note' }, place())); draw(); };
-    $('#o-vh').onclick = () => { els.push(Object.assign({ id: 'e' + Date.now(), kind: 'heading', text: 'Heading' }, place())); draw(); };
-    $('#o-vv').onclick = async () => {
-      const ref = $('#o-vref').value.trim();
-      if (!ref) { toast('Type a reference first.', 'warn'); return; }
-      const bibles = (S.modules || []).filter(m => m.is_bible);
-      const mid = (bibles[0] && bibles[0].id) || '';
-      let text = ref;
-      if (mid) {
-        const rd = await api('read', { id: mid, cursor: { ref, span: 'verse' } }).catch(() => null);
-        if (rd && rd.items && rd.items[0]) text = rd.items[0].text || ref;
-      }
-      els.push(Object.assign({ id: 'e' + Date.now(), kind: 'verse', ref, text, module_id: mid }, place()));
-      $('#o-vref').value = '';
-      draw();
-    };
-    $('#o-vsave').onclick = async () => {
-      $('#o-vmsg').textContent = 'Saving…';
-      const s = await post('canvas', { action: 'save', id, name: c.name, elements: els });
-      $('#o-vmsg').textContent = (s && s.canvas) ? 'Saved.' : 'Save failed.';
-    };
-    $('#o-varr').onclick = () => {
-      const a = $('#o-va').value, b = $('#o-vb').value;
-      if (!a || !b || a === b) { toast('Pick two different boxes.', 'warn'); return; }
-      els.push({ id: 'e' + Date.now(), kind: 'arrow', from: a, to: b });
-      draw();
-    };
-    draw();
+    main.querySelectorAll('a[data-vrename]').forEach(a => a.onclick = async (e) => {
+      e.preventDefault();
+      const b = boards.find(x => x.id === a.dataset.vrename);
+      const name = prompt('Rename canvas:', b ? b.name : 'Canvas');
+      if (!name) return;
+      await post('canvas/board', { action: 'rename', board: a.dataset.vrename, name });
+      refresh();
+    });
+    main.querySelectorAll('a[data-vdel]').forEach(a => a.onclick = async (e) => {
+      e.preventDefault();
+      if (!confirm('Delete this canvas and its cards?')) return;
+      await post('canvas/board', { action: 'remove', board: a.dataset.vdel });
+      refresh();
+    });
   },
 
   async chartsView(main) {
@@ -2871,7 +3184,7 @@ const Organise = {
     }
     /* Bars as inline SVG: no chart library, no network, and the whole thing
      * scales from a phone to a wide window. */
-    const rows = c.series.slice(0, 40);
+    const rows = (c.series || []).slice(0, 40);
     const max = c.max || 1;
     /* Labels are truncated and the bar is capped short of the right edge, so a
      * long name and a big number cannot end up printed on top of each other. */
@@ -3011,7 +3324,8 @@ const Organise = {
   async communityTagsView(main) {
     let h = '<div class="dash-card"><div class="dash-h">Community Tags</div>'
       + '<div class="tiny muted" style="margin-bottom:10px">User-sourced tags for '
-      + 'verses, words and topics. Tags are shared across all users.</div>'
+      + 'verses, words and topics. Tags are kept in your own library and travel '
+      + 'with your backup; there is no shared server.</div>'
       + '<div class="org-new" style="margin-bottom:10px">'
       + '<input id="ct-q" placeholder="Tag, module, or reference to filter" style="flex:1">'
       + '<button class="btn primary" id="ct-go">Filter</button>'
@@ -3198,7 +3512,12 @@ const Organise = {
         + '<button class="btn" id="course-complete" data-lesson="' + esc(id) + '">Mark Complete</button>'
         + '</div>';
       $('#course-complete').onclick = async () => {
-        await api('courses', { action: 'progress', course_id: main.dataset.courseId, lesson_id: id, completed: '1' });
+        const r = await api('courses', { action: 'progress',
+          course_id: main.dataset.courseId, lesson_id: id, completed: '1' });
+        if (!r || r.ok === false) {
+          toast((r && r.error) || 'Could not save progress.', 'err');
+          return;
+        }
         toast('Lesson marked complete.');
         openCourse(main.dataset.courseId);
       };
@@ -3315,12 +3634,8 @@ const Organise = {
       + '<label style="width:100px">Content type</label>'
       + '<select id="pe-type" style="flex:1">'
       + '<option value="passage">Passage</option>'
-      + '<option value="guide">Guide</option>'
       + '<option value="search">Search</option>'
-      + '<option value="notes">Notes</option>'
-      + '<option value="sermon">Sermon</option>'
-      + '<option value="word-study">Word Study</option>'
-      + '<option value="canvas">Canvas</option></select>'
+      + '<option value="notes">Notes</option></select>'
       + '<label style="width:110px;margin-left:10px">Reference/ID</label>'
       + '<input id="pe-id" style="flex:1" placeholder="e.g. John 3:16"></div>'
       + '<div class="org-new" style="margin-bottom:10px">'
@@ -3389,7 +3704,7 @@ const Organise = {
   async addModuleToCollection(moduleId) {
     const r = await api('collection');
     const cs = r.collections || [];
-    const label = (modById(moduleId) || {}).name || moduleId;
+    const label = modLabel(moduleId);
     let items = cs.map(c => '<a href="#" data-cpick="' + esc(c.id) + '" data-m="'
       + esc(moduleId) + '">' + esc(c.name) + ' <span class="muted tiny">('
       + (c.count || 0) + ')</span></a>').join('');
@@ -3470,6 +3785,9 @@ function wireModalCollectionPick() {
       e.preventDefault();
       const r = await api('collection', { action: 'add', id: pick.dataset.cpick,
                                           module: pick.dataset.m });
+      if (!r || r.ok === false || r.error) {
+        toast((r && r.error) || 'Could not add to that collection.', 'err'); return;
+      }
       const where = pick.textContent.trim().split(' ')[0];
       toast(r.unchanged ? 'Already in ' + where + '.'
                         : 'Added to ' + where);
@@ -3479,9 +3797,13 @@ function wireModalCollectionPick() {
     const nw = e.target.closest('[data-cnew]');
     if (nw) {
       e.preventDefault();
-      const name = ($('#oc-quick') || {}).value || '';
-      await api('collection', { action: 'save', name: name,
-                                modules: [nw.dataset.m] });
+      const name = (($('#oc-quick') || {}).value || '').trim();
+      if (!name) { toast('Name the collection first.', 'warn'); return; }
+      const made = await api('collection', { action: 'save', name: name,
+                                             modules: [nw.dataset.m] });
+      if (!made || made.ok === false || !made.id) {
+        toast((made && made.error) || 'Could not create the collection.', 'err'); return;
+      }
       toast('Collection created');
       closeModal();
       if (S.view === 'organise') Organise.load();
@@ -3500,6 +3822,9 @@ function wireModalPassagePick() {
                                            key: pick.dataset.k,
                                            ref: pick.dataset.r,
                                            module: pick.dataset.m });
+      if (!r || r.ok === false || r.error) {
+        toast((r && r.error) || 'Could not add to that list.', 'err'); return;
+      }
       toast(r.unchanged ? 'Already in that list.'
                         : 'Added to ' + pick.textContent.trim().split(' ')[0]);
       closeModal();
@@ -3508,10 +3833,17 @@ function wireModalPassagePick() {
     const nw = e.target.closest('[data-lnew]');
     if (nw) {
       e.preventDefault();
-      const name = ($('#ol-quick') || {}).value || '';
+      const name = (($('#ol-quick') || {}).value || '').trim();
+      if (!name) { toast('Name the list first.', 'warn'); return; }
       const made = await api('passagelist', { action: 'save', name: name });
-      await api('passagelist', { action: 'add', id: made.id, key: nw.dataset.k,
-                                 ref: nw.dataset.r, module: nw.dataset.m });
+      if (!made || made.ok === false || !made.id) {
+        toast((made && made.error) || 'Could not create the list.', 'err'); return;
+      }
+      const added = await api('passagelist', { action: 'add', id: made.id,
+        key: nw.dataset.k, ref: nw.dataset.r, module: nw.dataset.m });
+      if (!added || added.ok === false || added.error) {
+        toast((added && added.error) || 'Could not add the passage.', 'err'); return;
+      }
       toast('List created');
       closeModal();
       if (S.view === 'organise') Organise.load();
@@ -3521,6 +3853,24 @@ function wireModalPassagePick() {
 
 const Guides = {
   _morphSeq: 0,
+
+  /* A scripture cell is often a list ("Ge 1:1, 2", "Ex 38:26; 2 Ki 18:14").
+   * Emit one link per reference, carrying the last book/chapter forward for
+   * bare-number continuations, so each one opens that verse in the Bible. */
+  refChips(text) {
+    const parts = String(text || '').split(/[;,]\s*(?=[1-3]?\s*[A-Za-z]|\d)/);
+    let last = '';
+    return parts.map(raw => {
+      let p = raw.trim();
+      if (!p || p === '\u2014') return '';
+      if (/^\d+(?:-\d+)?$/.test(p) && last) {
+        const mm = last.match(/^([1-3]?\s?[A-Za-z]{2,})\s+(\d+)/);
+        p = (mm ? mm[1] + ' ' + mm[2] : last) + ':' + p;
+      }
+      last = p;
+      return '<a href="#" data-ref="' + esc(p) + '">' + esc(p) + '</a>';
+    }).filter(Boolean).join(', ');
+  },
 
   async load() {
     const tab = $('#g-tab').value;
@@ -3603,7 +3953,11 @@ const Guides = {
          + fields.map(f => '<th>' + esc(f.label) + '</th>').join('')
          + '</tr></thead><tbody>';
        rows.forEach(row => {
-         t += '<tr>' + fields.map(f => '<td>' + esc(String(row[f.key] == null ? '' : row[f.key])) + '</td>').join('') + '</tr>';
+         t += '<tr>' + fields.map(f => {
+          const v = row[f.key] == null ? '' : String(row[f.key]);
+          return '<td>' + (f.key === 'scripture' && v ? this.refChips(v) : esc(v))
+            + '</td>';
+        }).join('') + '</tr>';
        });
        t += '</tbody></table></div>';
        return t;
@@ -3619,7 +3973,7 @@ const Guides = {
      h += factTable('Calendar months', r.calendar_months,
        [{key:'name',label:'Name'},{key:'position',label:'#'},{key:'gregorian',label:'Gregorian'},{key:'scripture',label:'Scripture'},{key:'note',label:'Note'}]);
      h += factTable('Festivals', r.festivals,
-       [{key:'name',label:'Name'},{key:'month',label:'When'},{key:'scripture',label:'Scripture'},{key:'note',label:'Note'}]);
+       [{key:'name',label:'Name'},{key:'date',label:'When'},{key:'scripture',label:'Scripture'},{key:'note',label:'Note'}]);
      body.innerHTML = h;
    },
 
@@ -3759,7 +4113,9 @@ const Guides = {
       ['tense', 'Tense'], ['person', 'Person'],
       ['participle', 'Participle'], ['pos_particle', 'With a particle'],
     ];
-    if (!this._morphForm) {
+    /* Rebuild on every visit: load() clears #g-body each time, so the old
+     * "already built" guard left this tab saying "Loading…" forever. */
+    {
       let h = '<div class="dash-card"><div class="dash-h">Morph query</div>'
         + '<div class="tiny muted" style="margin-bottom:8px">'
         + `${f.codes.toLocaleString()} distinct codes over `
@@ -3776,29 +4132,14 @@ const Guides = {
       });
       h += '</div><button class="btn primary" id="mq-go">Find these words</button>'
         + '<span id="mq-out" class="tiny muted"></span></div>';
-/* The sections the reader configured, which this view does not already
-     * render.  `study/passage` returns its own fixed five sections and ignored
-     * the guide configuration entirely, so `guide/config` -- editable, saved,
-     * and offered in this very modal's toolbar -- was written and never read.
-     * Every section added or removed through that editor had no effect on what
-     * appeared here.  The configured guide is run for real now; the sections
-     * above already render well and are not repeated. */
     body.innerHTML = h;
-    // Clicking a cross-reference opens it in the Bible pane.
-    $$('.pg-xref a', body).forEach((a, i) => {
-      a.onclick = (e) => {
-        e.preventDefault();
-        Reader.openRefAnywhere(b.xrefs[i].label.replace('.', ' '));
-      };
-    });
       $('#mq-go').onclick = () => this.morphologyRun(body);
       // a change re-runs, so the count is never stale
       $$('#g-body select[id^=mq-]').forEach(sel => {
         sel.onchange = () => this.morphologyRun(body);
       });
-      this._morphForm = true;
     }
-    if (!this._morphDone) { this._morphDone = true; await this.morphologyRun(body); }
+    await this.morphologyRun(body);
   },
 
   async morphologyRun(body) {
@@ -3875,7 +4216,7 @@ const Guides = {
     h += (P.parent_list && P.parent_list.length)
       ? P.parent_list.map(x => '<div class="gn-row"><a href="#" data-person="'
           + esc(x.id) + '">' + esc(x.name) + '</a><span class="muted tiny"> '
-          + refLinks((x.refs || []).slice(0, 3)) + '</span></div>').join('')
+          + refLinks(x.refs) + '</span></div>').join('')
       : '<div class="empty">no parent stated in the text read</div>';
     h += '</div>';
 
@@ -3883,7 +4224,7 @@ const Guides = {
     h += (P.child_list && P.child_list.length)
       ? P.child_list.map(x => '<div class="gn-row"><a href="#" data-person="'
           + esc(x.id) + '">' + esc(x.name) + '</a><span class="muted tiny"> '
-          + refLinks((x.refs || []).slice(0, 2)) + '</span></div>').join('')
+          + refLinks(x.refs) + '</span></div>').join('')
       : '<div class="empty">no children stated in the text read</div>';
     h += '</div>';
 
@@ -3936,24 +4277,33 @@ const Guides = {
         '<a href="#" data-person="' + esc(x.toLowerCase()) + '">' + x + '</a>')
         .join(' \u00b7 ') + '</div>';
 
+    if ((s.conflicts || []).length) {
     h += '<div class="gn-block"><div class="gn-h">Where the sources differ</div>'
       + '<div class="tiny muted" style="margin-bottom:6px">'
       + esc(s.conflicts_note) + '</div>';
     ['shared', 'listed', 'variant'].forEach(k => {
       const rows = s.conflicts.filter(c => c.kind === k);
       if (!rows.length) return;
+      // One group per kind: a "more" link must only open its own rows.
+      h += '<div class="gn-group" data-kind="' + esc(k) + '">';
       h += '<div class="gn-conf-h">' + rows.length + ' \u2014 ' + esc(kinds[k])
         + '</div>';
-      rows.slice(0, 8).forEach(c => {
-        h += '<div class="gn-row"><a href="#" data-person="' + esc(c.id) + '">'
-          + esc(c.name) + '</a> <span class="muted tiny">\u2190 '
+      const refLinks = (rs) => (rs || []).map(r =>
+        '<a href="#" data-ref="' + esc(r) + '">' + esc(r) + '</a>').join(', ');
+      rows.forEach((c, i) => {
+        h += '<div class="gn-row' + (i >= 8 ? ' gn-extra' : '') + '"'
+          + (i >= 8 ? ' hidden' : '') + '>'
+          + '<a href="#" data-person="' + esc(c.id) + '">' + esc(c.name) + '</a>'
+          + ' <span class="muted tiny">\u2190 '
           + esc(c.parent_names.join(' / ')) + ' \u00b7 '
-          + esc((c.refs || []).slice(0, 3).join(', ')) + '</span></div>';
+          + refLinks(c.refs) + '</span></div>';
       });
-      if (rows.length > 8) h += '<div class="tiny muted">\u2026and '
-        + (rows.length - 8) + ' more</div>';
+      if (rows.length > 8) h += '<div class="tiny"><a href="#" data-gmore="'
+        + esc(k) + '">\u2026and ' + (rows.length - 8) + ' more</a></div>';
+      h += '</div>';
     });
     h += '</div>';
+    }
     if (s.partial && s.partial.length) {
       h += '<div class="gn-block"><div class="gn-h">Partial ('
         + s.partial.length + ')</div><div class="tiny muted">A list the text '
@@ -4007,7 +4357,8 @@ const Guides = {
       h += '<tr><td class="harm-e">' + esc(row.event) + '</td>'
         + row.refs.map(x => '<td>' + (x.pericope === '—'
           ? '<span class="muted">—</span>'
-          : '<a href="#" data-ref="' + esc(x.pericope) + '">'
+          : '<a href="#" data-ref="'
+            + esc((x.gospel || '') + ' ' + x.pericope) + '">'
             + esc(x.pericope) + '</a>') + '</td>').join('')
         + '</tr>';
     });
@@ -4133,8 +4484,18 @@ const Guides = {
 
   wire() {
     $('#g-body').onclick = (e) => {
-      const r = e.target.closest('a[data-ref]');
-      if (r) { e.preventDefault(); App.show('workspace'); Reader.openRefAnywhere(r.dataset.ref); return; }
+      // data-ref is handled by the document router, which also normalises
+      // dotted OSIS keys; repeating it here would open the same verse twice.
+      const more = e.target.closest('a[data-gmore]');
+      if (more) {
+        e.preventDefault();
+        const extras = $$('.gn-extra', more.closest('.gn-group') || document);
+        const open = more.dataset.open === '1';
+        extras.forEach(x => { x.hidden = open; });
+        more.dataset.open = open ? '' : '1';
+        more.textContent = open ? '\u2026and ' + extras.length + ' more' : 'show less';
+        return;
+      }
       const b = e.target.closest('[data-book]');
       if (b) { $('#g-ref').value = b.dataset.book; $('#g-tab').value = 'chapter'; this.load(); return; }
       const per = e.target.closest('a[data-person]');
@@ -4164,6 +4525,9 @@ const Guides = {
       const openref = e.target.closest('a[data-openref]');
       if (openref) {
         e.preventDefault();
+        // openRefAnywhere can fill a pane that is not on screen, which looks
+        // like a dead link from a guide. Show the workspace first.
+        App.show('workspace');
         Reader.openRefAnywhere(openref.dataset.openref);
         return;
       }

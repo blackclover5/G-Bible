@@ -61,11 +61,15 @@ that G-Bible writes to the target you pick — a folder on this computer, or a
 WebDAV/Nextcloud server — and pulls back from the same place on restore.
 
 The `.gbz` carries your notes, highlights, plans, tags, layouts, workflows,
-word lists, citations, reading progress, appearance and sermon material —
-plus your AI settings, API keys, AI conversations, saved morphological
-searches and AI usage history. The file is **not encrypted**, so keep it like
-a password; the sync password never travels in it. Modules themselves are not
-copied — a fresh install reinstalls them from the Store.
+word lists, citations, reading progress, saved morphological searches and
+sermon material, along with your AI *settings* (provider and model). A standard
+sync backup is **not encrypted** and does **not** include appearance, AI
+conversations, AI usage history or API keys; keep it like a password, and note
+that the sync password never travels in it. To move those private items, use
+**Export with AI data…** on the Backup card — it asks for a passphrase and is
+always encrypted. See [Backup and Synchronization](../wiki/Backup-and-Synchronization.md).
+Modules themselves are not copied — a fresh install reinstalls them from the
+Store. The **What travels?** button in Sync lists the exact scope.
 
 Choose a target, press **Sync now** (or leave the interval to do it for you),
 and `gbible-backup.gbz` lands wherever you said. To restore, pick where the
@@ -75,10 +79,11 @@ the same file sync wrote). Restore never deletes and never overwrites:
 identical records are skipped, differing records keep yours, and deleted
 markers in the backup are ignored.
 
-After a restore, appearance is applied automatically, AI keys already set on
-this machine keep their live values (only missing ones are restored), and
-G-Bible tells you which modules the backup expects but this machine doesn't
-have — install them from the Store and everything is readable again.
+After a restore, appearance is applied if the archive actually carries it, AI
+keys already set on this machine keep their live values (only missing ones are
+restored), and G-Bible tells you which modules the backup expects but this
+machine doesn't have — install them from the Store and everything is readable
+again.
 
 ## 3. What you're looking at
 
@@ -86,15 +91,21 @@ The top bar is your whole map:
 
 | Tab | What it's for |
 | --- | --- |
-| **Home** | Your study day at a glance — reading plan, recent highlights, prayer list |
+| **Home** | Your study day at a glance — today's reading, where you left off, notes, prayer, tags, highlights, reading plan, and cards for eStudySource (premium modules) and BibleSupport (free community modules) |
 | **Workspace** | The reading room: Bible panes, commentaries, dictionaries, Strong's study, side by side |
 | **Search** | Search your whole library — Strong's, morphology, phrases, words |
 | **Guides** | Passage guide, topic guide, chronological facts, harmony and more |
-| **Assistant** | Optional AI, which needs your own provider key before anything happens |
+| **Assistant** | Optional AI: connect a local server or add a cloud key. Nothing is sent until you enable it and choose a provider |
 | **Study tools** | Concordance, word study, maps, images, import/export tools |
 | **My study** | Notes & highlights, favourites, canvas, collections, prayer lists |
 | **Library** | **My library** (your books) and **Resource store** (the catalogue) |
 | **Settings** | Appearance, synchronisation, Logs, Read-aloud, about |
+
+The cards on Home are yours to arrange. Hold briefly on a card, then drag it to
+another spot or column; the arrangement is remembered on this device. The small
+**×** in a card's top-right corner removes it from Home. A **gear** button then
+appears in the Home header — click it to restore any card you removed, one at a
+time or all at once.
 
 ## 4. Your first five minutes
 
@@ -131,12 +142,12 @@ The top bar is your whole map:
 
 ## 6. Honest first impressions
 
-- This is a **1.0.1, open-source** application. It does a great deal and it
+- This is a **1.0.2, open-source** application. It does a great deal and it
    does most of it well, but it is a hobby project, not a commercial product.
   - Occasionally a re-import (or an unfamiliar closing of a module) needs
     re-indexing from its source — easiest from the module's own page.
   - The AI Assistant is optional and off until you turn it on with your own
-    provider key. It is a research aid, not a pope.
+    provider (a local server or a cloud key). It is a research aid, not a pope.
   - Synchronisation is still settling — make sure you have a backup of your
     library before you try it, and test it on one folder before trusting it with two.
 

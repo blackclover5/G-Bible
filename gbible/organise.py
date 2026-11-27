@@ -62,9 +62,13 @@ def collections() -> list[dict]:
         members = collection_members(r["id"])
         items = []
         for mid in members:
-            m = library.get(mid)
-            items.append({"module_id": mid, "name": m.name if m else mid,
-                          "type": m.type if m else ""})
+            # Keep the entry even when its module was removed: the collection
+            # belongs to the reader, not to the module.  Just say so honestly.
+            m = library.get_installed(mid)
+            items.append({"module_id": mid,
+                          "name": (m.name if m else "(removed) " + mid),
+                          "type": m.type if m else "",
+                          "installed": bool(m)})
         d = dict(r)
         d["rule"] = collection_rule(r["id"]).get("rule", "")
         out.append({**d, "count": len(members), "modules": items})
@@ -248,7 +252,7 @@ def add_to_collection(collection_id: str, module_id: str) -> dict:
     conn = db.connect()
     if not conn.execute("SELECT 1 FROM collection WHERE id=?",
                         (collection_id,)).fetchone():
-        return {"error": "no such collection"}
+        return {"ok": False, "error": "no such collection"}
     # Adding something already in the set is a no-op.  `INSERT OR REPLACE`
     # against the (collection_id, module_id) primary key does not do that: it
     # deletes the existing row and inserts a new one, and the new row's
@@ -322,7 +326,7 @@ def add_passage(list_id: str, unit_key: str, ref_label: str = "",
     conn = db.connect()
     if not conn.execute("SELECT 1 FROM passage_list WHERE id=?",
                         (list_id,)).fetchone():
-        return {"error": "no such passage list"}
+        return {"ok": False, "error": "no such passage list"}
     if conn.execute("SELECT 1 FROM passage_item WHERE list_id=? AND unit_key=?",
                     (list_id, unit_key)).fetchone():
         return {"id": list_id, "unchanged": True, "items": passage_items(list_id)}
@@ -741,6 +745,24 @@ def browser_query(spec: dict) -> dict:
         v = (spec.get(field) or "").strip()
         if v:
             parts.append(f'{field}:{v}')
+
+    # The newer scoped forms.  A clause role value can be a phrase ("Jesus
+    # Christ"), a morph request is already a feature spec, and a fuzzy term
+    # only needs its leading tilde if the reader typed one.
+    role = (spec.get("role") or "").strip()
+    role_term = (spec.get("role_term") or "").strip().strip('"')
+    if role_term:
+        prefix = role or "role"
+        parts.append(f'{prefix}:"{role_term}"' if " " in role_term
+                     else f'{prefix}:{role_term}')
+    morph = (spec.get("morph") or "").strip().strip('"')
+    if morph:
+        # Always quote a feature spec: the query language strips quotes at
+        # parse time, and quoting keeps `=` and `not:` from being tokenised.
+        parts.append(f'morph:"{morph}"')
+    fuzzy = (spec.get("fuzzy") or "").strip().lstrip("~")
+    if fuzzy:
+        parts.append("~" + fuzzy)
 
     return {"ok": True, "query": " AND ".join(parts)}
 

@@ -1703,10 +1703,17 @@ def worker_state() -> dict:
         return json.loads(row["value"]) if row and row["value"] else {}
     except (json.JSONDecodeError, TypeError):
         return {}
+    except sqlite3.OperationalError:
+        # A status read can arrive before the indexer has created its tables
+        # (fresh library, or a call from another thread during startup).
+        return {}
 
 
 def _set_worker_state(**kw) -> None:
     conn = db.connect()
+    # The worker may be recording the very first status on a fresh library;
+    # make sure its own tables exist before writing.
+    ensure(conn)
     st = worker_state()
     st.update(kw)
     st["at"] = time.strftime("%Y-%m-%dT%H:%M:%S")

@@ -75,6 +75,11 @@ def save_custom_plan(name: str, refs: list[str]) -> dict:
     if not clean:
         return {"ok": False, "error": "Add at least one passage."}
     all_c = custom_plans()
+    if name in all_c:
+        # The UI has no "edit plan" action: overwriting here would silently
+        # replace a reader's passages with whatever was pasted this time.
+        return {"ok": False, "error":
+                "A plan called that already exists. Delete it first to replace it."}
     all_c[name] = clean
     db.set_setting(CUSTOM_KEY, all_c)
     return {"ok": True, "name": name, "days": len(clean), "refs": clean}
@@ -134,10 +139,16 @@ def set_progress(plan: str, day: int, done: bool = True) -> dict:
             "count": len(days)}
 
 
-def clear_progress(plan: str) -> dict:
+def clear_progress(plan: str, *, notify: bool = True) -> dict:
     allp = progress()
     allp.pop(plan, None)
     db.set_setting(PROGRESS_KEY, allp)
+    if notify and plan:
+        try:
+            from . import sync
+            sync.tombstone("plan-" + plan, "plan-mark")
+        except Exception:                               # noqa: BLE001
+            pass
     return {"plan": plan, "days": []}
 
 
@@ -269,8 +280,8 @@ _BIBLE_SECTIONS = [
 ]
 
 
-#: Which books the library actually has text for, keyed on the unit count so an
-#: install invalidates it.
+#: Which books the library actually has text for, keyed on the installed module
+#: ids so an install or removal invalidates it.
 _BOOKS_CACHE: tuple = ()
 
 
@@ -286,15 +297,20 @@ def _books_with_text() -> dict:
     """
     global _BOOKS_CACHE
     conn = db.connect()
-    total = conn.execute("SELECT COUNT(*) c FROM unit").fetchone()["c"]
-    if _BOOKS_CACHE and _BOOKS_CACHE[0] == total:
+    # The count alone is not enough: removing one Bible and installing another
+    # with the same number of units leaves the plan pointing at old books.
+    sig = conn.execute(
+        "SELECT count(*) c, group_concat(id) s FROM "
+        "(SELECT id FROM module WHERE installed_at>0 ORDER BY id)").fetchone()
+    key = (sig["c"], sig["s"] or "")
+    if _BOOKS_CACHE and _BOOKS_CACHE[0] == key:
         return _BOOKS_CACHE[1]
     rows = conn.execute(
         "SELECT DISTINCT book FROM unit WHERE book IS NOT NULL AND book<>''"
     ).fetchall()
     have = {r["book"]: (canon.chapter_count("KJV", r["book"]) or 1)
             for r in rows if r["book"] in canon.BOOK_BY_OSIS}
-    _BOOKS_CACHE = (total, have)
+    _BOOKS_CACHE = (key, have)
     return have
 
 

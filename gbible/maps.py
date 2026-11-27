@@ -1,6 +1,6 @@
 """Historical maps, and the Bible places that can be put on them.
 
-The library holds four scanned historical maps -- an Ortelius Exodus route, a
+The library holds seven scanned historical maps -- an Ortelius Exodus route, a
 1794 Anville map of the Holy Land, a map of the Crusader states, and the
 Twelve Tribes map -- and separately a gazetteer of 334 Bible places, every one
 of them with a latitude and a longitude.  Both were there and nothing joined
@@ -49,9 +49,9 @@ _CALIB_KEY = "map_calibration:"
 # the gazetteer
 # --------------------------------------------------------------------------
 
-def places(term: str = "", *, limit: int = 400,
-           near: tuple[float, float] | None = None,
-           radius_km: float | None = None) -> list[dict]:
+def _places(term: str = "", *, limit: int = 400, offset: int = 0,
+            near: tuple[float, float] | None = None,
+            radius_km: float | None = None) -> tuple[list[dict], int]:
     """Bible places, searchable by name, by alternative name, or by reference.
 
     `near`/`radius_km` filter by distance from a point.  That is what makes a
@@ -81,7 +81,7 @@ def places(term: str = "", *, limit: int = 400,
                 rank = 2
             elif any(a.startswith(t) for a in alts):
                 rank = 2
-            elif t in alts:
+            elif any(t in a for a in alts):
                 rank = 1
             elif t and t in refs:
                 rank = 1
@@ -107,7 +107,7 @@ def places(term: str = "", *, limit: int = 400,
                                     else 0.0,
                                     (rp[1].get("name") or "")))
     out = []
-    for _rank, p in scored[:max(1, limit)]:
+    for _rank, p in scored[max(0, offset):max(0, offset) + max(1, limit)]:
         out.append({
             "id": p.get("id"), "slug": p.get("slug"),
             "name": p.get("name"), "alt_names": p.get("alt_names") or [],
@@ -115,8 +115,26 @@ def places(term: str = "", *, limit: int = 400,
             "comment": p.get("comment") or "",
             "passages": p.get("passages") or [],
             "distance_km": p.get("distance_km"),
+            "located": True,
         })
-    return out
+    return out, len(scored)
+
+
+def places(term: str = "", *, limit: int = 400,
+           near: tuple[float, float] | None = None,
+           radius_km: float | None = None) -> list[dict]:
+    """The page of places as a list, for older callers."""
+    return _places(term, limit=limit, near=near, radius_km=radius_km)[0]
+
+
+def places_page(term: str = "", *, limit: int = 400, offset: int = 0,
+                near: tuple[float, float] | None = None,
+                radius_km: float | None = None) -> dict:
+    """The same search with an honest total, offset and `more`."""
+    items, total = _places(term, limit=limit, offset=offset,
+                           near=near, radius_km=radius_km)
+    return {"places": items, "total": total,
+            "more": total > max(0, offset) + len(items)}
 
 
 def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -154,11 +172,11 @@ def _suggested_controls() -> list[dict]:
     and its angle, and a pair a few kilometres apart fixes both badly: two
     points close together make a rotation almost unconstrained, and the result
     is a map that looks right and is subtly wrong everywhere except the two
-    places it was set from.  The gazetteer installed here holds 334 places and
-    most of them are minor settlements of the Hebrew Bible -- Hebron, Beersheba,
-    Jericho and Nazareth are all absent -- so the widest separation available is
-    not always a famous city, and asking for the widest one is how the feature
-    keeps working on a gazetteer this thin.
+    places it was set from.  The gazetteer installed here holds 359 places and
+    leans towards minor settlements, so the widest usable pair is not always a
+    famous city; asking for the widest one is how the feature keeps working on
+    a thin gazetteer.  Major names such as Damascus, Sinai and Mount Carmel are
+    not in it, so the candidates are chosen from what is actually there.
     """
     allp = places(limit=1000)
     by_name = {(p["name"] or "").lower(): p for p in allp}
@@ -180,7 +198,7 @@ def _suggested_controls() -> list[dict]:
 # modern names, from Nominatim
 # --------------------------------------------------------------------------
 #
-# The gazetteer above is *biblical*: 334 places, weighted towards minor
+# The gazetteer above is *biblical*: 359 places, weighted towards minor
 # settlements of the Hebrew Bible, and missing Gilead, Jericho, Hebron,
 # Beersheba, Nazareth, Canaan and Moab.  Nominatim is the opposite: a modern
 # gazetteer of the inhabited world, which resolves the names the Bible gives to
@@ -265,9 +283,11 @@ def geocode(term: str, *, limit: int = 6, region: str = "near_east") -> dict:
     already six requests the reader did not ask for individually.
     """
     from .api import registry as apireg
-    label, box = _REGIONS.get(region if region is not None else "",
+    label, box = _REGIONS.get(region if region is not None else "near_east",
                                _REGIONS["near_east"])
-    key = f"fwd|{region}|" + " ".join(term.lower().split())
+    # The cached payload is already trimmed to `limit`; without the limit in
+    # the key a later request for a different page size gets the old slice.
+    key = f"fwd|{region}|{limit}|" + " ".join(term.lower().split())
     hit = apireg.cache_get("nominatim", key, kind="geocode", max_age=_GEO_TTL)
     if hit is not None:
         return dict(hit, cached=True)
@@ -289,8 +309,10 @@ def geocode(term: str, *, limit: int = 6, region: str = "near_east") -> dict:
     # Jerusalem at 31.8N.  Both are asked and merged, one second apart.
     asks = [dict(params)]
     if box:
-        asks.append(dict(params, viewbox=",".join(str(x) for x in box),
-                         bounded=1))
+        # Nominatim wants x1,y1,x2,y2 = lon_min,lat_max,lon_max,lat_min;
+        # NEAR_EAST is stored as (south, west, north, east).
+        viewbox = f"{box[1]},{box[2]},{box[3]},{box[0]}"
+        asks.append(dict(params, viewbox=viewbox, bounded=1))
     seen: set[tuple] = set()
     rows: list[dict] = []
     for ask in asks:
@@ -350,6 +372,7 @@ def geocode(term: str, *, limit: int = 6, region: str = "near_east") -> dict:
     # the city and "Cana" put a wedding venue above the village.
     out.sort(key=lambda p: (p["rank"], -(p["importance"] or 0), p["name"]))
     payload = {"ok": True, "query": term, "places": out[:max(1, limit)],
+               "total": len(out), "more": len(out) > max(1, limit),
                "cached": False,
                "region": label, "bounded": bool(box),
                "note": ("Searched " + label + ", and only places inside it are "

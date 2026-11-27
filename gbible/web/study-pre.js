@@ -20,7 +20,9 @@ function configuredGuideHtml(g) {
       || it.subject || it.label || '';
     const txt = it.text || it.comment || it.gloss || it.preview || '';
     const per = it.pericopes ? Object.keys(it.pericopes)
-      .map(k => esc(k) + ' ' + esc(it.pericopes[k])).join(' · ') : '';
+      .filter(k => it.pericopes[k] && it.pericopes[k] !== '—')
+      .map(k => '<a href="#" data-ref="' + esc(k + ' ' + it.pericopes[k]) + '">'
+        + esc(k) + ' ' + esc(it.pericopes[k]) + '</a>').join(' · ') : '';
     const open = (it.module_id && it.key)
       ? '<div class="tiny"><a href="#" data-open="' + esc(it.module_id)
         + '" data-key="' + esc(it.key) + '">Open in a pane</a></div>' : '';
@@ -32,9 +34,9 @@ function configuredGuideHtml(g) {
   };
   const withItems = cfg.filter(s => (s.items || []).length);
   const bare = cfg.filter(s => !(s.items || []).length && s.note);
-  return '<details class="st-sec"><summary class="st-h">Configured guide'
+  return '<div class="st-sec open"><div class="st-h">Configured guide'
     + ' <span class="tiny muted">· ' + cfg.length + ' section'
-    + (cfg.length === 1 ? '' : 's') + '</span></summary>'
+    + (cfg.length === 1 ? '' : 's') + '</span></div><div class="st-body">'
     + (withItems.length
       ? withItems.map(s => '<div class="st-head">' + esc(s.title || s.id)
         + ' <span class="muted tiny">· ' + s.items.length
@@ -43,5 +45,5 @@ function configuredGuideHtml(g) {
       : '')
     + bare.map(s => '<div class="tiny muted">' + esc(s.title || s.id)
       + ': ' + esc(s.note) + '</div>').join('')
-    + '</details>';
+    + '</div></div>';
 }

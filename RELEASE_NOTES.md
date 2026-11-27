@@ -33,7 +33,7 @@ self-test passes with zero failures.
 
 ### Personal backups, the G-Bible way (.gbz)
 - Sync and backup are one mechanism. **Settings → Synchronization** holds a single artefact — `gbible-backup.gbz` — written to the target you select (this computer, WebDAV, Nextcloud) and pulled back from the same place. One button, one file, one restore.
-- The `.gbz` carries notes, highlights, plans, tags, layouts, workflows, word lists, citations, reading progress, appearance, sermon material — plus the AI bundle by default (settings, API keys, conversations, saved morphological searches, usage history). Unencrypted, so keep it like a password; sync passwords never travel.
+- The `.gbz` carries notes, highlights, plans, tags, layouts, workflows, word lists, citations, reading progress, sermon material (not appearance, which stays on the device). AI settings travel; conversations, keys and usage need an explicit encrypted AI-inclusive export. A standard backup is unencrypted, so keep it like a password; sync passwords never travel.
 - Restore is additive: nothing is deleted, nothing is overwritten — identical records are skipped, differing records keep yours. Restore offers three sources (this computer / WebDAV / Nextcloud) — the network ones GET the file sync wrote. Usage history is only restored onto a machine with no usage history, because usage counters cannot be summed without double counting.
 - Modules are not copied by design; G-Bible tells you which ones the backup expects so the Store can reinstall them.
 
@@ -42,7 +42,7 @@ self-test passes with zero failures.
   dropdown menus (Study tools, My study, Library, Settings)
 - Consistent view headers across all 23 destination views
 - Refined color palette (deep slate surfaces, indigo accent — G-Bible's own
-  identity, not a Logos clone)
+  identity)
 - Unified component system: buttons, cards, inputs, modals, badges, chips
 - Softer borders, better focus states, hover elevations, responsive layout
 - Sectioned context menus (Quick Actions, Word & Topic Study, Passage Research,
@@ -110,7 +110,7 @@ Skipped tests indicate material not installed — not a defect.
   most OT texts) — those render plainly. Nothing is inferred.
 - Sync is opt-in and experimental; folders and WebDAV work today. Encryption
   is deliberately not supported yet.
-- The AI Assistant needs your own provider key; without one it produces nothing.
+- The AI Assistant needs a configured provider — a cloud key or a running local server (Ollama/LM Studio/llama.cpp); without one it produces nothing.
 - Some self-test checks require modules not yet installed (morphology-tagged
   texts, apparatus modules).
 

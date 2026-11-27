@@ -383,9 +383,15 @@ LICENSE_ALIASES = {
     "creative commons attribution 4.0 international": "CC-BY-4.0",
     "creative commons attribution-sharealike 4.0 international": "CC-BY-SA-4.0",
     "cc-by-sa": "CC-BY-SA-4.0",
-    "gfdl": "Public Domain",   # GFDL text of PD works is still PD text
-    "copyrighted; freely distributable": "Public Domain",
-    "gpl": "CC-BY-SA-4.0",     # treat conservatively
+    # GFDL is copyleft with attribution and licence-text duties; "freely
+    # distributable" is a permission, not a public-domain dedication.  Neither
+    # may be normalised to Public Domain by an importer.
+    "gfdl": "Copyrighted",
+    "copyrighted; freely distributable": "Copyrighted",
+    # GPL is a copyleft licence, not Creative Commons. Re-labelling it as
+    # CC-BY-SA printed a licence the source never granted in citations and
+    # exports. Keep the conservative "Copyrighted" class instead.
+    "gpl": "Copyrighted",
     "creative commons attribution 4.0": "CC-BY-4.0",
     "creative commons attribution 3.0": "CC-BY-3.0",
     "creative commons attribution 2.5": "CC-BY-2.5",
@@ -684,8 +690,10 @@ def pd_dated_ok(item: dict) -> tuple[bool, str]:
     """
     lic = normalise_license(item.get("license"))
     iid = str(item.get("id") or "").strip()
-    if lic not in ("Public Domain", "CC0"):
-        return (True, "")            # a current, explicit grant: date is irrelevant
+    if lic != "Public Domain":
+        # CC0 is an explicit dedication, like CC-BY: the year is irrelevant.
+        # Only a bare "Public Domain" claim needs a date to be trusted.
+        return (True, "")
     if iid in PD_DEDICATIONS:
         return (True, "")
     # An installed module's id is prefixed with the repository it came from
@@ -702,7 +710,17 @@ def pd_dated_ok(item: dict) -> tuple[bool, str]:
     try:
         year = int(str(raw).strip())
     except (TypeError, ValueError):
-        return (True, "")            # no year to judge it by
+        # A bundled catalogue is itself the curated provenance: each repo
+        # states that it lists only public-domain works.  Refusing every entry
+        # that omits a year hid most of the Store (KJV, ASV, Clarke, the maps)
+        # and made the recommended starter set fail wholesale.  Keep the strict
+        # answer for an item from anywhere else -- a user-added repo with a
+        # stripped year is exactly the case this check exists to catch.
+        if item.get("bundled_catalog"):
+            return (True, "")
+        return (False,
+                "claimed Public Domain with no publication year, so there is "
+                "no evidence it predates the copyright cutoff")
     if year < PD_SAFE_BEFORE:
         return (True, "")
     return (False,

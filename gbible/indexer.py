@@ -17,8 +17,77 @@ import time
 from dataclasses import dataclass, field
 from typing import Iterable, Iterator
 
-from . import canon, db, library, markup, taxonomy, topicindex
+from . import canon, coref, db, library, markup, taxonomy, topicindex
 from .markup import Seg
+
+
+#: Universal Dependencies relations mapped to the roles a reader asks for.
+#: `root` is a verb only when the token is tagged as one -- a verbless clause
+#: has a noun or adjective at the root, and calling it a verb would be a guess.
+_DEPREL_ROLE = {
+    "nsubj": "subject", "nsubjpass": "subject", "csubj": "subject",
+    "obj": "object", "dobj": "object", "cobj": "object",
+    "iobj": "indirect_object", "obl": "oblique", "root": "verb",
+}
+
+
+def _syntax_roles(mid: str, u: UnitIn,
+                  resolved: list[dict] | None = None) -> list[tuple]:
+    """Flatten a stored dependency tree into clause-role lookup rows.
+
+    A CoNLL-U unit carries its edges in `extra["syntax"]`.  Indexing them here
+    means a `subject:Jesus object:Peter` query is an exact lookup on a small
+    table rather than a scan of every tree in the library at search time.
+    Both the surface form and the lemma are indexed, folded the way every other
+    search field is folded, so `subject:Jesus` and `subject:Ἰησοῦς` can each
+    reach the same word.  A role is a relation rather than a tag, which is why
+    these rows live in their own table and not in `marker`.
+    """
+    edges = (u.extra or {}).get("syntax") or []
+    out: list[tuple] = []
+    seen: set[tuple] = set()
+    for e in edges:
+        if not isinstance(e, dict):
+            continue
+        roles: set[str] = set()
+        role = _DEPREL_ROLE.get(str(e.get("deprel") or "").lower())
+        if role:
+            roles.add(role)
+        if str(e.get("upos") or "").upper().startswith("V"):
+            roles.add("verb")
+        form = str(e.get("form") or "")
+        lemma = str(e.get("lemma") or "")
+        try:
+            pos = int(e.get("id") or 0)
+        except (TypeError, ValueError):
+            pos = 0
+        for r in roles:
+            for value in {db.fold(form), db.fold(lemma)}:
+                if not value:
+                    continue
+                key = (r, value, u.key, pos)
+                if key in seen:
+                    continue
+                seen.add(key)
+                out.append((mid, r, value, u.key, pos, form, 0))
+    for row in resolved or []:
+        role = row.get("role") or ""
+        value = row.get("value") or ""
+        if not role or not value:
+            continue
+        key = (role, value, u.key, int(row.get("pos") or 0))
+        if key in seen:
+            continue
+        seen.add(key)
+        # The surface is the pronoun actually printed, so a hit can say that
+        # the name came from a resolution rather than from the text.
+        out.append((mid, role, value, u.key, int(row.get("pos") or 0),
+                    str(row.get("surface") or ""), 1))
+        lemma = row.get("lemma") or ""
+        if lemma and lemma != value:
+            out.append((mid, role, lemma, u.key, int(row.get("pos") or 0),
+                        str(row.get("surface") or ""), 1))
+    return out
 
 
 @dataclass
@@ -66,6 +135,8 @@ class Indexer:
         self._buf_markers: list[tuple] = []
         self._buf_xrefs: list[tuple] = []
         self._buf_fts: list[tuple] = []
+        self._buf_roles: list[tuple] = []
+        self._coref = coref.Resolver()
         self.stats = dict(units=0, words=0, chars=0, strongs=0, lemmas=0,
                           morphs=0, notes=0, xrefs=0, headings=0,
                           chapters=set(), books=set())
@@ -110,6 +181,9 @@ class Indexer:
             self._buf_markers.append(m)
         for x in xrefs:
             self._buf_xrefs.append((self.mid, u.key, x, "ref"))
+        edges = (u.extra or {}).get("syntax") or []
+        resolved = self._coref.resolve(u.key, edges)
+        self._buf_roles.extend(_syntax_roles(self.mid, u, resolved))
         self._buf_fts.append((self.mid, u.key, u.title or "", text))
         self._maybe_flush()
 
@@ -136,14 +210,27 @@ class Indexer:
                 "surface) VALUES(?,?,?,?,?,?)", self._buf_markers)
             self._buf_markers.clear()
         if self._buf_fts:
+            rows = _last_per_key(self._buf_fts)
+            # `unit` uses INSERT OR REPLACE across the whole import, but the FTS
+            # table has no such key.  A repeated key in an earlier batch used
+            # to leave a stale row beside the new one, producing search hits
+            # whose text did not match the unit they pointed at.
+            c.executemany("DELETE FROM unit_fts WHERE module_id=? AND unit_key=?",
+                          [(m, k) for m, k, _t, _x in rows])
             c.executemany("INSERT INTO unit_fts(module_id,unit_key,title,text) "
-                          "VALUES(?,?,?,?)", _last_per_key(self._buf_fts))
+                          "VALUES(?,?,?,?)", rows)
             self._buf_fts.clear()
         if self._buf_xrefs:
             c.executemany(
                 "INSERT OR REPLACE INTO xref(module_id,from_key,to_key,kind) "
                 "VALUES(?,?,?,?)", self._buf_xrefs)
             self._buf_xrefs.clear()
+        if self._buf_roles:
+            c.executemany(
+                "INSERT OR REPLACE INTO syntax_role(module_id,role,value,"
+                "unit_key,pos,surface,resolved) VALUES(?,?,?,?,?,?,?)",
+                self._buf_roles)
+            self._buf_roles.clear()
         c.commit()
 
     # ----------------------------------------------------------------- scan
@@ -255,20 +342,32 @@ class Indexer:
                         for x in (r["modules"] or "").split(",") if x.strip()]
             existing[r["strongs"]] = [r["word"] or "", r["lemma"] or "",
                                       mods if isinstance(mods, list) else [], 0]
+        # `count` is the total across every module.  Adding this module's count
+        # to the stored total doubled it on every re-import, because removing a
+        # module deletes its markers but never subtracted its old contribution.
+        # Recompute both the totals and the module lists from the marker table
+        # itself: the grouped scans are a fraction of the per-value lookups the
+        # primary key would otherwise force.
+        totals = {r["value"]: r["n"] for r in c.execute(
+            "SELECT value, count(*) n FROM marker WHERE kind='strongs' "
+            "GROUP BY value")}
+        where: dict[str, list[str]] = {}
+        for r in c.execute(
+                "SELECT DISTINCT value, module_id FROM marker "
+                "WHERE kind='strongs'"):
+            where.setdefault(r["value"], []).append(r["module_id"])
         for r in rows:
-            v = r["value"]
-            rec = existing.setdefault(v, ["", "", [], 0])
+            rec = existing.setdefault(r["value"], ["", "", [], 0])
             if not rec[0]:
                 rec[0] = r["surface"] or ""
-            if self.mid not in rec[2]:
-                rec[2] = rec[2] + [self.mid]
-        for r in rows:
-            existing[r["value"]][3] = r["n"]
+        for v, rec in existing.items():
+            rec[2] = where.get(v, [])
+            rec[3] = totals.get(v, 0)
         c.executemany(
             "INSERT INTO strongs(strongs,word,lemma,count,modules) VALUES(?,?,?,?,?) "
             "ON CONFLICT(strongs) DO UPDATE SET "
             "word=COALESCE(NULLIF(excluded.word,''),strongs.word), "
-            "count=strongs.count+excluded.count, modules=excluded.modules",
+            "count=excluded.count, modules=excluded.modules",
             [(v, rec[0], rec[1], rec[3], json.dumps(rec[2]))
              for v, rec in existing.items()])
 
@@ -379,7 +478,7 @@ def run_import(module_id: str, units: Iterator[UnitIn], *,
             idx.add(u)
             n += 1
             if progress and n % 500 == 0:
-                progress(n, n - 1 + 1)
+                progress(n)
     except Exception as e:  # partial import is still useful, but say so
         st = idx.finalise()
         conn.execute("UPDATE module SET error=? WHERE id=?", (f"{type(e).__name__}: {e}", mid))

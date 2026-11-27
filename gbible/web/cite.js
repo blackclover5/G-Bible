@@ -15,7 +15,8 @@ const Cite = {
   async _meta() {
     if (!this.STYLES) {
       const r = await api('cite/styles');
-      this.STYLES = r.styles || [];
+      if (!r || r.ok === false || !(r.styles || []).length) return;
+      this.STYLES = r.styles;
       this.FIELDS = r.fields || [];
       this.DOCUMENTS = r.document || {};
     }
@@ -35,21 +36,24 @@ const Cite = {
   },
 
   /* Show the citation for one work, with its gaps and a way to fill them. */
-  async open(moduleId, ref, short) {
+  async open(moduleId, ref, short, styleWanted) {
     if (!moduleId) return;
     await this._meta();
     /* `short` is offered from the panel menu, where "Clarke, Commentary" is
      * usually what is wanted -- the full entry has already appeared in the
      * bibliography once, and the second reference to the same commentary in a
      * note is a short one. */
-    const [style, full] = ['sbl', short !== true];
-    const m = modById(moduleId) || {};
-    modal('Cite: ' + (m.name || moduleId),
+    const style = styleWanted || 'sbl';
+    const full = short !== true;
+    modal('Cite: ' + modLabel(moduleId),
       '<div class="st-loading">Building…</div>',
       [{ label: 'Close', cls: 'btn' }]);
-    const c = await api('cite/get', { id: moduleId, style, full: 1 });
+    const c = await api('cite/get', { id: moduleId, style, full: full ? 1 : 0 });
     const body = $('#modal-body');
-    if (!c.ok) { body.innerHTML = '<div class="st-body">' + esc(c.error) + '</div>'; return; }
+    if (!c || c.ok === false) {
+      body.innerHTML = '<div class="warn">' + esc((c && c.error) || 'Could not build the citation.') + '</div>';
+      return;
+    }
     const meta = c.meta || {};
 
     const styleRow = '<div class="ct-styles">' + this.STYLES.map(s =>
@@ -61,7 +65,7 @@ const Cite = {
     const gap = c.complete
       ? '<div class="ct-ok">Every field this style needs is filled in.</div>'
       : '<div class="ct-gap"><b>This citation is unfinished.</b> Missing: ' +
-        c.missing.join(', ') + '. Nothing has been guessed — fill in what you ' +
+        esc((c.missing || []).join(', ')) + '. Nothing has been guessed — fill in what you ' +
         'know below and this becomes a citation you can hand to someone.' +
         '</div>';
 
@@ -84,47 +88,56 @@ const Cite = {
       editor + '</details>' +
       '<div class="ct-lic" id="ct-lic"></div>';
 
-    const paint = async (st, fl) => {
-      const r = await api('cite/get', { id: moduleId, style: st, full: fl ? 1 : 0 });
-      $('#ct-out').textContent = r.citation || r.error;
-    };
     $$('.ct-style', body).forEach(b => {
       b.onclick = async () => {
-        $$('.ct-style', body).forEach(x => x.classList.remove('on'));
-        b.classList.add('on');
-        await paint(b.dataset.style, full);
+        // A partial repaint left the old gap report and missing-field marks
+        // on screen under the new style's citation.
+        await this.open(moduleId, ref, short, b.dataset.style);
       };
     });
     $$('input[data-field]', body).forEach(inp => {
       inp.onchange = async () => {
-        await api('cite/field', {
+        const r = await api('cite/field', {
           id: moduleId, field: inp.dataset.field, value: inp.value,
         });
-        await paint(style, full);
-        // Re-render so the gap strip and the highlight update with it.  `short`
-        // has to be carried across: it is a third argument, so dropping it here
-        // silently flipped a short-form citation back to the full entry.
-        this.open(moduleId, ref, short);
+        if (!r || r.ok === false) {
+          toast((r && r.error) || 'Could not save that field.', 'err'); return;
+        }
+        // Re-render with the current style and short/full choice: a partial
+        // repaint used to leave the old gap report on screen.
+        this.open(moduleId, ref, short, style);
       };
     });
     if (ref) {
-      const p = await api('cite/passage', { ref, id: moduleId, style, full: 1 });
-      $('#ct-passage').innerHTML =
-        '<div class="ct-ph-label">This passage</div>' +
-        '<div class="ct-ph">' + esc(p.citation || p.error) + '</div>' +
-        (p.note ? '<div class="ct-note">' + esc(p.note) + '</div>' : '') +
-        '<div class="ct-do">This kind of citation is complete: the reference ' +
-        'and the translation are facts, not metadata.</div>';
+      const p = await api('cite/passage', { ref, id: moduleId, style, full: full ? 1 : 0 });
+      if (!p || p.ok === false) {
+        $('#ct-passage').innerHTML = '<div class="warn">'
+          + esc((p && p.error) || 'Could not cite this passage.') + '</div>';
+      } else {
+        $('#ct-passage').innerHTML =
+          '<div class="ct-ph-label">This passage</div>' +
+          '<div class="ct-ph">' + esc(p.citation) + '</div>' +
+          (p.note ? '<div class="ct-note">' + esc(p.note) + '</div>' : '') +
+          '<div class="ct-do">This kind of citation is complete: the reference ' +
+          'and the translation are facts, not metadata.</div>';
+      }
     }
     const lic = await api('cite/attribution', { ids: moduleId });
-    $('#ct-lic').innerHTML = (lic.lines || []).map(l =>
-      '<div class="ct-lic-line">' + esc(l) + '</div>').join('');
+    $('#ct-lic').innerHTML = (!lic || lic.ok === false)
+      ? '<div class="tiny muted">' + esc((lic && lic.error)
+        || 'Licence information could not be read.') + '</div>'
+      : (lic.lines || []).map(l =>
+        '<div class="ct-lic-line">' + esc(l) + '</div>').join('');
   },
 
   /* Copy a citation with its attribution, the way a footnote is wanted. */
   async copy(moduleId, ref) {
     const c = await api('cite/passage', { ref, id: moduleId, style: 'sbl', full: 1 });
     const a = await api('cite/attribution', { ids: moduleId });
+    if (!c || c.ok === false || !a || a.ok === false) {
+      toast((c && c.error) || (a && a.error) || 'Could not build the citation.', 'err');
+      return;
+    }
     const text = (c.citation || '') + '\n' + (a.text || '');
     try {
       await navigator.clipboard.writeText(text);
@@ -176,10 +189,9 @@ const Cite = {
       });
       $$('.ct-fmt', body).forEach(b => {
         b.onclick = () => {
-          if (b.dataset.fmt === '__print') return Cite._printBib(ids, style);
           const url = '/file/bibliography?ids=' + encodeURIComponent(ids.join(',')) +
             '&style=' + style + '&fmt=' + b.dataset.fmt;
-          Cite._save(url, 'bibliography.' + b.dataset.fmt);
+          Cite.download(url, 'bibliography.' + b.dataset.fmt);
         };
       });
     };
@@ -236,68 +248,6 @@ const Cite = {
     });
   },
 
-  async _printBib(ids, style) {
-    const r = await api('cite/bibliography', { ids: ids.join(','), style });
-    if (!r.ok) return;
-    Cite._printHtml(
-      '<h1>Bibliography</h1><p class="meta">' + esc(
-        r.entries.length + ' entries') + '</p>' +
-      r.entries.map(e => '<p class="entry">' + esc(
-        e.citation.replace(/\*/g, '')) + '</p>').join(''),
-      'Bibliography');
-  },
-
-  /* Export one passage, in whatever format, with the licences attached. */
-  async exportPassage(ref, moduleIds) {
-    await this._meta();
-    const ids = (moduleIds && moduleIds.length) ? moduleIds :
-      ((S.layout && S.layout.panes) || []).map(p => p.module_id);
-    modal('Export: ' + ref, '<div class="st-loading">…</div>',
-      [{ label: 'Close', cls: 'btn' }]);
-    const body = $('#modal-body');
-    body.innerHTML =
-      '<div class="ct-do">Every format below carries the licence of the ' +
-      'material it quotes, because CC BY 4.0 requires attribution and an ' +
-      'export without it would be a breach of the licence.</div>' +
-      '<div class="ct-exports">' + this._formats('passage').map(f =>
-        '<button class="ct-fmt" data-fmt="' + f[0] + '" title="' + esc(f[1]) +
-        '">' + esc(f[0].toUpperCase()) + '</button>').join('') +
-      '</div>';
-    $$('.ct-fmt', body).forEach(b => {
-      b.onclick = () => {
-        if (b.dataset.fmt === '__print') {
-          const url = '/file/passage?ref=' + encodeURIComponent(ref) +
-            '&ids=' + encodeURIComponent(ids.join(',')) + '&fmt=html';
-          fetch(url).then(r => r.text()).then(h => Cite._printHtml(h, ref));
-          return;
-        }
-        const url = '/file/passage?ref=' + encodeURIComponent(ref) +
-          '&ids=' + encodeURIComponent(ids.join(',')) + '&fmt=' + b.dataset.fmt;
-        Cite._save(url, ref.replace(/[^A-Za-z0-9]+/g, '-') + '.' + b.dataset.fmt);
-      };
-    });
-  },
-
-  /* Print a generated document rather than the application.
-   * Printing the app itself gives you panes, tabs and sidebars; what a person
-   * wants on paper is the document. */
-  _printHtml(html, title) {
-    let f = document.getElementById('print-frame');
-    if (!f) {
-      f = document.createElement('iframe');
-      f.id = 'print-frame';
-      f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
-      document.body.appendChild(f);
-    }
-    const doc = f.contentDocument || f.contentWindow.document;
-    doc.open();
-    doc.write(html);
-    doc.close();
-    const go = () => { try { f.contentWindow.print(); } catch (e) {} };
-    if (doc.readyState === 'complete') setTimeout(go, 120);
-    else f.onload = () => setTimeout(go, 120);
-  },
-
   /* Downloads go through a real anchor so the browser names the file and the
    * export never passes through a data: URL of unbounded size. */
   _save(url, filename) {
@@ -307,6 +257,30 @@ const Cite = {
     document.body.appendChild(a);
     a.click();
     a.remove();
+  },
+
+  /* Fetch first, then save the bytes we actually received.  An anchor alone
+   * saved the server's error page as a file called *.pdf and still toasted
+   * "Saved", which is a promise the app could not keep. */
+  async download(url, filename) {
+    try {
+      const r = await fetch(url, {
+        headers: { 'X-GBible-CSRF-Token': CSRF_TOKEN } });
+      if (!r.ok) {
+        toast('Could not build that file (HTTP ' + r.status + ').', 'err');
+        return false;
+      }
+      const blob = await r.blob();
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = href; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(href), 30000);
+      return true;
+    } catch (e) {
+      toast((e && e.message) || 'Could not build that file.', 'err');
+      return false;
+    }
   },
 };
 

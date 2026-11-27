@@ -18,6 +18,8 @@ Implements the search query language:
   bible:"Gen 1:1"           reference
   strongs:G2316             datatype / field scoping
   lemma.g:ἀγαπάω           original-language scoping
+  morph:"tense=aorist"     morphology by grammatical feature, not tag spelling
+  subject:Jesus object:Peter   clause roles from a CoNLL-U treebank
   field.bible:Joshua        disambiguating field modifier
   term:(a OR b OR c)        one highlight colour for a set
 
@@ -41,10 +43,8 @@ import bisect
 import math
 import re
 import time
-import unicodedata
 from dataclasses import dataclass
 from dataclasses import field as dcfield
-from typing import Iterable
 
 from . import canon, db, markup, native
 from .library import Module, get as get_module, list_all
@@ -165,20 +165,6 @@ def _term_stems(t: Term) -> list[str]:
     return [w for w in out if len(w) >= 2]
 
 
-def _term_keys(t: Term) -> list[str]:
-    """Every token a term looks for, folded the way `db.token_key` folds.
-
-    A phrase keeps its words in `phrases` and leaves `words` empty, so reading
-    only `words` found nothing to scan for and every `"..."` query fell through
-    to the FTS path that cannot answer it.
-    """
-    out = list(t.words or [])
-    for ph in t.phrases or []:
-        out.extend(ph)
-    out.extend(t.raw or [])
-    return out
-
-
 # ==========================================================================
 # Query parsing
 # ==========================================================================
@@ -197,6 +183,7 @@ _DATATYPES = {
     "event", "heading", "title", "field", "lemma.g", "lemma.h", "strongs.g",
     "strongs.h", "greek", "hebrew", "louwNida".lower(), "preachingTheme".lower(),
     "date", "word", "type", "passageList".lower(), "milestone", "term",
+    "subject", "object", "indirect_object", "oblique", "verb", "role",
 }
 
 
@@ -223,7 +210,17 @@ class Term:
     #: A topic:/sense: request, answered from the topic marker index rather
     #: than by looking for the word in the text.
     topic: str = ""
+    #: A clause role from a CoNLL-U treebank, e.g. `subject:Jesus`.  Resolved
+    #: against the `syntax_role` index, not against the unit text.
+    role: str = ""
+    role_term: str = ""
     negated: bool = False
+    #: (module_id, unit_key) pairs proved by the marker index for this term.
+    #: Filled by `_candidates` and read by `_evaluate`, so a marker term can be
+    #: checked truthfully under AND / OR / NOT instead of being assumed present
+    #: for every candidate row.  Not part of a query's identity.
+    hits: set[tuple[str, str]] | None = dcfield(
+        default=None, repr=False, compare=False)
 
     def __str__(self):
         return self.text
@@ -455,6 +452,12 @@ class _Parser:
         #: A parse that changed nothing about the tree still has to be able to
         #: tell the reader, which is what these are for.
         self.warnings: list[str] = []
+        # Parser state is per query.  These used to be class attributes, so a
+        # query that raised mid-atom could leave a scope behind for the next,
+        # unrelated parse to inherit.
+        self.pending_field: str | None = None
+        self.pending_scope: str | None = None
+        self.scopes: list = []
 
     def peek(self):
         return self.toks[self.i] if self.i < len(self.toks) else (None, None)
@@ -477,8 +480,6 @@ class _Parser:
                 self.i += 1
                 rhs = self.parse_prox()
                 node = Op(NOT, node, rhs)
-                if isinstance(node.a, Op) and node.a.kind == NOT and node.a.b is None:
-                    pass
             elif k in (None, ")", "op") and k != "op":
                 break
             elif k == "op":
@@ -584,6 +585,17 @@ class _Parser:
             if k in (None, ")", "op", "("):
                 break
             if k == "scope":
+                # Two value-bearing scopes in a row are two terms, not one term
+                # with both values joined by a space.  The old loop appended
+                # every scoped value to `parts`, so `subject:Jesus object:Peter`
+                # parsed as one role request for "Jesus Peter" and never
+                # matched a clause.  Leave the second scope unconsumed so the
+                # enclosing AND builds the second term from it.
+                head0 = v.partition(":")[0].lower()
+                scoped_value = (":" in v and not self.pending_field
+                                and (head0 in _DATATYPES or "." in head0))
+                if scoped_value and parts:
+                    break
                 self.i += 1
                 if ":" in v and not self.pending_field:
                     # strongs:G2316 / bible:"Gen 1:1" -- the scope IS the term
@@ -607,17 +619,16 @@ class _Parser:
                 self.i += 1
                 continue
             break
-        if self.pending_field is not None or self.pending_scope is not None:
-            self.pending_field = None
-            self.pending_scope = None
         if not parts and not phrases:
             raise QueryError("empty term")
         self._raw_phrases = []
-        return _make_term(parts, phrases, raw_phrases, self)
-
-    pending_field: str | None = None
-    pending_scope: str | None = None
-    scopes: list = []
+        term = _make_term(parts, phrases, raw_phrases, self)
+        # Clear only after _make_term has consumed the modifiers.  Clearing
+        # before it made `field/heading Jesus` lose its field and left the
+        # pending_scope branch permanently dead.
+        self.pending_field = None
+        self.pending_scope = None
+        return term
 
 
 def _make_term(parts: list[str], phrases: list[list[str]],
@@ -648,7 +659,7 @@ def _make_term(parts: list[str], phrases: list[list[str]],
         val = " ".join(parts) if parts else (
             " ".join(phrases[0]) if phrases else "")
         _apply_datatype(t, t.datatype, val)
-        if t.strongs or t.is_morph or t.lemma or t.ref:
+        if t.strongs or t.is_morph or t.lemma or t.ref or t.role_term:
             t.words = []
         return t
     joined = " ".join(parts)
@@ -692,12 +703,23 @@ def _apply_datatype(t: Term, dtype: str, val: str) -> None:
         t.lemma = v
         t.words = _tk(v)
         t.raw = [db.fold(x) for x, _a, _b in db.words(v)]
-    elif d in ("morph", "morphology"):
+    elif d in ("morph", "morphology") or d.startswith("morph."):
+        # `morph.g:` and `morph.h:` are documented, dotted scoping forms.  They
+        # used to fall through to the text branch and search for the letters
+        # "vf" instead of the tag.  Keep the scope on the term for callers that
+        # inspect it, but make it a real morphology request.
         t.morph = v
         t.is_morph = True
         t.words = []
     elif d in ("bible", "reference", "ref"):
         t.ref = canon.parse_ref(v)
+        t.words = []
+    elif d in ("subject", "object", "indirect_object", "oblique", "verb", "role"):
+        # Clause roles are indexed from a CoNLL-U treebank.  `role:X` searches
+        # any role, the named forms search one; both fold accents and case like
+        # every other indexed field.
+        t.role = "" if d == "role" else d
+        t.role_term = db.fold(v)
         t.words = []
     elif d in ("topic", "sense"):
         # Resolved through the topic marker index rather than as a text term.
@@ -758,20 +780,20 @@ def _walk(node):
 class SearchOpts:
     modules: list[str] = dcfield(default_factory=list)
     scope: str = ""                 # resource id | "all" | "bible" | "books" | ""
-    search_bible_text: bool = True
-    search_headings: bool = True
     match_case: bool = False
     match_all_forms: bool = False
     match_forms: str = ""           # per-term override, e.g. "case,form"
-    reference_matching: str = "default"   # narrow | default | broad
     limit: int = 200
     offset: int = 0
     sort: str = "relevance"         # relevance | passage | resource | newest
     snippets: bool = True
     context: int = 0                # verses of context per hit
-    verb: str = "words"             # words | chapter | verse | book
-    fast: bool = True               # skip the exact-proximity pass
-    interface: str = "local"        # local | api
+    include_resolved: bool = True   # include pronoun-resolved role matches
+    # `search_bible_text`, `search_headings`, `reference_matching`, `verb`,
+    # `fast` and `interface` used to be declared here but were never read by
+    # the engine.  `fast` in particular is decided from the query itself: a
+    # caller asking for it changed nothing.  They are removed rather than left
+    # as options that promise a behaviour they do not have.
     # Spelling suggestions cost a scan of the library's own vocabulary to build,
     # which is worth it for a query someone typed and worth nothing to a caller
     # that is going to discard them.  Clause search builds the same vocabulary
@@ -806,6 +828,8 @@ class Hit:
     #: cache was keyed differently here than it is there.
     positions: dict[str, list[int]] = dcfield(default_factory=dict)
     strongs: list[str] = dcfield(default_factory=list)
+    #: When a role match came from a resolved pronoun, e.g. "jesus ← he".
+    role_notes: list[str] = dcfield(default_factory=list)
     context: list[dict] = dcfield(default_factory=list)
     rank: int = 0
 
@@ -829,6 +853,8 @@ def _fts_expr(term: Term, opts: SearchOpts) -> str:
     parts: list[str] = []
     if term.strongs:
         return ""            # handled by the marker index, not FTS
+    if term.role_term:
+        return ""            # handled by the syntax_role index
     if term.lemma and term.datatype.startswith("lemma"):
         return ""
     if term.ref and not term.words:
@@ -871,6 +897,21 @@ def _fts_expr(term: Term, opts: SearchOpts) -> str:
     if not parts:
         return ""
     return " AND ".join(parts)
+
+
+def _FtsTree(terms):
+    """A relaxed flat OR over a term list, used only as an FTS pre-filter.
+
+    The exact pass re-applies the real boolean, so this may be wider than the
+    query. It used to be a class, but a plain tree is all the compiler needs.
+    """
+    parts = [t for t in (terms or []) if isinstance(t, Term)]
+    if not parts:
+        return None
+    node = parts[0]
+    for t in parts[1:]:
+        node = Op(OR, node, t)
+    return node
 
 
 def _fts_query(tree, opts: SearchOpts) -> str:
@@ -941,26 +982,30 @@ def _tokens(text: str, key: str = "") -> list[tuple[str, int, int]]:
 
 _MISS = object()
 _CAND_LIMIT = [8000]
+#: Why the FTS path was not used, reported once per process in warnings.
+_FTS_FALLBACK_NOTE: list[str] = []
 
 
 def _hit_dict(h: "Hit") -> dict:
     return {k: v for k, v in h.__dict__.items() if not k.startswith("_")}
 
 
-def _is_plain_and(query: Query) -> bool:
-    """True when the tree is a conjunction of unadorned words.
+def _is_plain_boolean(query: Query) -> bool:
+    """True when the tree is only AND/OR over unadorned words.
 
-    In that case FTS5 has already proven every term is present (it matched the
-    conjunction of the surface forms), so the Python pass has nothing to add and
-    can be skipped.  This is the common case -- a plain multi-word search -- and
-    skipping it is the difference between milliseconds and minutes on a library
-    holding several commentaries.
+    FTS5 evaluates both conjunction and disjunction of surface forms exactly,
+    so the Python pass has nothing to add and can be skipped.  OR used to be
+    excluded, which made `~typo` -- rewritten to `(typo OR correction)` -- take
+    eighteen seconds over a library where the correction alone took a third of
+    a second.  A pure OR of words is no harder for FTS5 than a pure AND; mixed
+    boolean trees keep the exact pass, since the flat prefilter is only a
+    superset there.
     """
     for n in _walk(query.root):
-        if isinstance(n, Op) and n.kind != AND:
+        if isinstance(n, Op) and n.kind not in (AND, OR):
             return False
         if isinstance(n, Term):
-            if n.wildcards or n.field or n.strongs or n.is_morph or n.lemma:
+            if n.wildcards or n.field or n.strongs or n.is_morph or n.lemma or n.role_term:
                 return False
             if n.ref and not n.words and not n.phrases:
                 return False
@@ -1022,18 +1067,6 @@ def _candidates_from_uids(query: Query, mods: list[Module],
     return out
 
 
-def _empty_result(query: Query, opts: SearchOpts, t0: float,
-                  *, note: str = "") -> dict:
-    warnings = ["empty query"] if note == "empty query" else []
-    if note:
-        warnings.append(note)
-    return {"ok": True, "hits": [], "total": 0,
-            "ms": round((time.time() - t0) * 1000, 1),
-            "query": query.raw, "warnings": warnings,
-            "groups": {}, "group_meta": {}, "operators": [], "smart": [],
-            "truncated": False, "returned": 0, "limit": opts.limit}
-
-
 def _posi_ready() -> bool:
     from . import posindex
     try:
@@ -1053,7 +1086,8 @@ def _plain_leaves(node) -> list | None:
     for n in _walk(node):
         if isinstance(n, Term):
             if (n.field or n.wildcards or n.strongs or n.is_morph or n.lemma
-                    or n.topic or n.phrases or (n.ref and not n.words)):
+                    or n.topic or n.role_term or n.phrases
+                    or (n.ref and not n.words)):
                 return None
             if not n.words:
                 return None
@@ -1071,7 +1105,7 @@ def _needs_the_stemmer(query) -> bool:
     widening and no exact pass.
     """
     for t in query.terms:
-        if t.strongs or t.is_morph or t.lemma or t.topic or t.ref:
+        if t.strongs or t.is_morph or t.lemma or t.topic or t.ref or t.role_term:
             continue
         if t.phrases and not t.raw:
             continue
@@ -1315,6 +1349,10 @@ def search(q: str | Query, opts: SearchOpts | None = None) -> dict:
     _PHRASE_CACHE.clear()
     _topic_only[0] = False
     opts = opts or SearchOpts()
+    mods = _modules(opts)
+    fuzzy_notes: list[str] = []
+    if isinstance(q, str) and "~" in q:
+        q, fuzzy_notes = _expand_fuzzy(q, mods)
     if isinstance(q, str):
         try:
             query = parse(q)
@@ -1324,7 +1362,7 @@ def search(q: str | Query, opts: SearchOpts | None = None) -> dict:
                 "groups": {}, "group_meta": {}}
     else:
         query = q
-    mods = _modules(opts)
+    query.warnings.extend(fuzzy_notes)
     if query.root is None:
         return {"ok": True, "hits": [], "total": 0, "ms": 0, "query": query.raw,
                 "warnings": ["empty query"], "groups": {}, "group_meta": {}}
@@ -1332,8 +1370,27 @@ def search(q: str | Query, opts: SearchOpts | None = None) -> dict:
         return {"ok": True, "hits": [], "total": 0, "ms": 0, "query": query.raw,
                 "warnings": [], "groups": {}, "group_meta": {}}
 
-    marker_terms = [t for t in query.terms if t.strongs or t.is_morph or t.lemma]
-    text_terms = [t for t in query.terms if not (t.strongs or t.is_morph or t.lemma)]
+    # A role query without a treebank used to answer "no hits", which reads as
+    # "nobody was the subject" rather than "this library cannot answer".  Say
+    # so, and say what would make it answerable.
+    if any(t.role_term for t in query.terms):
+        ids = [m.id for m in mods if m and m.id]
+        has_roles = False
+        if ids:
+            ph = ",".join("?" * len(ids))
+            has_roles = db.connect().execute(
+                f"SELECT 1 FROM syntax_role WHERE module_id IN ({ph}) LIMIT 1",
+                ids).fetchone() is not None
+        if not has_roles:
+            query.warnings.append(
+                "No syntax treebank with clause roles is installed. "
+                "Import a CoNLL-U file from 'This computer' with its licence "
+                "stated to use subject:/object:/verb: searches.")
+
+    marker_terms = [t for t in query.terms
+                    if t.strongs or t.is_morph or t.lemma or t.role_term]
+    text_terms = [t for t in query.terms
+                  if not (t.strongs or t.is_morph or t.lemma or t.role_term)]
 
     # Try the positional index first.  It answers proximity, order, phrase and
     # conjunction from postings, without reading a single unit's text -- which is
@@ -1376,7 +1433,8 @@ def search(q: str | Query, opts: SearchOpts | None = None) -> dict:
     fast = (not opts.match_all_forms and not opts.match_case
             and not _topic_only[0]    # a topic term needs the exact pass
             and (_posindex_used[0]
-                 or (_is_plain_and(query) and not _needs_the_stemmer(query))))
+                 or (_is_plain_boolean(query)
+                     and not _needs_the_stemmer(query))))
     # A module read by the scan fallback was not narrowed by FTS5, so its
     # candidate pool is an OR where FTS5 would have given an AND -- and a
     # quoted phrase, which FTS5 would have narrowed to the exact adjacency, is
@@ -1450,51 +1508,126 @@ def _candidates(query: Query, text_terms: list[Term], marker_terms: list[Term],
     """module_id -> {unit_key: row}.  Narrow with FTS5 and the marker index."""
     conn = db.connect()
     mids = [m.id for m in mods]
-    ph = ",".join("?" * len(mids))
     out: dict[str, dict] = {m: {} for m in mids}
 
     def load(keys_by_mod: dict[str, list[str]]):
         for mid, keys in keys_by_mod.items():
             if not keys:
                 continue
-            qp = ",".join("?" * len(keys))
-            for r in conn.execute(
-                    f"SELECT u.* FROM unit u WHERE u.module_id=? AND u.key IN ({qp})",
-                    [mid, *keys]):
-                out[mid][r["key"]] = r
+            # A broad marker query can name tens of thousands of units.  One
+            # IN() with that many placeholders exceeds SQLite's variable limit
+            # on most builds; chunk exactly as the other key lookups do.
+            for i in range(0, len(keys), 400):
+                chunk = keys[i:i + 400]
+                qp = ",".join("?" * len(chunk))
+                for r in conn.execute(
+                        f"SELECT u.* FROM unit u WHERE u.module_id=? "
+                        f"AND u.key IN ({qp})", [mid, *chunk]):
+                    out[mid][r["key"]] = r
 
     # --- Strong's / lemma / morphology ---------------------------------
     if marker_terms:
         per_mod: dict[str, set[str]] = {m: set() for m in mids}
+        positive = _positive_markers(query.root)
         for t in marker_terms:
+            # Every term keeps its own hit set.  The old code merged all marker
+            # hits into one pool and then declared every term satisfied for
+            # every row, so `morph:X AND word` returned all FTS hits for `word`
+            # and `word NOT morph:X` returned nothing.  The exact pass now reads
+            # these sets and evaluates each term under the real boolean tree.
+            hits: set[tuple[str, str]] = set()
             for m in mids:
                 if not m:
                     continue
+                found: set[str] = set()
                 if t.strongs:
                     vals = ",".join("?" * len(t.strongs))
-                    kind = "strongs"
                     for r in conn.execute(
                             f"SELECT DISTINCT unit_key FROM marker WHERE module_id=? "
-                            f"AND kind='{kind}' AND value IN ({vals})",
+                            f"AND kind='strongs' AND value IN ({vals})",
                             [m, *t.strongs]):
-                        per_mod[m].add(r["unit_key"])
+                        found.add(r["unit_key"])
                 elif t.is_morph and t.morph:
-                    for r in conn.execute(
-                            "SELECT DISTINCT unit_key FROM marker WHERE module_id=? "
-                            "AND kind='morph' AND value LIKE ?",
-                            (m, f"%{t.morph}%")):
-                        per_mod[m].add(r["unit_key"])
+                    # Resolve the request to concrete tags before asking the
+                    # marker table for units.  A `LIKE '%code%'` prefilter was a
+                    # spelling search: `HNcms` missed a tag written `HNcmsa` in
+                    # another scheme, while a fragment that happened to occur
+                    # inside an unrelated tag matched a word with none of the
+                    # requested features.  `morphq` decodes the closed tag
+                    # vocabulary once and answers by grammatical feature.
+                    from . import morphq
+                    res = morphq.resolve_query(t.morph)
+                    matched = res["codes"]
+                    if res["mode"] == "substring":
+                        query.warnings.append(
+                            f"morph:{t.morph} did not decode to grammatical "
+                            "features; matched as a literal tag fragment")
+                    # Chunk below the common 999-variable SQLite floor: a broad
+                    # feature request can resolve to hundreds of tags.
+                    for i in range(0, len(matched), 400):
+                        chunk = matched[i:i + 400]
+                        vals = ",".join("?" * len(chunk))
+                        for r in conn.execute(
+                                f"SELECT DISTINCT unit_key FROM marker "
+                                f"WHERE module_id=? AND kind='morph' "
+                                f"AND value IN ({vals})",
+                                [m, *chunk]):
+                            found.add(r["unit_key"])
                 elif t.lemma:
-                    for r in conn.execute(
-                            "SELECT DISTINCT unit_key FROM marker WHERE module_id=? "
-                            "AND kind='morph' AND value IN "
-                            "(SELECT value FROM marker WHERE module_id=? AND kind='morph' "
-                            " AND value LIKE ?)",
-                            (m, m, f"%{t.lemma}%")):
-                        per_mod[m].add(r["unit_key"])
-        load({m: list(v) for m, v in per_mod.items()})
-        if not any(out.values()):
-            return out
+                    # Lemma headwords live in `kind='lemma'`, not `kind='morph'`.
+                    # Looking for a Greek headword among morphology codes made
+                    # every `lemma:` search return zero hits, including one for
+                    # a word indexed hundreds of times.  Fold accents and case
+                    # on both sides before asking for the concrete headwords.
+                    from . import morphq
+                    res = morphq.resolve_lemma(t.lemma)
+                    if res["mode"] == "substring":
+                        query.warnings.append(
+                            f"lemma:{t.lemma} is not an exact headword; "
+                            "matched as a partial form")
+                    heads = res["codes"]
+                    for i in range(0, len(heads), 400):
+                        chunk = heads[i:i + 400]
+                        vals = ",".join("?" * len(chunk))
+                        for r in conn.execute(
+                                f"SELECT DISTINCT unit_key FROM marker "
+                                f"WHERE module_id=? AND kind='lemma' "
+                                f"AND value IN ({vals})",
+                                [m, *chunk]):
+                            found.add(r["unit_key"])
+                elif t.role_term:
+                    # Clause roles come from a CoNLL-U treebank and live in
+                    # their own index.  `subject:Jesus` is an exact role+value
+                    # lookup; `role:Jesus` searches every role at once.
+                    # Inferred (pronoun-resolved) matches are opt-in.  Filter
+                    # at the lookup, not after paging, or a page of 200 hits
+                    # could hide the explicit matches further down.
+                    only_explicit = "" if opts.include_resolved else \
+                        " AND resolved=0"
+                    if t.role:
+                        for r in conn.execute(
+                                "SELECT DISTINCT unit_key FROM syntax_role "
+                                "WHERE module_id=? AND role=? AND value=?"
+                                + only_explicit,
+                                (m, t.role, t.role_term)):
+                            found.add(r["unit_key"])
+                    else:
+                        for r in conn.execute(
+                                "SELECT DISTINCT unit_key FROM syntax_role "
+                                "WHERE module_id=? AND value=?"
+                                + only_explicit,
+                                (m, t.role_term)):
+                            found.add(r["unit_key"])
+                hits.update((m, k) for k in found)
+                if id(t) in positive:
+                    per_mod[m].update(found)
+            t.hits = hits
+        if positive:
+            load({m: list(v) for m, v in per_mod.items()})
+        # Do not return early just because the marker pool is empty.  A term
+        # under OR is still "positive" for narrowing purposes (a union is a
+        # valid superset), but an empty hit set must not erase the other side
+        # of `subject:Jesus OR God`.  `_check_tree` decides the boolean later.
         if not text_terms:
             return out
 
@@ -1607,7 +1740,7 @@ def _candidates(query: Query, text_terms: list[Term], marker_terms: list[Term],
     #
     # Anything else keeps the relaxed tree, because there the exact pass does run
     # and the OR is only widening the candidate pool.
-    if _is_plain_and(query):
+    if _is_plain_boolean(query):
         expr = _fts_query(query.root, opts)
     else:
         expr = _fts_query(_FtsTree(fts_terms), opts)
@@ -1678,40 +1811,6 @@ def _candidates(query: Query, text_terms: list[Term], marker_terms: list[Term],
     return out
 
 
-def _loose(node):
-    """Broaden a tree for the FTS pre-filter.
-
-    FTS5 is only used to narrow candidates cheaply; the exact boolean, proximity
-    and set-algebra evaluation happens afterwards against the unit text.  So
-    every operator is relaxed to OR here.  Compiling the real tree would make
-    FTS reject expressions it cannot express (proximity, EQUALS, IN) and, worse,
-    a tree built as a flat AND over the term list would silently turn `a OR b`
-    into `a AND b`.
-    """
-    if node is None:
-        return None
-    if isinstance(node, Term):
-        return node
-    a = _loose(node.a)
-    b = _loose(node.b) if node.b is not None else None
-    if b is None:
-        return a
-    return Op(OR, a, b)
-
-
-class _FtsTree:
-    """A throwaway tree so _fts_query can be reused for a term list."""
-
-    def __init__(self, terms: list[Term]):
-        node = terms[0]
-        for t in terms[1:]:
-            node = Op(OR, node, t)
-        self.root = node
-
-
-_FTS_FALLBACK_NOTE: list[str] = []
-
-
 def _note_fallback(e: Exception) -> None:
     """Record once why the single-query path was not usable."""
     msg = f"{type(e).__name__}: {e}"
@@ -1731,6 +1830,43 @@ def _fts_fallback(conn, expr: str, mid: str) -> list:
     except Exception:
         pass
     return rows
+
+
+def _positive_markers(node) -> set[int]:
+    """Marker terms that occur with positive polarity in the boolean tree.
+
+    A term on the right of `NOT` (or inside a unary `NOT`) has to be *absent*,
+    so narrowing the candidate pool to units carrying it would invert the
+    query: `Suffer NOT morph:tense=aorist` would return only aorists.  A term
+    under OR is an alternative, and its hits are still a valid superset.  Terms
+    that appear both ways are kept, which is a safe over-approximation -- the
+    exact pass decides each row.
+    """
+    # Term carries list/set fields and is deliberately unhashable, so key by
+    # identity rather than by value.
+    out: set[int] = set()
+
+    def walk(n, positive: bool) -> None:
+        if n is None:
+            return
+        if isinstance(n, Term):
+            if positive and (n.strongs or n.is_morph or n.lemma or n.role_term):
+                out.add(id(n))
+            return
+        if isinstance(n, Op):
+            if n.kind == NOT:
+                if n.b is None:
+                    walk(n.a, not positive)
+                else:
+                    walk(n.a, positive)
+                    walk(n.b, not positive)
+            else:
+                walk(n.a, positive)
+                if n.b is not None:
+                    walk(n.b, positive)
+
+    walk(node, True)
+    return out
 
 
 def _conjunctive_refs(node) -> list[Term]:
@@ -1859,12 +1995,6 @@ def _phrase_pos(text: str, phrase: list[str], *, key: str = "",
     _PHRASE_CACHE[ck] = out
     return out
 
-
-def _phrase_pos_uncached(text: str, phrase: list[str]) -> list[int]:
-    toks = [db.token_key(w) for w, _a, _b in db.words(text)]
-    if not phrase or not toks:
-        return []
-    return []
 
 def _term_match(term: Term, text: str, *, match_case: bool,
                 match_all_forms: bool, title: str = "", key: str = ""
@@ -1995,6 +2125,8 @@ def _evaluate(candidates: dict[str, dict], query: Query, opts: SearchOpts,
     that is actually returned -- computing them for every candidate is what made
     a plain two-word search take minutes over a library holding commentaries."""
     hits: list[Hit] = []
+    role_terms = [t for t in query.terms if t.role_term]
+    role_conn = db.connect() if role_terms else None
     for mid, rows in candidates.items():
         if not rows:
             continue
@@ -2009,10 +2141,16 @@ def _evaluate(candidates: dict[str, dict], query: Query, opts: SearchOpts,
             term_pos: dict[int, list] = {}
             if not fast:
                 for t in query.terms:
-                    if t.strongs or t.is_morph or t.lemma or t.topic:
-                        # Already proven by the marker index; leaving the entry
-                        # out makes _check_tree treat it as satisfied rather than
-                        # as a failed text match.
+                    if t.strongs or t.is_morph or t.lemma or t.role_term:
+                        # The marker index proved which units carry this tag,
+                        # but not that *this* unit does.  Give the exact pass a
+                        # real truth value so AND / OR / NOT can be evaluated
+                        # against it like any other term.
+                        term_pos[id(t)] = (
+                            [(0, 0, 0)] if (mid, key) in (t.hits or set()) else [])
+                        continue
+                    if t.topic:
+                        # Topic articles are already the candidate set.
                         continue
                     term_pos[id(t)] = _term_match(
                         t, text, match_case=opts.match_case,
@@ -2024,6 +2162,8 @@ def _evaluate(candidates: dict[str, dict], query: Query, opts: SearchOpts,
                               if w} | {s for t in query.terms for s in t.strongs}
                               | {t.morph for t in query.terms
                                  if t.is_morph and t.morph}
+                              | {t.lemma for t in query.terms if t.lemma}
+                              | {t.role_term for t in query.terms if t.role_term}
                               | {db.fold(t.topic) for t in query.terms
                                  if t.topic})
             strongs = sorted({s for t in query.terms for s in t.strongs})
@@ -2044,10 +2184,28 @@ def _evaluate(candidates: dict[str, dict], query: Query, opts: SearchOpts,
                             positions.setdefault(w, []).append(wi)
                 for v in positions.values():
                     v.sort()
+            role_notes: list[str] = []
+            if role_conn is not None:
+                conn = role_conn
+                for t in role_terms:
+                    if (mid, key) not in (t.hits or set()):
+                        continue
+                    sql = ("SELECT DISTINCT surface FROM syntax_role "
+                           "WHERE module_id=? AND unit_key=? AND value=? "
+                           "AND resolved=1")
+                    args: list = [mid, key, t.role_term]
+                    if t.role:
+                        sql += " AND role=?"
+                        args.append(t.role)
+                    for rr in conn.execute(sql, args).fetchall():
+                        role_notes.append(
+                            f"{t.role or 'role'}:{t.role_term} ← "
+                            f"{rr['surface'] or '?'}")
             hit = Hit(
                 module_id=mid, module_name=m.name, module_type=m.type,
                 key=key, label=row["ref_label"], title=row["title"] or "",
                 matched=matched, strongs=strongs, positions=positions,
+                role_notes=sorted(set(role_notes)),
                 score=0.0,
             )
             hit.text = text
@@ -2110,8 +2268,15 @@ def _check_tree(node, text: str, term_pos: dict, opts: SearchOpts,
     if node is None:
         return True
     if isinstance(node, Term):
-        if node.strongs or node.is_morph or node.lemma or node.topic:
-            return True          # satisfied by the marker/topic index
+        if node.topic:
+            return True          # the topic index already fixed the candidates
+        if node.strongs or node.is_morph or node.lemma or node.role_term:
+            p = term_pos.get(id(node))
+            # A caller that has not populated per-term hits (the positional
+            # index path, or a direct tree check) keeps the old behaviour:
+            # the marker index already narrowed the candidates to units that
+            # carry the tag.
+            return bool(p) if p is not None else True
         p = term_pos.get(id(node))
         if p is None:
             # A reference carries no positions in the text: it asks where this
@@ -2282,6 +2447,17 @@ def _relate(kind: str, op: Op, text: str, term_pos: dict, opts: SearchOpts) -> b
     if kind == "INTERSECTS":
         return any(_overlaps(span(x), span(y)) for x in A for y in B)
     return False
+
+
+def span(p) -> tuple[int, int]:
+    """The character range of one term position ``(word, start, length)``.
+
+    ``IN`` and ``INTERSECTS`` used to call this without ever defining it, so
+    all four documented forms (including their NOT variants) failed with
+    NameError. The positional index declines these operators, so the text path
+    is the only one that sees them.
+    """
+    return (int(p[1]), int(p[1]) + int(p[2]))
 
 
 def _contains(a, b) -> bool:
@@ -2778,7 +2954,8 @@ def surface_counts(mods: list[Module]) -> dict[str, int]:
     prewarm_spelling() at startup rather than inside the hint.
     """
     conn = db.connect()
-    key = ("surface-counts", db.GENERATION) + tuple(sorted(m.id for m in mods))
+    key = (("surface-counts", db.GENERATION, str(db.db_path()))
+           + tuple(sorted(m.id for m in mods)))
     hit = _VOCAB_CACHE.get(key)
     if hit is not None and time.time() - hit[0] < 3600:
         return hit[1]
@@ -3131,7 +3308,7 @@ def smart_notes(query: Query, mods: list[Module], opts: SearchOpts
                 out.append({"kind": "forms", "from": w, "to": db.stem(w),
                             "note": "Try 'Match all forms'."})
     for t in query.terms:
-        if t.strongs or t.is_morph:
+        if t.strongs or t.is_morph or t.role_term:
             continue
         for w in t.words:
             s = _strongs_for(mods, w)
@@ -3171,6 +3348,81 @@ def _vocab(mods: list[Module]) -> set[str]:
         _VOCAB_CACHE.clear()
     _VOCAB_CACHE[key] = (time.time(), out)
     return out
+
+
+def _fuzzy_expansion(raw: str, mods: list[Module], notes: list[str]) -> str:
+    """Replace one `~word` with the closest spelling in the library vocabulary.
+
+    Typo suggestions already exist in `word_notes()`, but they only *advise*: a
+    search for `pryaer` still returns nothing.  Using the same vocabulary and
+    distance budget here makes the typo actually find `prayer`.  The
+    substitution is reported in `notes`, so the reader can see what the engine
+    searched for rather than trusting an invisible rewrite.
+    """
+    if not raw or ":" in raw or "*" in raw or "?" in raw:
+        # Drop the tilde: a scoped or malformed value is simply left as an
+        # ordinary term for the parser to handle, not re-emitted with a leading
+        # "~" that would be stripped by the tokenizer into a different query.
+        return raw
+    w = db.fold(raw)
+    if len(w) < 3:
+        return raw
+    counts = surface_counts(mods)
+    if w in counts:
+        # A correctly spelled word needs no expansion.
+        return raw
+    max_d = 2 if len(w) <= 6 else 3
+    ranked = []
+    for cand in _near_candidates(counts, w, max_d):
+        if cand == w:
+            continue
+        d = _lev(w, cand, max_d)
+        if d < max_d:
+            # `counts` is sampled from 6,000 short units, where "faint" occurs
+            # more often than "faith" even though the opposite is true in the
+            # Bible.  The FTS vocabulary knows the whole corpus, so use its
+            # document frequency to break a tie and keep the sample as a
+            # fallback for words the index does not carry.
+            df = doc_freq(cand) or counts.get(cand, 0)
+            ranked.append((d, -df, cand))
+    ranked.sort()
+    if not ranked:
+        return raw
+    # One correction, not an OR of the typo and its neighbours.  An OR that
+    # contains a word with no postings makes the positional index decline the
+    # whole query, and the exact pass then re-reads seven thousand unit texts:
+    # `(pryaer OR prayer)` took thirteen seconds where `prayer` took a third of
+    # one.  The typo almost never has hits of its own, so searching the most
+    # likely word instead is both faster and more useful.  The warning names the
+    # substitution, so nothing is silently rewritten.
+    best = ranked[0][2]
+    notes.append(f"~{raw} searched as {best}")
+    return best
+
+
+def _expand_fuzzy(q: str, mods: list[Module]) -> tuple[str, list[str]]:
+    """Rewrite `~word` terms in a query string, leaving quoted text alone."""
+    notes: list[str] = []
+    out: list[str] = []
+    i, n = 0, len(q)
+    quoted = False
+    while i < n:
+        ch = q[i]
+        if ch == '"':
+            quoted = not quoted
+            out.append(ch)
+            i += 1
+            continue
+        if (ch == "~" and not quoted
+                and (i == 0 or not (q[i - 1].isalnum() or q[i - 1] in "_:"))):
+            m = re.match(r"~([^\s()\"~]+)", q[i:])
+            if m:
+                out.append(_fuzzy_expansion(m.group(1), mods, notes))
+                i += m.end()
+                continue
+        out.append(ch)
+        i += 1
+    return "".join(out), notes
 
 
 def _closest(w: str, vocab, *, max_d: int = 2,
@@ -3404,6 +3656,9 @@ OPERATOR_HELP = [
      "note": "Order and adjacency. No stemming inside quotes."},
     {"op": "wildcard", "syntax": "lord*   lord?",
      "note": "* = zero or more characters in a word, ? = one."},
+    {"op": "~word", "syntax": "~prayr",
+     "note": "Fuzzy: search the closest spelling found in your library instead "
+             "of the typo. The substitution is reported in the warnings."},
     {"op": "BEFORE", "syntax": "term1 BEFORE term2",
      "note": "term1 occurs before term2."},
     {"op": "AFTER", "syntax": "term1 AFTER term2", "note": "term1 follows term2."},
@@ -3420,8 +3675,19 @@ OPERATOR_HELP = [
      "note": "They overlap. The most forgiving of the three."},
     {"op": "field:", "syntax": "heading:baptism   field.bible:Joshua",
      "note": "Restrict a term to a tagged field."},
-    {"op": "datatype:", "syntax": "strongs:G2316   lemma.g:ἀγαπάω   morph.g:VF",
-     "note": "Strong's, lemma and morphology are searched directly."},
+    {"op": "datatype:", "syntax": "strongs:G2316   lemma.g:ἀγαπάω   morph:VF",
+     "note": "Strong's, lemma and morphology are searched directly. Lemma "
+             "headwords ignore accent and case: 'αγαπαω' finds 'ἀγαπάω'."},
+    {"op": "role:", "syntax": "subject:Jesus object:Peter   verb:love",
+     "note": "Clause roles from an imported CoNLL-U treebank. 'role:X' "
+             "searches every role. Roles: subject, object, indirect_object, "
+             "oblique, verb. Third-person pronouns are also resolved to a "
+             "single compatible name nearby and marked as inferred."},
+    {"op": "morph:", "syntax": 'morph:"tense=perfect not:conjugation=qal"',
+     "note": "Morphology by grammatical feature, not tag spelling. Features: "
+             "pos, gender, number, case, state, tense, voice, mood, person, "
+             "conjugation, participle, degree, scheme. 'not:' excludes a "
+             "feature. An exact tag such as morph:robinson:V-PPM-2S still works."},
     {"op": "reference:", "syntax": 'bible:"Gen 1:1"   reference:"Gen 1:1"',
      "note": "A passage. 'reference:' restricts to cross-references only."},
     {"op": "term:(...)", "syntax": "term:(Jesus OR Christ OR Messiah)",

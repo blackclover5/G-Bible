@@ -24,8 +24,10 @@ const Preach = {
     return panes[0];
   },
 
-  async enter() {
-    if (this.on) return;
+  async enter(ref) {
+    // Choosing "Preach from this verse" while already preaching used to be a
+    // no-op.  Restart on the newly chosen verse instead.
+    if (this.on) this.exit();
     const pane = this.target();
     if (!pane) { toast('Open a Bible first — there is nothing to preach from.'); return; }
     const m = modById(pane.module_id);
@@ -54,6 +56,10 @@ const Preach = {
       this.size = Math.round(shown.text_size / 100 * 1.9 * 10) / 10;
     }
     document.documentElement.style.setProperty('--preach-size', this.size + 'rem');
+    if (ref) {
+      shown.cursor = shown.cursor || {};
+      shown.cursor.ref = ref;
+    }
     this.build(m, shown);
     this.bind();
     if (document.documentElement.requestFullscreen) {
@@ -71,6 +77,7 @@ const Preach = {
     document.body.classList.remove('preaching', 'serif', 'sans', 'mono');
     $$(`.tile[data-preach-hide]`).forEach(t => { delete t.dataset.preachHide; });
     if (this.bar) { this.bar.remove(); this.bar = null; }
+    this.fullBtn = null;
     if (this.ref) { this.ref.remove(); this.ref = null; }
     clearInterval(this.timer.id);
     /* The idle timer had `this.bar.classList.add('idle')` inside it, and it
@@ -83,6 +90,7 @@ const Preach = {
     this.timer.running = false;
     document.removeEventListener('mousemove', this._wake);
     document.removeEventListener('keydown', this._keys, true);
+    document.removeEventListener('fullscreenchange', this._fs);
     if (this.saved && this.paneId) {
       const p = (S.layout.panes || []).find(x => x.id === this.paneId);
       if (p) p.text_size = this.saved.textSize;
@@ -161,6 +169,8 @@ const Preach = {
       Cite.copy(p ? p.module_id : '', (p && p.cursor && p.cursor.ref) || '');
     });
     bar.appendChild(el('span', 'sep'));
+    this.fullBtn = b('Fullscreen  (F)', () => this.toggleFullscreen());
+    this.paintFullscreen();
     b('Close  (Esc)', () => this.exit());
     document.body.appendChild(bar);
     this.bar = bar;
@@ -310,6 +320,25 @@ const Preach = {
     return p.x >= r.left && p.x <= r.right && p.y >= r.top && p.y <= r.bottom;
   },
 
+  /* One fullscreen toggle for both the F key and the toolbar button, so the
+   * two cannot drift apart.  A browser can refuse the request (and Esc can
+   * leave fullscreen without going through us), so the button label follows
+   * the real state via `fullscreenchange` rather than a local guess. */
+  toggleFullscreen() {
+    if (document.fullscreenElement) {
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    } else if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  },
+
+  paintFullscreen() {
+    if (this.fullBtn) {
+      this.fullBtn.textContent = document.fullscreenElement
+        ? 'Exit fullscreen  (F)' : 'Fullscreen  (F)';
+    }
+  },
+
   onKey(e) {
     if (!this.on) return;
     /* A modal owns the keyboard while it is up.
@@ -334,8 +363,14 @@ const Preach = {
       e.preventDefault(); this.step(-1);
     }
     if (e.key === 'f' || e.key === 'F') {
-      const p = (S.layout.panes || []).find(x => x.id === this.paneId);
-      if (p) Reader.focusRef(p, '', '');
+      e.preventDefault();
+      /* 'f' toggles fullscreen without leaving preaching mode.  Esc is taken
+       * by exit(), so this is the only way to step out of the browser's
+       * fullscreen while staying on the passage.  It used to call
+       * Reader.focusRef(pane, '') -- a pane is not a module and an empty ref is
+       * not a reference, so the shortcut silently did nothing. */
+      this.toggleFullscreen();
+      return;
     }
   },
 
@@ -349,7 +384,9 @@ const Preach = {
   bind() {
     this._wake = (e) => this.wake(e);
     this._keys = (e) => this.onKey(e);
+    this._fs = () => this.paintFullscreen();
     document.addEventListener('mousemove', this._wake);
+    document.addEventListener('fullscreenchange', this._fs);
     /* Capture, not bubble.  There is a document-level Escape handler that
      * closes modals, registered when the page loaded -- so before preaching
      * mode starts.  On Escape it runs first, the modal is already closed by

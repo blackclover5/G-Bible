@@ -96,10 +96,9 @@ def search_in_range(q: str, range_name: str, opts_dict: dict | None = None) -> d
         scope=opts_dict.get("scope") or "",
         match_case=bool(opts_dict.get("match_case")),
         match_all_forms=bool(opts_dict.get("match_all_forms")),
-        reference_matching=opts_dict.get("reference_matching", "default"),
         limit=fetch, offset=0,
         sort=opts_dict.get("sort", "relevance"),
-        snippets=True, context=0, fast=True, smart=False,
+        snippets=True, context=0, smart=False,
     )
     res = _search.search(q, opts)
     hits = res.get("hits") or res.get("results") or []
@@ -125,7 +124,7 @@ def search_in_range(q: str, range_name: str, opts_dict: dict | None = None) -> d
 
 def equivalent_refs(module_id: str, ref: str) -> dict:
     """A verse plus everything installed cross-reference tables link it to."""
-    m = library.get(module_id)
+    m = library.get_installed(module_id)
     if m is None:
         return {"ok": False, "error": "Not installed"}
     rr = canon.parse_ref(ref, m.v11n)
@@ -201,7 +200,7 @@ def delete_visual_filter(fid: str) -> dict:
 def apply_visual_filters(module_id: str, book: str, chapter: int) -> dict:
     """Which enabled filters match which verses of one chapter."""
     from . import search as _search
-    m = library.get(module_id)
+    m = library.get_installed(module_id)
     if m is None:
         return {"ok": False, "error": "Not installed"}
     conn = db.connect()
@@ -212,6 +211,7 @@ def apply_visual_filters(module_id: str, book: str, chapter: int) -> dict:
         return {"ok": True, "matches": {}, "verses": []}
     matches: dict[str, list[str]] = {}
     surfaces: dict[str, list[str]] = {}
+    truncated = []
     for f in visual_filters():
         if not f.get("enabled"):
             continue
@@ -228,10 +228,12 @@ def apply_visual_filters(module_id: str, book: str, chapter: int) -> dict:
             continue
         try:
             opts = _search.SearchOpts(modules=[module_id], limit=400,
-                                      snippets=False, smart=False, fast=True)
+                                      snippets=False, smart=False)
             res = _search.search(q, opts)
         except Exception:  # noqa: BLE001
             continue
+        if res.get("truncated"):
+            truncated.append(f.get("name") or f["id"])
         hits = res.get("hits") or res.get("results") or []
         keys = {h.get("key") for h in hits
                 if isinstance(h, dict) and h.get("module_id") == module_id}
@@ -240,7 +242,7 @@ def apply_visual_filters(module_id: str, book: str, chapter: int) -> dict:
             matches[f["id"]] = hit_here
             surfaces[f["id"]] = _query_terms(q)
     return {"ok": True, "matches": matches, "verses": verses,
-            "surfaces": surfaces}
+            "surfaces": surfaces, "truncated": truncated}
 
 
 def _morph_hits(module_id: str, verses: list[str], spec: str) -> list[str]:
@@ -250,88 +252,25 @@ def _morph_hits(module_id: str, verses: list[str], spec: str) -> list[str]:
     spec = (spec or "").strip()
     if not spec:
         return []
-    conn = db.connect()
-    codes: list[str] = []
-    if "=" in spec or spec.startswith("not:"):
-        filt: dict[str, str] = {}
-        for part in spec.split(","):
-            if "=" not in part:
-                continue
-            k, v = part.split("=", 1)
-            if k.strip() in morphq._FILTERS:
-                filt[k.strip()] = v.strip()
-        try:
-            res = morphq.query(limit=0, **filt)
-        except Exception:  # noqa: BLE001
-            return []
-        # limit=0 means "no paging" in morphq (page = all codes).
-        entries = res.get("results") or []
-        codes = [e["code"] for e in entries if e.get("code")]
-    else:
-        prefix = spec.lower()
-        rows = conn.execute("SELECT DISTINCT value FROM marker WHERE kind='morph'"
-                            ).fetchall()
-        codes = [r["value"] for r in rows
-                 if r["value"] and r["value"].lower().startswith(prefix)]
+    # One decoder for every surface: `pos=N,tense=present` is decoded to its
+    # features, and a bare code such as HNcms is decoded too instead of being
+    # matched as a literal prefix.  The old split here left the two paths with
+    # different ideas of what a morphology request meant.
+    codes = morphq.resolve_query(spec)["codes"]
     if not codes:
         return []
+    conn = db.connect()
     verseset = set(verses)
-    ph = ",".join("?" * len(codes))
-    rows = conn.execute(
-        f"SELECT DISTINCT unit_key FROM marker WHERE module_id=? AND kind='morph'"
-        f" AND value IN ({ph})", [module_id, *codes]).fetchall()
-    return sorted({r["unit_key"] for r in rows} & verseset)
-
-
-def _morph_surfaces(module_id, verses, spec):
-    spec = (spec or "").strip()
-    if not spec:
-        return []
-    conn = db.connect()
-    codes = []
-    filt = {}
-    if "=" in spec or spec.startswith("not:"):
-        for part in spec.split(","):
-            if "=" not in part:
-                continue
-            k, v = part.split("=", 1)
-            if k.strip() in ("pos", "gender", "number", "state", "conjugation",
-                             "tense", "person", "participle", "scheme",
-                             "pos_particle"):
-                filt[k.strip()] = v.strip()
-        if filt:
-            try:
-                from . import morphq as _mq
-                res = _mq.query(limit=1, **filt)
-                codes = [e["code"] for e in (res.get("results") or [])
-                         if e.get("code")]
-            except Exception:
-                codes = []
-        if not codes and not filt:
-            prefix = spec.lower()
-            rows = conn.execute(
-                "SELECT DISTINCT value FROM marker WHERE kind='morph'").fetchall()
-            codes = [r["value"] for r in rows
-                     if r["value"] and r["value"].lower().startswith(prefix)]
-    else:
-        prefix = spec.lower()
+    found: set[str] = set()
+    for i in range(0, len(codes), 400):
+        chunk = codes[i:i + 400]
+        ph = ",".join("?" * len(chunk))
         rows = conn.execute(
-            "SELECT DISTINCT value FROM marker WHERE kind='morph'").fetchall()
-        codes = [r["value"] for r in rows
-                 if r["value"] and r["value"].lower().startswith(prefix)]
-    if not codes:
-        return []
-    verseset = set(verses or [])
-    ph = ",".join("?" * len(codes))
-    sql = ("SELECT DISTINCT surface FROM marker WHERE module_id=? "
-           "AND kind='morph' AND value IN (%s)" % ph)
-    params = [module_id] + list(codes)
-    if verseset:
-        vp = ",".join("?" * len(verseset))
-        sql += " AND unit_key IN (%s)" % vp
-        params += sorted(verseset)
-    rows = conn.execute(sql, params).fetchall()
-    return [r["surface"] for r in rows if r["surface"]]
+            f"SELECT DISTINCT unit_key FROM marker WHERE module_id=? "
+            f"AND kind='morph' AND value IN ({ph})",
+            [module_id, *chunk]).fetchall()
+        found.update(r["unit_key"] for r in rows)
+    return sorted(found & verseset)
 
 
 def _query_terms(q):
@@ -372,7 +311,7 @@ def filtered_reading(module_id: str, refs: list[str]) -> dict:
     the text.  The book/chapter/verse columns are set the same way for every
     module, and `row["key"]` is then whatever *this* module calls that verse.
     """
-    m = library.get(module_id)
+    m = library.get_installed(module_id)
     if m is None:
         return {"ok": False, "error": "Not installed"}
     conn = db.connect()

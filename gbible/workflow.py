@@ -227,6 +227,14 @@ def resolve(step: dict, ref: str = "") -> dict:
             return out
         out["action"] = "search"
         return out
+    if step["kind"] in ("outline", "word", "clause"):
+        # These are tool steps, not resource steps: they carry no module and
+        # used to fall through to "skip" even though the UI offers them.
+        out["action"] = step["kind"]
+        out["cursor"] = dict(step.get("cursor") or {})
+        if ref:
+            out["cursor"]["ref"] = ref
+        return out
     mid = step.get("module_id") or ""
     if not mid and step.get("slot"):
         mid = _best_in_slot(step["slot"], ref)
@@ -234,7 +242,9 @@ def resolve(step: dict, ref: str = "") -> dict:
         out["reason"] = ("no resource installed for this step"
                          if step.get("slot") else "this step names no resource")
         return out
-    if library.get(mid) is None:
+    # get() still returns the soft-removed row; get_installed() is the honest
+    # test.  The step's saved data is untouched either way.
+    if library.get_installed(mid) is None:
         out["reason"] = f"{mid} is no longer installed"
         return out
     out["action"] = "open"

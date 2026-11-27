@@ -20,6 +20,7 @@ const Ai = {
   context: null,      // a passage the reader has put in front of the assistant
   sources: [],        // citations for the current answer
   ctrl: null,         // AbortController for the in-flight stream
+  sending: false,     // whether the Send button is currently acting as Stop
   tip: null,          // the citation tooltip, when one is showing
   editing: -1,        // the index of the question being edited, or -1
   modelsFor: {},      // provider id -> models discovered from the server
@@ -30,13 +31,15 @@ const Ai = {
   topicCacheOrder: [],  // the topics in the cache, oldest first
   topicQuestionsCache: {},  // topic -> [questions], written in a call of
                         // their own and therefore kept apart from the answer
+  topicQuestionsOrder: [],  // same bounded lifetime as the answers
 
   els() {
     return {
       chat: $('#ai-chat'), head: $('#ai-head'), note: $('#ai-note'),
-      input: $('#ai-input'), send: $('#ai-send'), stop: $('#ai-stop'),
+      input: $('#ai-input'), send: $('#ai-send'),
       model: $('#ai-model'), lib: $('#ai-use-library'),
-      mine: $('#ai-use-mine'), scope: $('#ai-scope'), recent: $('#ai-recent'),
+      mine: $('#ai-use-mine'), deep: $('#ai-deep-research'),
+      scope: $('#ai-scope'), recent: $('#ai-recent'),
     };
   },
 
@@ -182,6 +185,7 @@ const Ai = {
   },
 
   async load() {
+    if (aiOff()) return;
     const r = await api('ai/providers');
     Ai.providers = r.providers || [];
     Ai.settings = r.settings || {};
@@ -189,11 +193,31 @@ const Ai = {
     const e = Ai.els();
     if (e.lib) e.lib.checked = Ai.settings.use_library !== false;
     if (e.mine) e.mine.checked = Ai.settings.use_mine !== false;
+    if (e.deep) e.deep.checked = !!Ai.settings.deep_research;
+    // These three live in the chat header, not the settings modal. They must
+    // write through to the same settings, or ticking them changes nothing.
+    const wireBar = (box, key, label) => {
+      if (!box || box.onchange) return;
+      box.onchange = async () => {
+        const r = await post('ai/settings', { [key]: box.checked });
+        if (!r || r.ok === false) {
+          box.checked = !box.checked;
+          toast((r && r.error) || 'Could not change ' + label + '.', 'err');
+          return;
+        }
+        Ai.settings[key] = box.checked;
+        toast(label + ' ' + (box.checked ? 'on' : 'off'));
+      };
+    };
+    wireBar(e.lib, 'use_library', 'Use my library');
+    wireBar(e.mine, 'use_mine', 'My own material');
+    wireBar(e.deep, 'deep_research', 'Deep research');
     Ai.renderModels();
     Ai.renderHead();
     Ai.loadScopes();
-    if (e.send) e.send.onclick = () => Ai.send();
-    if (e.stop) e.stop.onclick = () => Ai.stop();
+    if (e.send) e.send.onclick = () => {
+      if (Ai.sending) Ai.stop(); else Ai.send();
+    };
     if (e.input) {
       e.input.onkeydown = (ev) => {
         // Enter sends; Shift+Enter is a newline -- the convention every chat
@@ -250,6 +274,7 @@ const Ai = {
   /* A one-line reason the assistant cannot be used yet, or '' when it can.
    * Callers show this instead of sending a request that is certain to fail. */
   blocked() {
+    if (aiOff()) return 'AI Assistant is not set up. Open Settings → AI Assistant to enable it.';
     const p = Ai.provider();
     if (!p) return 'No AI provider is configured. Open Settings → AI.';
     // A key is missing before a model is missing: it is the first thing that
@@ -302,23 +327,26 @@ const Ai = {
   renderHead() {
     const e = Ai.els();
     if (!e.head) return;
+    const link = ' · <a href="#" id="ai-head-cfg">change</a>';
+    const wire = () => {
+      const cfg = $('#ai-head-cfg');
+      if (cfg) cfg.onclick = (ev) => { ev.preventDefault(); App.show('aisettings'); };
+    };
     const p = Ai.provider();
     if (!p) { e.head.textContent = 'No provider configured.'; return; }
     const where = p.local ? 'on this machine' : 'cloud';
     e.head.innerHTML = 'Provider: <b>' + esc(p.name) + '</b> (' + where
-      + ') · model <b>' + esc(Ai.settings.model || '—') + '</b>'
-      + ' · <a href="#" id="ai-head-cfg">change</a>';
-    const cfg = $('#ai-head-cfg');
-    if (cfg) cfg.onclick = (ev) => { ev.preventDefault(); App.show('aisettings'); };
+      + ') · model <b>' + esc(Ai.settings.model || '—') + '</b>' + link;
+    wire();
     if (e.note) {
       e.note.innerHTML = p.local
         ? 'Private: the passages and your question stay on this machine.'
         : (p.free
-            ? 'Free tier: no charge for the calls, but this is still the cloud '
-              + '— the passages relevant to your question and the question '
-              + 'itself are sent to ' + esc(p.name) + '.'
-            : 'Cloud: the passages relevant to your question and the question '
-              + 'itself are sent to ' + esc(p.name) + '.');
+          ? 'Free tier: no charge for the calls, but this is still the cloud — '
+            + 'the passages relevant to your question and the question itself '
+            + 'are sent to ' + esc(p.name) + '.'
+          : 'Cloud: the passages relevant to your question and the question '
+            + 'itself are sent to ' + esc(p.name) + '.');
     }
   },
 
@@ -355,8 +383,8 @@ const Ai = {
     if (!Ai.history.length) {
       e.chat.innerHTML = '<div class="ai-empty">Ask a question and G-Bible '
         + 'answers from the books you have installed, citing each one. '
-        + 'Switch providers under <b>Settings → AI</b> to choose between a '
-        + 'model on this machine and a cloud one.</div>';
+        + 'Under <b>Settings → AI</b> you can choose a local server or a '
+        + 'cloud provider.</div>';
       return;
     }
     e.chat.innerHTML = '';
@@ -373,6 +401,17 @@ const Ai = {
     const body = el('div', 'ai-body');
     body.innerHTML = m.role === 'user' ? esc(m.content) : Ai.render(m.content);
     b.appendChild(body);
+    if (m.role === 'assistant' && m.backend) {
+      const tag = el('div', 'ai-backend');
+      const local = m.backend === 'local';
+      tag.innerHTML = '<span class="chip ' + (local ? 'pd' : 'no') + '">'
+        + (local ? 'Answered by a local server' : 'Answered via API')
+        + '</span>';
+      b.appendChild(tag);
+    }
+    if (m.role === 'assistant' && m.webStatus) {
+      b.appendChild(el('div', 'ai-web-status', m.webStatus));
+    }
     if (m.role === 'user') {
       // The pencil.  Asking again is not the same as adding to the
       // conversation: the turns from the edited question onward are
@@ -384,7 +423,31 @@ const Ai = {
       b.appendChild(pen);
     }
     if (m.role === 'assistant' && m.citations && m.citations.length) {
-      b.appendChild(Ai.sourceList(m.citations));
+      const web = m.citations.filter(c => c.external && c.url);
+      const local = m.citations.filter(c => !c.external);
+      if (local.length) b.appendChild(Ai.sourceList(local));
+      if (web.length) {
+        const cited = new Set(Array.from(
+          (m.content || '').matchAll(/\[(\d+)\]/g), x => Number(x[1])));
+        const used = web.filter(c => cited.has(Number(c.n)));
+        const checked = web.filter(c => !cited.has(Number(c.n)));
+        const box = el('div', 'ai-web-used');
+        const addPages = (heading, pages) => {
+          if (!pages.length) return;
+          box.appendChild(el('div', 'ai-web-used-h', heading));
+          pages.forEach(c => {
+            const a = el('a', 'ai-web-site', c.module_name || c.title || c.url);
+            a.href = c.url;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            a.title = c.title || c.url;
+            box.appendChild(a);
+          });
+        };
+        addPages('Websites cited', used);
+        addPages('Pages checked, not cited', checked);
+        b.appendChild(box);
+      }
     }
     return b;
   },
@@ -581,13 +644,40 @@ const Ai = {
                '$1<em>$2</em>');
   },
 
+  /* Briefly mark the passage a citation opened so the reader can see which
+   * verse the chip landed on.  The pane
+   * is rebuilt on focus, so wait for that before looking for the element. */
+  async flashCite(key) {
+    if (!key) return;
+    await new Promise(r => setTimeout(r, 0));
+    const sel = '[data-k="' + (window.CSS && CSS.escape ? CSS.escape(key)
+      : String(key).replace(/["\\]/g, '\\$&')) + '"]';
+    const node = document.querySelector('.verse' + sel)
+      || document.querySelector(sel);
+    if (!node) return;
+    if (node._citeFlashT) clearTimeout(node._citeFlashT);
+    node.classList.remove('cite-flash');
+    // Force a reflow so a second flash on the same verse restarts the CSS
+    // animation instead of continuing the first one.
+    void node.offsetWidth;
+    node.classList.add('cite-flash');
+    try {
+      node.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    } catch (e) { /* jsdom / older engines */ }
+    node._citeFlashT = setTimeout(() => {
+      node.classList.remove('cite-flash');
+      node._citeFlashT = null;
+    }, 2200);
+  },
+
   sourceList(cites) {
     const w = el('div', 'ai-sources');
     cites.forEach(c => {
       const name = c.label || c.title || c.module_name;
       const chip = el('button', 'ai-src');
       chip.innerHTML = '<b>[' + c.n + ']</b> ' + esc(name)
-        + ' <span class="tiny muted">— ' + esc(c.module_name) + '</span>';
+        + ' <span class="tiny muted">— ' + esc(c.module_name) + '</span>'
+        + (c.external ? ' <span class="tiny">web</span>' : '');
       chip.title = c.text || '';
       // The fragment: the part of the source this answer actually leaned on,
       // with the words it leaned on marked.  The server compared the two
@@ -606,6 +696,7 @@ const Ai = {
         chip.onmouseleave = () => Ai.hideTip();
         chip.onblur = () => Ai.hideTip();
       }
+      const mod = c.module_id ? modById(c.module_id) : null;
       // The reader's own material opens the thing itself, and it is checked
       // first: a note titled "Notes on John 3" reads exactly like a Bible
       // reference, and opening it as one would send the reader to a verse
@@ -615,23 +706,65 @@ const Ai = {
         chip.title = (c.text || '') + '\n\nOpens your own '
           + (c.own.kind || 'material') + '.';
         chip.onclick = () => Ai.openOwn(c.own);
+      } else if (c.external && c.url) {
+        // An outside page is not a library resource: open the exact page the
+        // reader approved, in a new tab, with no access back to this window.
+        chip.classList.add('wr-src');
+        chip.title = (c.text || '') + '\n\nOpens the outside page in a new tab.';
+        chip.onclick = () => window.open(c.url, '_blank', 'noopener');
+      } else if (mod && mod.reader && mod.reader !== 'verse'
+                 && mod.reader !== 'audio') {
+        // A FactBook, dictionary or book citation names an *entry*, not a
+        // verse: "John" in Thompson is not "John 1:1" in a Bible. Check the
+        // module first, so a heading with a number in it ("1 JOHN") is not
+        // mistaken for a reference and sent to a Bible instead.
+        chip.title = (c.text || '') + '\n\nOpens this entry in '
+          + (mod.name || 'the library') + '.';
+        chip.onclick = async () => {
+          await Ai.openEntry(mod, c);
+          await Ai.flashCite(c.key);
+        };
       } else if (/^[1-3]?\s?[A-Za-z]{2,}/.test(name) && /\d/.test(name)) {
         // A label that reads as a Bible reference opens; a commentary page label
         // ("Verse 8") does not, and says so rather than opening something wrong.
         chip.onclick = () => Reader.openRefAnywhere(name.replace(/\./g, ' '));
-      } else if (c.module_id && c.key) {
-        // A topical article or a gloss has no reference to open, but it does
-        // have a place in the library, and opening it is the whole point of a
-        // citation that cannot be checked another way.
+      } else if (c.module_id && c.key && mod) {
         chip.title = (c.text || '') + '\n\nOpens this entry in a pane.';
-        chip.onclick = () => {
-          const mod = modById(c.module_id);
-          if (mod) Reader.focusRef(mod, c.key);
+        chip.onclick = async () => {
+          await Reader.focusRef(mod, c.key);
+          await Ai.flashCite(c.key);
         };
       }
       w.appendChild(chip);
     });
     return w;
+  },
+
+  /* Open a citation that points at an entry in a keyed resource.
+   *
+   * The key is best: it is the module's own address for the article.  A guide
+   * can quote an entry without carrying its key though, and then the chip used
+   * to have no click handler at all -- the AI looked as if it simply would not
+   * open Thompson.  Fall back to a heading search in that same module, so
+   * "John" lands on John rather than on the first page of the book. */
+  async openEntry(mod, c) {
+    let key = (c.key || '').trim();
+    if (!key && mod.reader === 'topic') {
+      const term = (c.label || c.title || '').trim();
+      if (term) {
+        const r = await api('factbook-search', {
+          q: term, module_ids: [mod.id], limit: 10 });
+        const results = r.results || [];
+        const fold = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+        const want = fold(term);
+        const hit = results.find(x => fold(x.key) === want
+          || fold(x.title) === want) || results[0];
+        if (hit) key = hit.key || '';
+      }
+    }
+    App.show('workspace');
+    if (!key) { toast('That entry has no key to open.', 'warn'); return; }
+    return Reader.focusRef(mod, key);
   },
 
   /* Open one of the reader's own documents from a citation.
@@ -677,6 +810,7 @@ const Ai = {
    * itself has to be supplied, or the answer is about something else.
    */
   attach(text, label, moduleId, key, moduleName) {
+    if (aiOff()) { toast('AI Assistant is not set up.', 'warn'); return; }
     const t = (text || '').trim();
     if (!t) { toast('Nothing to attach.', 'warn'); return; }
     Ai.context = { text: t, label: label || '', module_id: moduleId || '',
@@ -820,14 +954,33 @@ const Ai = {
     Ai.renderChat();
   },
 
+  /* Send and Stop are one button, so there is no mistaking whether the
+   * assistant is working: while a turn is in flight the same primary action
+   * reads "Stop" and is styled as a danger action.  Clicking it again aborts
+   * the stream; when the answer finishes it becomes "Send" once more.
+   */
+  setSending(on) {
+    Ai.sending = !!on;
+    const e = Ai.els();
+    if (e.send) {
+      e.send.textContent = Ai.sending ? 'Stop' : 'Send';
+      e.send.classList.toggle('primary', !Ai.sending);
+      e.send.classList.toggle('danger', Ai.sending);
+      e.send.title = Ai.sending
+        ? 'Stop the assistant — it is still working'
+        : 'Send your question';
+    }
+  },
+
   stop() {
     if (Ai.ctrl) { Ai.ctrl.abort(); Ai.ctrl = null; }
-    const e = Ai.els();
-    if (e.stop) e.stop.style.display = 'none';
-    if (e.send) e.send.disabled = false;
+    // Give immediate feedback; onFinally() will settle it again when the
+    // aborted stream actually unwinds.
+    Ai.setSending(false);
   },
 
   async send() {
+    if (Ai.sending) return;   // Enter pressed mid-turn: never start a second one
     const e = Ai.els();
     const q = (e.input.value || '').trim();
     if (!q) return;
@@ -863,25 +1016,53 @@ const Ai = {
   },
 
   async run(req, display) {
+    if (aiOff()) {
+      toast('AI Assistant is not set up. Enable it in Settings → AI Assistant.',
+            'warn');
+      App.show('aisettings');
+      return;
+    }
     const e = Ai.els();
     if (!Ai.provider()) {
       toast('Choose a provider first (Settings → AI)', 'err');
       App.show('aisettings');
       return;
     }
+    /* Decide about the web before the turn appears in the chat: a denial must
+     * not leave an empty assistant bubble behind.  The assistant checks whether
+     * the web would help, then asks for this question only. Saying no still
+     * answers from the installed library. */
+    let webToken = '';
+    let webApproved = false;
+    const previousQuestion = [...Ai.history].reverse().find(m => m.role === 'user');
+    const webQuestion = !req.action && req.question
+      && req.question.trim().split(/\s+/).length <= 4 && previousQuestion
+      ? previousQuestion.content + ' ' + req.question
+      : req.question;
+    if (!req.action && req.question && await WebResearch.shouldSearch(webQuestion)) {
+      if (await WebResearch.ask()) {
+        webApproved = true;
+        const web = await WebResearch.gather(webQuestion);
+        if (web && web.token) webToken = web.token;
+      }
+    }
     Ai.history.push({ role: 'user', content: display });
     const bot = { role: 'assistant', content: '', citations: [] };
     Ai.history.push(bot);
     Ai.renderChat();
     const live = e.chat.lastChild ? e.chat.lastChild.querySelector('.ai-body') : null;
+    const liveWeb = el('div', 'ai-web-status');
     const liveSources = el('div', 'ai-sources');
+    if (e.chat.lastChild) e.chat.lastChild.insertBefore(liveWeb, null);
     if (e.chat.lastChild) e.chat.lastChild.insertBefore(liveSources, null);
-    if (e.stop) e.stop.style.display = '';
-    if (e.send) e.send.disabled = true;
+    const liveBackend = el('div', 'ai-backend');
+    if (e.chat.lastChild) e.chat.lastChild.insertBefore(liveBackend, liveSources);
+    Ai.setSending(true);
 
     Ai.sources = [];
     const useLib = e.lib ? e.lib.checked : true;
     const useMine = e.mine ? e.mine.checked : true;
+    const deep = e.deep ? e.deep.checked : false;
     await Ai.streamTo({
       ...req,
       // An action is not a turn in a conversation: "translate this" must not be
@@ -890,6 +1071,7 @@ const Ai = {
       history: req.action ? [] : Ai.history.slice(0, -2),
       use_library: useLib,
       use_mine: useMine,
+      deep_research: deep,
       // The passage the reader put in front of the assistant, if any.  It
       // travels with this question and with no other: the next question is
       // a new question.
@@ -898,11 +1080,23 @@ const Ai = {
       context_module_id: Ai.context ? Ai.context.module_id : '',
       context_module_name: Ai.context ? Ai.context.module_name : '',
       context_key: Ai.context ? Ai.context.key : '',
+      web_token: webToken,
+      web_approved: webApproved,
     }, {
+      onBackend: (ev) => {
+        bot.backend = ev.backend || 'api';
+        const local = bot.backend === 'local';
+        liveBackend.innerHTML = '<span class="chip ' + (local ? 'pd' : 'no')
+          + '">' + (local ? 'Answered by a local server'
+                          : 'Answered via ' + esc(ev.provider || 'API'))
+          + '</span>';
+      },
       onSources: (ev) => {
         Ai.sources = ev.citations || [];
-        Ai.settings.provider = ev.provider || Ai.settings.provider;
-        Ai.settings.model = ev.model || Ai.settings.model;
+        bot.webStatus = ev.web_research && ev.web_research.message || '';
+        if (liveWeb) liveWeb.textContent = bot.webStatus;
+        if (ev.provider) Ai.settings.provider = ev.provider;
+        if (ev.model) Ai.settings.model = ev.model;
         if (liveSources.parentNode) {
           liveSources.parentNode.replaceChild(Ai.sourceList(Ai.sources),
                                               liveSources);
@@ -911,6 +1105,15 @@ const Ai = {
       onDelta: (t) => {
         bot.content += t;
         if (live) live.innerHTML = Ai.render(bot.content);
+      },
+      onReplace: (ev) => {
+        bot.content = ev.text || '';
+        bot.webStatus = ev.web_status || bot.webStatus || '';
+        if (live) live.innerHTML = Ai.render(bot.content);
+        if (liveWeb) liveWeb.textContent = bot.webStatus;
+      },
+      onStatus: (ev) => {
+        if (liveWeb) liveWeb.textContent = ev.text || '';
       },
       onError: (err, hint) => {
         bot.content = (err || 'The provider refused the request.')
@@ -929,8 +1132,9 @@ const Ai = {
       },
       onFinally: () => {
         if (!bot.content) bot.content = '(no answer)';
-        if (e.stop) e.stop.style.display = 'none';
-        if (e.send) e.send.disabled = false;
+        // A newer question may already have taken over the button.  Only the
+        // last stream standing gets to put it back to "Send".
+        if (!Ai.ctrl) Ai.setSending(false);
         bot.citations = Ai.sources;
         Ai.renderChat();
         // The passage has served its purpose: it belongs to the question that
@@ -954,10 +1158,13 @@ const Ai = {
    */
   async streamTo(req, h) {
     h = h || {};
-    await Ai.ensure();
+    // Create the controller before the first await, so Stop pressed straight
+    // after Send always has something to abort -- even on the first question,
+    // while provider settings are still being fetched.
     const ctrl = new AbortController();
     Ai.ctrl = ctrl;
     try {
+      await Ai.ensure();
       const r = await fetch('/api/ai/stream', {
         method: 'POST',
         headers: {
@@ -975,10 +1182,11 @@ const Ai = {
             ? req.use_mine : Ai.settings.use_mine !== false,
           scope: req.scope !== undefined
             ? req.scope : (Ai.settings.scope || ''),
-          semantic: req.semantic !== undefined
-            ? req.semantic : Ai.settings.semantic !== false,
           smart_query: req.smart_query !== undefined
             ? req.smart_query : Ai.settings.smart_query !== false,
+          deep_research: req.deep_research !== undefined
+            ? req.deep_research : !!((Ai.settings && Ai.settings.deep_research)),
+          web_token: req.web_token || '',
         }),
       });
       if (!r.ok) {
@@ -1003,8 +1211,11 @@ const Ai = {
           let ev;
           try { ev = JSON.parse(frame.slice(5).trim()); }
           catch (err) { continue; }
-          if (ev.type === 'sources') { if (h.onSources) h.onSources(ev); }
+          if (ev.type === 'backend') { if (h.onBackend) h.onBackend(ev); }
+          else if (ev.type === 'sources') { if (h.onSources) h.onSources(ev); }
           else if (ev.type === 'delta') { if (h.onDelta) h.onDelta(ev.text || ''); }
+          else if (ev.type === 'replace') { if (h.onReplace) h.onReplace(ev); }
+          else if (ev.type === 'status') { if (h.onStatus) h.onStatus(ev); }
           else if (ev.type === 'fragments') {
             if (h.onFragments) h.onFragments(ev.fragments || []);
           }
@@ -1087,24 +1298,33 @@ const Ai = {
   /* The questions a topic guide should offer.
    *
    * They are written by the model from the guide's own material, in a call
-   * of its own: the questions are four short lines, and a reader should not
-   * have to wait for an overview to finish before they can see what they
-   * might ask about.  The generic set is shown first, so the row is never
-   * empty while the model thinks -- and it is what is left if the model
-   * cannot be reached at all.
+   * of its own.  The guide deliberately waits for the overview before making
+   * that call: two concurrent generations on a local model only slow each
+   * other down.  The generic set is shown first, so the row is never empty
+   * while the model thinks -- and it is what is left if the model cannot be
+   * reached at all.
    */
+  /* One cache key per answer: the scope changes which books the guide may
+   * read, so the same term under two scopes is two different answers. */
+  guideKey(action, lens, term) {
+    const scope = (Ai.settings && Ai.settings.scope) || '';
+    return action + ':' + (lens || '') + ':' + scope + ':'
+      + (term || '').trim();
+  },
+
   async guideQuestions(term, opts) {
     opts = opts || {};
     await Ai.ensure();
     const action = opts.action === 'fact' ? 'fact' : 'topic';
     const lens = opts.lens || '';
-    const key = (action + ':' + lens + ':' + (term || '').trim());
+    const key = Ai.guideKey(action, lens, term);
     if (Ai.topicQuestionsCache[key]) return Ai.topicQuestionsCache[key];
     let qs = [];
     try {
+      const scope = (Ai.settings && Ai.settings.scope) || '';
       const r = action === 'fact'
-        ? await api('ai/fact-questions', { term: (term || '').trim(), lens: lens })
-        : await api('ai/topic-questions', { topic: (term || '').trim() });
+        ? await api('ai/fact-questions', { term: (term || '').trim(), lens: lens, scope })
+        : await api('ai/topic-questions', { topic: (term || '').trim(), scope });
       qs = (r && r.questions) || [];
     } catch (e) {
       qs = [];
@@ -1153,7 +1373,26 @@ const Ai = {
    * exchange already in it, so the question they were pursuing is still the
    * question they are asking.
    */
-  adoptTopic(hist, cites, topic) {
+  /* Apply a scope carried over from a guide so the follow-up searches the
+   * same books the guide read, even if the pane's picker has since changed. */
+  async setScope(scope) {
+    scope = scope || '';
+    Ai.settings.scope = scope;
+    const e = Ai.els();
+    if (e.scope) {
+      if (scope && !Array.from(e.scope.options).some(o => o.value === scope)) {
+        const option = document.createElement('option');
+        option.value = scope;
+        option.textContent = scope;
+        e.scope.appendChild(option);
+      }
+      e.scope.value = scope;
+    }
+    try { await post('ai/settings', { scope }); } catch (err) { /* cosmetic */ }
+  },
+
+  adoptTopic(hist, cites, topic, scope) {
+    if (scope !== undefined) Ai.setScope(scope);
     Ai.history = (hist || []).map(h => ({
       role: h.role,
       // The overview is asked with an instruction the model was given, not
@@ -1187,6 +1426,14 @@ const Ai = {
       const old = Ai.topicCacheOrder.shift();
       delete Ai.topicCache[old];
     }
+    // The questions come from a separate model call; keep the same bound so a
+    // long session does not retain one list per visited guide.
+    if (Ai.topicQuestionsOrder.indexOf(topic) < 0) {
+      Ai.topicQuestionsOrder.push(topic);
+    }
+    while (Ai.topicQuestionsOrder.length > 20) {
+      delete Ai.topicQuestionsCache[Ai.topicQuestionsOrder.shift()];
+    }
   },
 };
 
@@ -1197,18 +1444,111 @@ const Ai = {
  * same reason: a credential rendered into the page is a credential in any
  * screenshot the reader takes.
  */
+/* Every AI settings switch posts to the same endpoint. Failures must be
+ * surfaced: reloading on an ok:false answer looks like a successful change. */
+async function aiSet(patch, label) {
+  const r = await post('ai/settings', patch);
+  if (!r || r.ok === false) {
+    toast((r && r.error) || 'Could not change ' + (label || 'that setting') + '.', 'err');
+    return false;
+  }
+  return true;
+}
+
 const AiSettings = {
   data: null,
+  _seq: 0,
+
+  /* The setup card shown in place of all AI settings until the reader opts in.
+   * There is no download: enabling AI only means choosing a provider below. */
+  async renderSetup() {
+    const host = $('#ai-setup');
+    if (!host) return;
+    host.innerHTML = '<div class="api ai-setup-card"><div class="body">'
+      + '<h3>AI Assistant is not set up</h3>'
+      + '<p class="muted">G-Bible works entirely without AI. If you would like '
+      + 'an assistant that reads your installed books and cites its sources, '
+      + 'enable it and choose a provider. G-Bible downloads no model: a local '
+      + 'server (Ollama, LM Studio, llama.cpp) or a cloud key supplies the '
+      + 'answers. Nothing is sent until you decide.</p>'
+      + '<div class="ai-setup-choices">'
+      + '<button class="btn primary" id="ai-setup-api">Enable AI Assistant — '
+      + 'choose a provider</button>'
+      + '</div>'
+      + '<div class="ai-setup-progress tiny muted" id="ai-setup-progress">'
+      + '</div>'
+      + '<p class="tiny muted" style="margin-top:12px">A cloud provider receives '
+      + 'your question and the passages relevant to it — never the whole '
+      + 'library. A local server keeps everything on this machine. You can '
+      + 'disable the assistant again at any time.</p>'
+      + '</div></div>';
+    const btn = $('#ai-setup-api');
+    if (btn) btn.onclick = async () => {
+      const progress = $('#ai-setup-progress');
+      if (btn) btn.disabled = true;
+      try {
+        const r = await post('ai/setup/start', {});
+        if (!r.ok) throw new Error(r.error || 'Could not enable AI.');
+        if (progress) progress.textContent = r.message || 'Enabled.';
+        location.reload();
+      } catch (e) {
+        if (btn) btn.disabled = false;
+        if (progress) progress.textContent = 'Could not enable AI: ' + e.message;
+      }
+    };
+  },
+
+  /* The enabled settings page: turn the assistant off again. */
+  renderSetupActions() {
+    const main = $('#ai-provider-main');
+    if (!main) return;
+    const card = el('div', 'api');
+    const body = el('div', 'body');
+    body.appendChild(el('div', 'n', 'Assistant installation'));
+    const offBtn = el('button', 'btn danger', 'Disable AI Assistant');
+    offBtn.onclick = async () => {
+      if (!confirm('Disable the AI Assistant? Its controls will disappear '
+                   + 'from the app. Conversations and provider keys are kept; '
+                   + 'you can enable it again here later.')) return;
+      const r = await post('ai/setup/disable', {});
+      if (!r || r.ok === false) { toast((r && r.error) || 'Could not disable AI.', 'err'); return; }
+      location.reload();
+    };
+    body.appendChild(offBtn);
+    card.appendChild(body);
+    main.insertBefore(card, main.firstChild);
+  },
 
   async load() {
+    const seq = ++this._seq;
+    // A fresh app shows one card and nothing else.  The reader decides here
+    // whether AI exists in their app at all; the rest of the settings page is
+    // not rendered until that decision has been made.
+    const setup = $('#ai-setup');
+    const body = $('#ai-settings-body');
+    const sum = $('#ai-settings-summary');
+    if (aiOff()) {
+      if (body) body.style.display = 'none';
+      if (sum) sum.textContent = '';
+      await this.renderSetup();
+      return;
+    }
+    if (body) body.style.display = '';
+    if (setup) setup.innerHTML = '';
     const r = await api('ai/providers');
+    if (seq !== this._seq) return;
+    if (!r || r.ok === false) {
+      if (sum) sum.textContent = '';
+      const host = $('#ai-provider-main');
+      if (host) host.innerHTML = '<div class="warn">' + esc((r && r.error) || 'Could not load AI settings.') + '</div>';
+      return;
+    }
     this.data = r;
     const s = r.settings || {};
     // How much of the reader's own material there is to cite.  The Grounding
     // card below says so, and a switch that says "include my own material"
     // and then quietly includes nothing is a lie told by omission.
     Ai.ownCount = r.mine || {};
-    const sum = $('#ai-settings-summary');
     if (sum) {
       sum.innerHTML = (r.summary ? r.summary.total : 0)
         + ' providers · ' + (r.summary ? r.summary.local : 0)
@@ -1219,6 +1559,7 @@ const AiSettings = {
     }
     this.renderSide(r.providers || [], s);
     this.renderMain(r.providers || [], s);
+    this.renderSetupActions();
     this.renderUsage();
   },
 
@@ -1231,6 +1572,7 @@ const AiSettings = {
    * visible rather than asserted.
    */
   async renderUsage() {
+    const seq = ++this._seq;
     const main = $('#ai-provider-main');
     if (!main) return;
     const old = $('#ai-usage-card');
@@ -1238,6 +1580,7 @@ const AiSettings = {
     let r;
     try { r = await api('ai/usage', { days: 30 }); }
     catch (e) { return; }
+    if (seq !== this._seq) return;
 
     const card = el('div', 'api');
     card.id = 'ai-usage-card';
@@ -1316,6 +1659,11 @@ const AiSettings = {
     const p = providers.find(x => x.id === s.provider) || providers[0];
     main.innerHTML = '';
     if (!p) { main.innerHTML = '<div class="empty">No providers.</div>'; return; }
+    main.appendChild(el('div', 'api',
+      'Answers come from the provider selected below. A local server keeps '
+      + 'requests on this machine; a cloud provider receives your question '
+      + 'and the passages relevant to it.'));
+
     const card = el('div', 'api');
 
     const body = el('div', 'body');
@@ -1326,9 +1674,6 @@ const AiSettings = {
     meta.innerHTML = '<span class="chip ' + (p.local ? 'pd' : 'no') + '">'
       + (p.local ? 'Private' : 'Sends data to ' + esc(p.name)) + '</span>'
       + (p.free ? ' <span class="chip fr">Free tier</span>' : '')
-      + (p.embeds ? ' <span class="chip pd" title="Can turn text into a '
-          + 'vector, so the sources can be ranked by meaning as well as by '
-          + 'their words">Semantic</span>' : '')
       + ' · '
       + esc(p.base_url || '');
     body.appendChild(meta);
@@ -1458,9 +1803,11 @@ const AiSettings = {
     const sl = el('label', 'tiny muted', ' max sources ');
     const sn = document.createElement('input');
     sn.type = 'number'; sn.min = '1'; sn.max = '30';
-    sn.value = s.max_sources || 8; sn.style.width = '60px';
+    sn.value = s.max_sources || 20; sn.style.width = '60px';
     sn.onchange = async () => {
-      await post('ai/settings', { max_sources: sn.value });
+      const ok = await aiSet({ max_sources: sn.value }, 'max sources');
+      if (!ok) return;
+      if (Ai.settings) Ai.settings.max_sources = Number(sn.value);
       toast('Max sources set to ' + sn.value);
     };
     sl.appendChild(sn);
@@ -1518,32 +1865,62 @@ const AiSettings = {
       + 'use and the words a commentary would use are often not the same. '
       + 'One extra call per question.'));
 
-    // Ranking by meaning as well as by words.  Whether it is on depends on
-    // the provider: some of them can turn text into a vector and some cannot.
-    const semRow = el('div', 'row');
-    const sem = el('label', 'tiny muted');
-    const scb = document.createElement('input');
-    scb.type = 'checkbox';
-    scb.checked = s.semantic !== false;
-    scb.disabled = !(p && p.embeds);
-    scb.onchange = async () => {
-      await post('ai/settings', { semantic: scb.checked });
-      Ai.settings.semantic = scb.checked;
-      toast('Semantic ranking ' + (scb.checked ? 'on' : 'off'));
+    // Retrieval-quality controls.  Each writes one setting and says plainly
+    // what it costs, because the useful ones are not free.
+    const qualityRow = (key, label, note) => {
+      const row = el('div', 'row');
+      const lab = el('label', 'tiny muted');
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.checked = s[key] !== false;
+      box.onchange = async () => {
+        await post('ai/settings', { [key]: box.checked });
+        Ai.settings[key] = box.checked;
+        if (key === 'deep_research') {
+          const bar = $('#ai-deep-research');
+          if (bar) bar.checked = box.checked;
+        }
+        toast(label + ' ' + (box.checked ? 'on' : 'off'));
+      };
+      lab.appendChild(box);
+      lab.appendChild(document.createTextNode(' ' + label));
+      row.appendChild(lab);
+      ob.appendChild(row);
+      if (note) ob.appendChild(el('div', 'no muted', note));
     };
-    sem.appendChild(scb);
-    sem.appendChild(document.createTextNode(' Rank by meaning, not just words'));
-    semRow.appendChild(sem);
-    ob.appendChild(semRow);
+    qualityRow('resolve_refs', 'Resolve people and events to passages',
+      'Finds likely chapters from names in your question, then reads those '
+      + 'chapters in full — so a person in one verse and the reason a few '
+      + 'verses later both reach the model.');
+    qualityRow('multi_hop', 'Search again when the first sources are thin',
+      'One extra library pass with a sharper query, before the answer is '
+      + 'drafted. No extra model call.');
+    qualityRow('deep_research', 'Deep research',
+      'Reads the maximum number of sources, always takes the second retrieval '
+      + 'pass and resolves names to passages. Slower, no extra provider calls.');
+    const revRow = el('div', 'row');
+    const revLab = el('label', 'tiny muted', ' Review answers with ');
+    const revSel = el('select', '');
+    [['auto', 'a different provider when available'],
+     ['same', 'the answering model'], ['api', 'the configured API']]
+      .forEach(([id, text]) => {
+        const o = document.createElement('option');
+        o.value = id; o.textContent = text;
+        if ((s.review_backend || 'auto') === id) o.selected = true;
+        revSel.appendChild(o);
+      });
+    revSel.onchange = async () => {
+      await post('ai/settings', { review_backend: revSel.value });
+      Ai.settings.review_backend = revSel.value;
+      toast('Answer reviewer updated');
+    };
+    revLab.appendChild(revSel);
+    revRow.appendChild(revLab);
+    ob.appendChild(revRow);
     ob.appendChild(el('div', 'no muted',
-      p && p.embeds
-        ? (p.embed_model
-            ? 'The sources are re-ordered by what they say as well as by '
-              + 'their words, using ' + p.embed_model + '.'
-            : 'The sources are re-ordered by what they say as well as by '
-              + 'their words, using whichever model the server has loaded.')
-        : (p ? p.name + ' cannot turn text into a vector, so the sources are '
-                + 'ranked by their words alone.' : '')));
+      'A model that writes an answer is a poor judge of its own mistakes. '
+      + 'When a second provider is configured it audits the draft and the '
+      + 'answer is revised once if the audit fails. A local provider keeps the audit on this machine.'));
     opts.appendChild(ob);
     main.appendChild(opts);
   },

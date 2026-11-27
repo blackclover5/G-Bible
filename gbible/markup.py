@@ -17,11 +17,11 @@ import functools
 import re
 from typing import Iterable, NamedTuple
 
-from . import native
+from . import db, native
 
 
 class Seg(NamedTuple):
-    kind: str          # text|strongs|note|xref|heading|title|add|alt|red|name|img|break|para
+    kind: str          # text|strongs|note|xref|entryref|heading|title|add|alt|red|name|img|break|para
     text: str = ""
     value: str = ""    # Strong's number, morph code, target key, note id
     lemma: str = ""
@@ -782,18 +782,6 @@ def _emit_catchword(f: _Frame, parent: list[Seg], keep_notes: bool) -> None:
     parent.append(Seg("catchword", _text_of(f.buf), f.attrs.get("osisid", "")))
 
 
-def _restyle(kind: str, extra_attrs: dict | None = None):
-    def go(f: _Frame, parent: list[Seg], keep_notes: bool) -> None:
-        for s in f.buf:
-            if s.is_text():
-                d = dict(s.attrs)
-                d.update(extra_attrs or {})
-                parent.append(s._replace(kind=kind, attrs=d))
-            else:
-                parent.append(s)
-    return go
-
-
 def _emit_q(f: _Frame, parent: list[Seg], keep_notes: bool) -> None:
     """<q who="Jesus"> -- mark the children as words of Christ, order intact."""
     for s in f.buf:
@@ -1467,15 +1455,70 @@ class RenderOpts:
         self.font_scale = font_scale
 
 
+def segs_from_outline(text: str) -> list[Seg]:
+    """Render a SWORD outline dictionary (Nave, Torrey) as a real list.
+
+    These modules are topical indexes: each entry is a run of ``→ Heading  refs``
+    lines, sometimes with ``• See`` cross-references.  The importer flattened
+    their markup, so without this the reader shows ragged whitespace, arrow
+    glyphs and dense reference chains.  Nothing here changes the stored text;
+    the headings become `title` segments so the existing .docheading styling
+    applies, and the cleaned references stay ordinary text so the reader's
+    scripture-reference linker still makes them clickable.
+    """
+    segs: list[Seg] = []
+    for raw in (text or "").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.startswith("→"):
+            rest = line[1:].strip()
+            m = re.search(r"\b(?:\d\s?)?[A-Z][a-z]{1,9}\.?\s+\d{1,3}", rest)
+            if m and m.start() > 0:
+                heading, refs = rest[:m.start()].strip(), rest[m.start():]
+            else:
+                heading, refs = rest, ""
+            if heading:
+                segs.append(Seg("title", heading, attrs={"t": "outline"}))
+            if refs:
+                refs = re.sub(r"\s{2,}", " ", refs)
+                refs = re.sub(r"\s+,\s*", ", ", refs)
+                refs = re.sub(r"\s*;\s*", "; ", refs)
+                refs = re.sub(r"\s*-\s*", "-", refs).strip()
+                segs.append(Seg("break"))
+                segs.append(Seg("text", refs))
+            segs.append(Seg("break"))
+        elif line.startswith("•"):
+            item = line.lstrip("• ").strip()
+            if re.match(r"^See\s+", item, re.I):
+                see = re.sub(r"^See\s+", "", item, flags=re.I)
+                segs.append(Seg("text", "See also "))
+                # An entry reference, not a scripture reference: the module id
+                # is attached by library._segs_of before rendering.
+                segs.append(Seg("entryref", see, value=see))
+            else:
+                segs.append(Seg("text", item))
+            segs.append(Seg("break"))
+        else:
+            segs.append(Seg("text", re.sub(r"\s{2,}", " ", line)))
+            segs.append(Seg("break"))
+    return segs
+
+
 def segs_html(segs: Iterable[Seg], o: RenderOpts | None = None) -> str:
     o = o or RenderOpts()
     out: list[str] = []
+    # Word ordinal carried on tagged words, so a note can be pinned to one
+    # occurrence of Strong's G2316 rather than to every occurrence in the verse.
+    # The indexer numbers words with the same tokenizer, so these agree.
+    word_no = 0
 
     def with_red(h: str, marked: bool) -> str:
         return f'<span class="wj">{h}</span>' if marked and o.show_red else h
 
     for s in segs:
         wj = s.kind == "red" or bool(s.attrs.get("wj"))
+        nwords = len(db.words(s.text or "")) if s.is_text() else 0
         if s.kind == "text":
             h = esc(s.text)
             out.append(f'<span class="wj">{h}</span>' if (wj and o.show_red) else h)
@@ -1494,12 +1537,15 @@ def segs_html(segs: Iterable[Seg], o: RenderOpts | None = None) -> str:
             # Tagged words get a wrapper so hovering the word itself works,
             # not just the superscript. Always rendered, even with the
             # Strong's toggle off.
+            pos = word_no + 1
             w = esc(s.text)
             if nums:
-                w = '<span class="tword" data-s="' + esc(nums[0]) + '">' + esc(s.text) + '</span>'
+                w = ('<span class="tword" data-s="' + esc(nums[0])
+                     + '" data-p="' + str(pos) + '">' + esc(s.text) + '</span>')
             if o.show_strongs and nums:
                 w += ('<sup class="snums">'
-                      + " ".join(f'<a class="snum" data-s="{n}" href="#">{n}</a>' for n in nums)
+                      + " ".join(f'<a class="snum" data-s="{n}" data-p="{pos}" '
+                                 f'href="#">{n}</a>' for n in nums)
                       + "</sup>")
             if s.lemma and o.show_strongs:
                 w += f'<sup class="morphs" title="morphology">{esc(s.lemma)}</sup>'
@@ -1537,6 +1583,12 @@ def segs_html(segs: Iterable[Seg], o: RenderOpts | None = None) -> str:
         elif s.kind == "xref":
             tgt = esc(s.value or "")
             out.append(f'<a href="#" data-ref="{tgt}">{tgt}</a>')
+        elif s.kind == "entryref":
+            key = esc(s.value or s.text)
+            mid = esc(s.attrs.get("module", ""))
+            out.append(f'<a href="#" class="entryref" data-entry="{key}" '
+                       f'data-module="{mid}">{key}</a>')
+        word_no += nwords
     return "".join(out)
 
 

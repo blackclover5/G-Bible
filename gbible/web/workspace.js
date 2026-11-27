@@ -24,7 +24,10 @@ const Workspace = {
     if (used.has(tile + ':' + moduleId)) tile = 't0_0';
     const r = await post('workspace/pane', {
       action: 'add', layout: lay.id, module: moduleId, tile: tile,
-      cursor: cursor || {}, options: opts || {}, link_set: link });
+      cursor: cursor || {}, options: opts || {},
+      // Workflow options arrive nested; the server expects these top-level.
+      text_size: (opts && opts.text_size) || 100,
+      link_set: (opts && opts.link_set) || link });
     if (!r || !r.ok || !r.pane) {
       toast('Could not open the resource'
         + (r && r.error ? ': ' + r.error : ''), 'err');
@@ -35,6 +38,7 @@ const Workspace = {
       if (!S.layout.panes) S.layout.panes = [];
       S.layout.panes.push(r.pane);
     }
+    try { localStorage.setItem('gbible:last-module', moduleId); } catch (e) {}
     App.renderWorkspace();
     /* A tile draws tp[0] -- the first pane filed under it -- so a pane added to
      * a tile that already has one is saved correctly and then never shown.  The
@@ -219,9 +223,13 @@ const Workspace = {
   async floatPane(paneId) {
     const p = (S.layout.panes || []).find(x => x.id === paneId);
     if (!p) { toast('That pane is no longer open.', 'warn'); return; }
-    const tile = $('.tile[data-tile="' + App.tileKey(p.tile_id) + '"]');
-    const paneEl = tile ? $('.pane', tile) : null;
-    const html = paneEl ? paneEl.outerHTML : '';
+    // Make the requested pane active first: a tile shows only its first pane,
+    // so floating an inactive tab used to copy the wrong pane's body.
+    await App.showPane(p.tile_id, p.id);
+    const tile = document.querySelector('.tile[data-tile="'
+      + App.tileKey(p.tile_id) + '"]');
+    const paneEl = tile ? tile.querySelector('.pane[data-pane="' + p.id + '"]') : null;
+    const html = paneEl ? paneEl.outerHTML.replace(/<div class="pane-tools"[\s\S]*?<\/div>/, '') : '';
     const m = modById(p.module_id);
     const title = (m ? m.name : (p.view === 'guide' ? 'Passage' : (p.view === 'wordstudy' ? 'Word Study' : 'Pane')))
       + (p.cursor && (p.cursor.ref || p.cursor.number) ? ' — ' + (p.cursor.ref || p.cursor.number) : '');
@@ -238,60 +246,89 @@ const Workspace = {
     toast('Opened in a new window.');
   },
 
+  /* Move a pane into another slot of the layout, optionally in front of a
+   * specific tab there.  One central path is used by the toolbar dropdown, the
+   * tab right-click menu and drag-and-drop, so all three collapse an emptied
+   * source tile the same way. */
+  async movePane(paneId, targetTileId, beforePaneId) {
+    const lay = S.layout;
+    if (!lay || !lay.id) return false;
+    const panes = lay.panes || [];
+    const idx = panes.findIndex(x => x.id === paneId);
+    if (idx < 0) return false;
+    const srcTile = App.tileKey(panes[idx].tile_id);
+    const dstTile = App.tileKey(targetTileId);
+    const leaves = App.leafTileIds(App.ensureTiles());
+    if (!leaves.includes(dstTile)) { toast('That pane is not available.', 'warn'); return false; }
+    if (srcTile === dstTile && !beforePaneId) return false;
+    /* Re-file locally first: pruning saves the whole layout (panes included),
+     * so the new tile_id is persisted along with the collapsed tree.  Placing
+     * the moved pane first in its new slot makes it the visible tab there. */
+    const [moved] = panes.splice(idx, 1);
+    moved.tile_id = dstTile;
+    let at = beforePaneId
+      ? panes.findIndex(x => x.id === beforePaneId)
+      : panes.findIndex(x => App.tileKey(x.tile_id) === dstTile);
+    if (at < 0) at = panes.length;
+    panes.splice(at, 0, moved);
+    lay.panes = panes;
+    await App.pruneEmptyTiles({ forceSave: true });
+    return true;
+  },
+
   async closeAll() {
     const lay = S.layout;
     if (!lay || !lay.id) { toast('No workspace is open.', 'warn'); return; }
     const panes = (lay.panes || []).slice();
-    await Promise.all(panes.map(p =>
-      post('workspace/pane', { action: 'close', pane: p.id }).catch(() => {})));
+    const results = await Promise.all(panes.map(p =>
+      post('workspace/pane', { action: 'close', pane: p.id }).catch(() => null)));
+    if (results.some(r => !r || r.ok === false)) {
+      toast('Some panes could not be closed.', 'warn');
+      await App.loadWorkspace();
+      return;
+    }
     if (S.layout) S.layout.panes = [];
-    App.renderWorkspace();
+    /* Collapse every emptied slot down to a single empty pane. */
+    await App.pruneEmptyTiles();
     toast('All panes closed.');
   },
 
   async closePane(paneId) {
-    const lay = S.layout;
-    const target = lay && (lay.panes || []).find(x => x.id === paneId);
-    const tileId = target ? App.tileKey(target.tile_id) : null;
-    await post('workspace/pane', { action: 'close', pane: paneId });
-    // Drop the pane locally instead of a full reload, then re-render.
+    const r = await post('workspace/pane', { action: 'close', pane: paneId });
+    if (!r || r.ok === false) {
+      toast((r && r.error) || 'Could not close that pane.', 'err');
+      return;
+    }
+    // Drop the pane locally instead of a full reload.
     if (S.layout && S.layout.panes) {
       S.layout.panes = S.layout.panes.filter(p => p.id !== paneId);
     }
-    App.renderWorkspace();
-    // Prune an emptied tile without a second full reload.
-    if (tileId && S.layout) {
-      const rest = S.layout.panes || [];
-      const inTile = rest.filter(x => App.tileKey(x.tile_id) === tileId);
-      const elsewhere = rest.filter(x => App.tileKey(x.tile_id) !== tileId);
-      if (!inTile.length && elsewhere.length) {
-        const pruned = App.removeTileLeaf(App.ensureTiles(), tileId);
-        if (pruned) {
-          S.layout.tiles = pruned;
-          await App.saveCurrentTree();
-        }
-      }
-    }
+    /* Collapse the tile this pane was in (and any other empty slots) before
+     * rendering: the old code rendered the still-split tree first, so the
+     * closed pane's empty slot flashed on screen until the next render. */
+    await App.pruneEmptyTiles();
   },
 
   async propagate(p) {
     const links = await api('workspace/link', { pane: p.id, cursor: p.cursor });
-    (links.links || []).forEach(L => {
-      if (L.action === 'none') return;
+    for (const L of (links.links || [])) {
+      if (L.action === 'none') continue;
       const t = S.layout.panes.find(x => x.id === L.pane_id);
-      if (!t) return;
+      if (!t) continue;
       t.cursor = Object.assign({}, t.cursor, L.cursor);
       if (L.shared.indexOf('bibleVerse') >= 0 && L.cursor.ref) {
-        const near = L.cursor.ref;
-        t.cursor.ref = near;
+        t.cursor.ref = L.cursor.ref;
       }
       if (L.shared.indexOf('strongs') >= 0 && L.cursor.strongs) {
         t.cursor.number = L.cursor.strongs;
         t.cursor.strongs = L.cursor.strongs;
       }
+      // Persist the moved cursor: the old code only changed memory, so a
+      // reload put every linked pane back where it had been.
+      post('workspace/pane', { pane: t.id, cursor: t.cursor }).catch(() => {});
       const pane = $('.pane[data-pane="' + t.id + '"]');
-      if (pane) App.fillPane(pane, t);
-    });
+      if (pane) await App.fillPane(pane, t);
+    }
     /* The Info follow-pane tracks the cursor that just moved. */
     try {
       const ref = (p.cursor && p.cursor.ref) || '';
@@ -315,7 +352,8 @@ const Workspace = {
     }
     for (const [ls, members] of bySet) {
       if (!ls) continue;
-      const leader = members.find(p => p.cursor && p.cursor.ref);
+      const leader = members.find(p => p.cursor
+        && (p.cursor.ref || p.cursor.date || p.cursor.key));
       if (!leader) continue;
       await this.propagate(leader);
     }
@@ -352,11 +390,17 @@ const Workspace = {
   async parallel(moduleId, collectionId) {
     return api('workspace/parallel', { module: moduleId, collection: collectionId || '' });
   },
-  async parallelStep(moduleId, dir, collectionId) {
+  async parallelStep(moduleId, dir, collectionId, paneId) {
     const r = await api('workspace/parallel', {
       module: moduleId, direction: dir > 0 ? 'next' : 'prev',
       collection: collectionId || '' });
-    if (r.ok && r.module_id) this.openModule(r.module_id, {});
+    if (r.ok && r.module_id) {
+      // Cycle the resource in the *current* pane: opening a new pane with an
+      // empty cursor dropped the reader at the next Bible's first chapter,
+      // which defeats the point of comparing the same verse across versions.
+      if (paneId) await this.switchModule(paneId, r.module_id);
+      else this.openModule(r.module_id, {});
+    }
     return r;
   },
   async markProgress(moduleId, key, label, pct) {
@@ -482,12 +526,27 @@ const Workspace = {
     const p = (S.layout.panes || []).find(x => x.id === paneId);
     if (!p) { toast('That pane is no longer open.', 'warn'); return; }
     const m = (S.modules || []).find(x => x.id === p.module_id);
+    if (!m) {
+      // Guide, word-study and factbook panes have no module to read: clone
+      // what is already rendered instead of showing an empty dialog.
+      const live = document.querySelector('.pane[data-pane="' + p.id + '"] .pane-body');
+      modal(p.view || 'Pane',
+        '<div style="font-size:1.15em;line-height:1.7;max-height:70vh;overflow:auto">'
+        + (live ? live.innerHTML : '<div class="empty">Nothing to show in fullscreen.</div>')
+        + '</div>', [{ label: 'Close', cls: 'btn' }]);
+      return;
+    }
     const r = await api('read', { id: p.module_id, cursor: p.cursor || {},
       options: p.options || {}, span: 'chapter' }).catch(() => null);
-    const items = (r && r.items) || [];
-    modal((m ? m.name : '') + (p.cursor && p.cursor.ref ? ' — ' + p.cursor.ref : ''),
+    if (!r || r.ok === false) {
+      toast((r && r.error) || 'Could not read that pane.', 'err');
+      return;
+    }
+    const items = r.items || [];
+    modal(m.name + (p.cursor && p.cursor.ref ? ' — ' + p.cursor.ref : ''),
       '<div style="font-size:1.25em;line-height:1.7;max-height:70vh;overflow:auto">'
-      + items.map(i => i.html || '').join('') + '</div>',
+      + (items.length ? items.map(i => i.html || '').join('')
+        : '<div class="empty">No text at this reference.</div>') + '</div>',
       [{ label: 'Close', cls: 'btn' }]);
   },
   async markHere(paneId) {
@@ -628,8 +687,56 @@ function PanelMenu(p, m, body) {
 
 /* ============================================================== Search */
 const Search = {
+  limit: 400,   // grown by "Show more"; the reader can reach every match
+  smartToken: 0,
+  /* One result → several tools.  The tools already exist; this is only the
+   * wire that hands them the reference the reader was looking at. */
+  sendTo(h, x, y) {
+      const items = [{ section: 'THIS RESULT' }];
+      if (h.strongs && h.strongs.length) {
+        items.push({ label: 'Word study: ' + esc(h.strongs[0]),
+          fn: () => Reader.openWordStudyPane(h.strongs[0]) });
+        items.push({ label: 'Concordance: ' + esc(h.strongs[0]),
+          fn: () => Study.openConcordance(h.strongs[0]) });
+      }
+      if (h.label) {
+        items.push({ label: 'Passage Guide: ' + esc(h.label),
+          fn: () => Reader.openGuidePane(h.label, 'passage') });
+        items.push({ label: 'Exegetical Guide: ' + esc(h.label),
+          fn: () => Reader.openGuidePane(h.label, 'exegetical') });
+        items.push('-');
+        items.push({ section: 'USE THIS PASSAGE' });
+        items.push({ label: 'Sermon research: ' + esc(h.label), fn: () => {
+          const gr = $('#g-ref'); if (gr) gr.value = h.label;
+          $('#sm-tab').value = 'sermon-manager';
+          App.show('sermon-manager');
+        } });
+        items.push({ label: 'Places on a map: ' + esc(h.label), fn: async () => {
+          const v = await api('study/verse', { id: h.module_id, key: h.key });
+          const names = ((v && v.places) || []).map(p => p.name).filter(Boolean);
+          if (!names.length) { toast('No gazetteer place is tagged here.', 'warn'); return; }
+          MapsUI.showPlace(names[0]);
+          if (names.length > 1) toast('Also named here: ' + names.slice(1).join(', '));
+        } });
+        items.push({ label: 'Timeline and events',
+          fn: () => Study.showTimelineFor(h.label) });
+      }
+      if (items.length === 1) {
+        items.push({ label: 'No tools for this result', fn: () => {} });
+      }
+    Study.menu(x, y, items);
+  },
+
   /* 'group' = one collapsible section per resource, 'flat' = the old list. */
   group: 'group',
+  goToken: 0,
+
+  /* The results view has two shapes: the ordinary reading list, and the
+   * analysis grid (a sortable table with the result set's tags and facets). */
+  view: 'results',
+  analysisSort: 'score',
+  analysisDir: 'desc',
+  analysisToken: 0,
 
   /* Which search experience is active: all | bible | books | morph | topics
    * | media | documents | maps. Each has its own query, filters, and results. */
@@ -655,7 +762,7 @@ const Search = {
   async toPassageList(hits) {
     if (!hits || !hits.length) { toast('No results to save.', 'warn'); return; }
     const name = prompt('Name this passage list',
-      ((S.search && S.search.query) || 'Passages').slice(0, 40));
+      ((S.search && S.search.q) || 'Passages').slice(0, 40));
     if (!name) return;
     const made = await api('passagelist', { action: 'save', name });
     if (!made.ok) { toast(made.error || 'Could not make that list.', 'err'); return; }
@@ -764,6 +871,7 @@ const Search = {
     const host = $('#search-tpl');
     if (!host) return;
     const r = await api('search/template');
+    if (!r || r.ok === false) { host.innerHTML = ''; host.style.display = 'none'; return; }
     const rows = r.templates || [];
     if (!rows.length) { host.innerHTML = ''; host.style.display = 'none'; return; }
     host.style.display = '';
@@ -788,6 +896,7 @@ const Search = {
     /* Built-in starting points. Tapping one fills the box and runs it;
      * saving keeps an editable copy. */
     const r = await api('search/template', { action: 'gallery' });
+    if (!r || r.ok === false) { toast((r && r.error) || 'Could not load the gallery.', 'err'); return; }
     modal('Search gallery',
       ((r.gallery || []).map(g => '<div class="item"><div style="flex:1">'
         + '<div class="t">' + esc(g.name) + (g.saved ? ' <span class="chip">saved</span>' : '')
@@ -802,8 +911,9 @@ const Search = {
       closeModal(); $('#sq').value = b.dataset.use; App.show('search'); Search.go();
     });
     $$('#modal-body button[data-keep]').forEach(b => b.onclick = async () => {
-      await api('search/template', { action: 'save', name: b.dataset.name,
+      const s = await api('search/template', { action: 'save', name: b.dataset.name,
         query: b.dataset.keep });
+      if (!s || s.ok === false) { toast((s && s.error) || 'Could not save.', 'err'); return; }
       closeModal(); Search.loadTemplates(); toast('Saved.');
     });
   },
@@ -841,6 +951,15 @@ const Search = {
       + '<label style="margin-left:10px">Language</label>'
       + '<select id="bq-lang"><option value="">any</option>'
       + langs.map(l => '<option>' + l + '</option>').join('') + '</select></div>' +
+      '<div class="bq-row"><label>Clause role</label>'
+      + '<select id="bq-role"><option value="">any role</option>'
+      + ['subject', 'object', 'indirect_object', 'oblique', 'verb']
+        .map(r => '<option>' + r + '</option>').join('') + '</select>'
+      + words('roleword', 'Jesus') + '</div>' +
+      '<div class="bq-row"><label>Morphology</label>'
+      + words('morph', 'tense=aorist') + '</div>' +
+      '<div class="bq-row"><label>Fuzzy word</label>' + words('fuzzy', 'prayr')
+      + '<span class="muted tiny">finds the closest spelling in your library</span></div>' +
       '</div>' +
       '<div class="bq-out"><div class="tiny muted">This will search for</div>' +
       '<code id="bq-query"></code></div>' +
@@ -855,6 +974,8 @@ const Search = {
       within_words: val('within'),
       strongs: val('strongs'), heading: val('heading'), bible: val('bible'),
       type: val('type'), lang: val('lang'),
+      role: val('role'), role_term: val('roleword'),
+      morph: val('morph'), fuzzy: val('fuzzy'),
     });
     /* Debounced, and out-of-order replies are dropped.  Each keystroke fires a
      * request; typing quickly meant an older reply could land last and leave the
@@ -865,6 +986,10 @@ const Search = {
       const mine = ++seq;
       const r = await api('search/browser', { spec: JSON.stringify(spec()) });
       if (mine !== seq) return;                       // a newer request won
+      if (!r || r.ok === false) {
+        $('#bq-err').textContent = (r && r.error) || 'Could not build that query.';
+        return;
+      }
       $('#bq-query').textContent = r.query || '(nothing yet)';
       $('#bq-err').textContent = '';
     };
@@ -872,7 +997,6 @@ const Search = {
     $$('#modal-body input, #modal-body select').forEach(
       e => { e.oninput = queue; e.onchange = queue; });
     await refresh();
-    const go = $('#modal-body .bq-run');
     const foot = document.createElement('div');
     foot.innerHTML = '<button class="btn primary bq-run">Run this search</button>'
       + '<button class="btn" id="bq-save">Save it</button>';
@@ -889,7 +1013,8 @@ const Search = {
       if (!q || q === '(nothing yet)') { toast('Fill something in first.', 'warn'); return; }
       const name = prompt('Name this search', q.slice(0, 40));
       if (!name) return;
-      await api('search/template', { action: 'save', name: name, query: q });
+      const s = await api('search/template', { action: 'save', name: name, query: q });
+      if (!s || s.ok === false) { toast((s && s.error) || 'Could not save.', 'err'); return; }
       toast('Saved');
       closeModal();
       Search.loadTemplates();
@@ -942,10 +1067,17 @@ const Search = {
    * is used only for the part it is good at (knowing that "the way, the truth and
    * the life" is about John 14) and the engine does the finding. */
   async smart() {
+    if (aiOff()) {
+      toast('AI Assistant is not set up. Enable it in Settings → AI Assistant.',
+            'warn');
+      App.show('aisettings');
+      return;
+    }
     const box = $('#sq');
     const host = $('#search-hint');
     const q = (box.value || '').trim();
     if (!q) { toast('Type a question first.', 'warn'); return; }
+    const seq = ++this.smartToken;
     if (typeof Ai === 'undefined' || !Ai.provider()) {
       toast('Set up a provider first (Settings → AI).', 'err');
       App.show('aisettings');
@@ -955,6 +1087,7 @@ const Search = {
     host.innerHTML = '<span class="tiny muted">Asking the model for a '
       + 'query…</span>';
     const r = await api('ai/smart-search', { q });
+    if (seq !== this.smartToken || (box.value || '').trim() !== q) return;
     if (!r.ok) {
       host.innerHTML = '<span class="tiny" style="color:var(--error)">'
         + esc(r.error || 'The model produced no query.')
@@ -968,12 +1101,263 @@ const Search = {
     this.go();
   },
 
+  /* The analysis grid.  The backend re-runs the query and returns rows with
+   * their tags plus facets, so sorting and the facet line describe the whole
+   * bounded result set rather than the page the reader was shown. */
+  downloadText(name, text, mime) {
+    const blob = new Blob([text], { type: (mime || 'text/plain') + ';charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  },
+
+  analysisExport(raw, q, fmt) {
+    const rows = raw.rows || [];
+    const columns = (raw.columns || []).map(c => c.key);
+    const cell = (r, key) => {
+      const v = key === 'resolution' ? r.resolution
+        : key === 'reference' ? r.label
+          : key === 'module_name' ? r.module_name
+            : key === 'matched' ? (r.matched || []).join(', ')
+              : key === 'lemmas' ? (r.lemmas || []).join(', ')
+                : key === 'morphs' ? (r.morphs || []).join(', ')
+                  : key === 'strongs' ? (r.strongs || []).join(' ')
+                    : r[key];
+      return v == null ? '' : String(v);
+    };
+    if (fmt === 'csv') {
+      const escCsv = (v) => '"' + String(v).replace(/"/g, '""') + '"';
+      const lines = [columns.map(escCsv).join(',')];
+      rows.forEach(r => lines.push(columns.map(k => escCsv(cell(r, k))).join(',')));
+      return lines.join('\n');
+    }
+    const lines = ['# Analysis: ' + (q || ''), '',
+      'Query: `' + (q || '') + '`  ',
+      'Results analyzed: ' + rows.length + '  ',
+      'Query time: ' + (raw.ms || 0) + ' ms', '', '## Facets', ''];
+    Object.keys(raw.facets || {}).forEach(k => {
+      const items = raw.facets[k] || [];
+      if (!items.length) return;
+      lines.push('- **' + k + '**: ' + items.map(x => x.label + ' (' + x.count + ')').join(', '));
+    });
+    lines.push('', '## Hits', '',
+      '| ' + columns.join(' | ') + ' |',
+      '| ' + columns.map(() => '---').join(' | ') + ' |');
+    rows.forEach(r => lines.push('| ' + columns.map(k =>
+      cell(r, k).replace(/\|/g, '\\|').replace(/\n/g, ' ')).join(' | ') + ' |'));
+    return lines.join('\n');
+  },
+
+  async renderAnalysis(host, q) {
+    const token = ++this.analysisToken;
+    // Analyse exactly what the results pane answered, including the resolved
+    // passage scope and translation filter. The old code re-sent the raw box
+    // text and all modules, so Analysis described a different result set.
+    const last = this.lastQuery || {};
+    const loading = el('div', 'tiny muted', 'Building analysis…');
+    host.appendChild(loading);
+    let raw;
+    try {
+      raw = await api('search/analysis', {
+        q: last.q || q, scope: S.search.opts.scope,
+        modules: last.mods || S.search.mods || [],
+        match_case: S.search.opts.match_case,
+        match_all_forms: S.search.opts.match_all_forms,
+        include_resolved: S.search.opts.include_resolved ? 1 : 0,
+        max_hits: 1000, sort: this.analysisSort, dir: this.analysisDir });
+    } catch (e) {
+      if (token === this.analysisToken) {
+        loading.textContent = 'Analysis failed: ' + ((e && e.message) || e);
+      }
+      return;
+    }
+    /* A second search may have started while this one was in flight.  Its
+     * token wins; writing this answer into the shared host would put an old
+     * result set under a new query. */
+    if (token !== this.analysisToken) return;
+    loading.remove();
+    if (!raw.ok) {
+      host.appendChild(el('div', 'warn', esc(raw.error || 'Analysis failed.')));
+      return;
+    }
+    host.appendChild(el('div', 'tiny muted',
+      'Analyzed ' + raw.analyzed + ' of ' + raw.total + ' results'
+      + (raw.ms == null ? '' : ' · ' + raw.ms + ' ms')));
+    const exportBar = el('div', 'sgroups-bar');
+    [['csv', 'Export CSV'], ['md', 'Export Markdown']].forEach(([fmt, label]) => {
+      const b = el('button', 'btn tiny', label);
+      b.title = 'Save this analysis, with its facets, as a ' + fmt + ' file';
+      b.onclick = () => this.downloadText(
+        'gbible-analysis-' + Date.now() + '.' + (fmt === 'csv' ? 'csv' : 'md'),
+        this.analysisExport(raw, q, fmt), fmt === 'csv' ? 'text/csv' : 'text/markdown');
+      exportBar.appendChild(b);
+    });
+    host.appendChild(exportBar);
+    (raw.warnings || []).forEach(w =>
+      host.appendChild(el('div', 'tiny muted', esc(w))));
+    const names = { book: 'Book', module: 'Resource', type: 'Kind',
+                    lemma: 'Lemma', morph: 'Morphology', strongs: 'Strong’s' };
+    const drill = (kind, label) => {
+      if (kind === 'lemma') return 'lemma:' + label;
+      if (kind === 'morph') return 'morph:' + label;
+      if (kind === 'strongs') return 'strongs:' + label;
+      if (kind === 'book' && label && label !== '—') {
+        return 'bible:"' + label + '"';
+      }
+      return '';
+    };
+    Object.keys(names).forEach(k => {
+      const items = (raw.facets && raw.facets[k]) || [];
+      if (!items.length) return;
+      const line = el('div', 'tiny muted');
+      line.appendChild(document.createTextNode(names[k] + ': '));
+      items.slice(0, 12).forEach((x, i) => {
+        const term = drill(k, x.label);
+        const chip = term ? el('button', 'btn tiny') : el('span');
+        chip.textContent = x.label + ' ' + x.count;
+        if (term) {
+          chip.title = 'Add ' + term + ' to the search';
+          chip.onclick = () => {
+            if (Search.type !== 'all' && Search.type !== 'bible') {
+              const all = document.querySelector('.stype-btn[data-type="all"]');
+              if (all) all.click();
+            }
+            const box = $('#sq');
+            const base = (box.value || '').trim();
+            box.value = base ? base + ' ' + term : term;
+            App.show('search');
+            Search.go();
+          };
+        }
+        line.appendChild(chip);
+        if (i < items.length - 1) {
+          line.appendChild(document.createTextNode(' · '));
+        }
+      });
+      host.appendChild(line);
+    });
+    const cols = (raw.columns || []).concat([{ key: 'tools', label: 'Tools' }]);
+    const table = el('table', 'analysis-table');
+    table.style.cssText = 'width:100%;border-collapse:collapse;'
+      + 'font-size:12px;margin-top:8px';
+    const head = el('tr');
+    head.style.cssText = 'border-bottom:1px solid var(--line)';
+    cols.forEach(c => {
+      const th = el('th');
+      th.style.cssText = 'text-align:left;padding:4px 6px;cursor:pointer;'
+        + 'white-space:nowrap';
+      th.textContent = c.label + (this.analysisSort === c.key
+        ? (this.analysisDir === 'desc' ? ' ↓' : ' ↑') : '');
+      th.onclick = () => {
+        if (this.analysisSort === c.key) {
+          this.analysisDir = this.analysisDir === 'desc' ? 'asc' : 'desc';
+        } else {
+          this.analysisSort = c.key;
+          this.analysisDir = 'desc';
+        }
+        this.go();
+      };
+      head.appendChild(th);
+    });
+    const thead = el('thead');
+    thead.appendChild(head);
+    table.appendChild(thead);
+    const body = el('tbody');
+    (raw.rows || []).forEach(r => {
+      const tr = el('tr');
+      tr.style.cssText = 'border-bottom:1px solid var(--line);cursor:pointer';
+      const values = {
+        reference: r.label, module_name: r.module_name, book: r.book,
+        score: r.score, lemmas: (r.lemmas || []).join(', '),
+        morphs: (r.morphs || []).join(', '),
+        strongs: (r.strongs || []).join(' '),
+        matched: (r.matched || []).join(', '),
+        resolution: r.resolution || ''
+      };
+      cols.forEach(c => {
+        const td = el('td');
+        td.style.cssText = 'padding:3px 6px;vertical-align:top';
+        if (c.key === 'tools') {
+          const add = (label, fn, title) => {
+            const b = el('button', 'btn tiny', label);
+            b.title = title || label;
+            b.onclick = (e) => { e.stopPropagation(); fn(e); };
+            td.appendChild(b);
+          };
+          add('send to…', (e) => {
+            const box = e.currentTarget.getBoundingClientRect();
+            Search.sendTo(r, box.left, box.bottom);
+          }, 'Open this result in a study tool');
+          if (r.module_type === 'Syntax' || r.resolution) {
+            add('Syntax tree',
+              () => SyntaxTree.tree(r.module_id, r.key, r.label),
+              'Show the stored dependency tree');
+          }
+        } else {
+          const v = values[c.key];
+          td.textContent = v == null ? '' : String(v);
+        }
+        tr.appendChild(td);
+      });
+      tr.onclick = () => {
+        const m = modById(r.module_id);
+        if (!m) return;
+        const p = S.layout.panes.find(x => x.module_id === r.module_id);
+        if (p && m.reader === 'verse') {
+          p.cursor = { ref: r.label, span: 'chapter' };
+          Reader.reload(p, m);
+        } else Workspace.openModule(r.module_id,
+          m.reader === 'verse' ? { ref: r.label, span: 'chapter' } : { key: r.key });
+        App.show('workspace');
+      };
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    host.appendChild(table);
+  },
+
+  setType(type) {
+    const b = document.querySelector('.stype-btn[data-type="' + type + '"]');
+    if (b && b.onclick) b.onclick({ currentTarget: b });
+  },
+
   async go() {
+    // Templates, the Browse gallery and workflows inject a query into #sq.
+    // In Morph that box is not read, so the injected query silently did
+    // nothing. If the morph word box is empty, switch to All first.
+    if (this.type === 'morph'
+        && !(($('#s-morph-word') || {}).value || '').trim()
+        && (($('#sq') || {}).value || '').trim()) {
+      this.setType('all');
+      return;                 // setType's click already called go()
+    }
+    // The dispatch below awaits a network call.  A newer query may finish
+    // first; without a token the older reply would repaint the pane and then
+    // trigger an analysis of a query nobody is looking at.
+    const token = ++this.goToken;
+    ++this.analysisToken;   // never let an older analysis repaint this search
     /* Save the active type's query before we possibly overwrite the input. */
     this.saveTypeQuery(this.type);
 
     let q = '';
+    // A new query starts from the first page; "Show more" is the only thing
+    // that grows the limit.
+    const queryKey = this.type + '|' + ($('#sq').value || '');
+    if (queryKey !== this._lastQueryKey) { this.limit = 400; this._lastQueryKey = queryKey; }
     let r;
+    // Filters live in the per-type strip above the query box.  They used to be
+    // saved and restored but never sent to the server, so changing them did
+    // nothing; these two carry the Bible translation and passage into search.
+    let scopedModules = null;
+    let scopedPassage = '';
+    /* Only the main text endpoint can be re-run as an analysis.  The morph,
+     * topic, media and map paths build their own hit shapes. */
+    let usedMain = false;
     const host = $('#search-results');
     const t = this.type;
 
@@ -998,6 +1382,9 @@ const Search = {
         return;
       }
       S.search.q = q;
+      const tr = ($('#s-bible-translation') || {}).value || '';
+      if (tr) scopedModules = [tr];
+      scopedPassage = (($('#s-bible-passage') || {}).value || '').trim();
     } else if (t === 'books') {
       q = ($('#sq').value || '').trim();
       if (!q) {
@@ -1068,7 +1455,7 @@ const Search = {
       const collection = ($('#s-books-collection') || {}).value || '';
       const btype = ($('#s-books-type') || {}).value || '';
       const module_ids = collection ? [collection] : [];
-      const raw = await api('books-search', { q, module_ids, limit: 400 });
+      const raw = await api('books-search', { q, module_ids, type: btype, limit: 400 });
       if (!raw.ok) {
         host.innerHTML = '';
         host.appendChild(el('div', 'warn', esc(raw.error || 'search failed')));
@@ -1076,15 +1463,15 @@ const Search = {
       }
       const hits = (raw.results || []).map(x => ({
         module_id: x.module_id || '',
-        key: x.key || '',
+        key: x.key || x.ref || '',
         label: x.ref || x.title || x.key || '',
         module_name: x.module || '',
         snippet_html: '<span class="tiny muted">' + esc((x.text || '').slice(0, 160)) + '</span>',
         matched: [],
         rank: 1
       }));
-      r = { ok: true, hits, total: hits.length, ms: null, warnings: [],
-            smart: [], operators: [], groups: {}, group_meta: {} };
+      r = { ok: true, hits, total: raw.count || hits.length, more: !!raw.more,
+            ms: null, warnings: [], smart: [], operators: [], groups: {}, group_meta: {} };
     } else if (t === 'topics') {
       const source = ($('#s-topics-source') || {}).value || '';
       /* Topics is the FactBook: search the books' headings for the entry a
@@ -1110,8 +1497,8 @@ const Search = {
         matched: [],
         rank: 1
       }));
-      r = { ok: true, hits, total: hits.length, ms: null, warnings: [],
-            smart: [], operators: [], groups: {}, group_meta: {} };
+      r = { ok: true, hits, total: raw.count || hits.length, more: !!raw.more,
+            ms: null, warnings: [], smart: [], operators: [], groups: {}, group_meta: {} };
     } else if (t === 'media') {
       const source = ($('#s-media-source') || {}).value || '';
       const license = ($('#s-media-license') || {}).value || '';
@@ -1149,11 +1536,12 @@ const Search = {
         label: x.title || x.key || '',
         module_name: 'Documents',
         snippet_html: '<span class="tiny muted">' + esc(x.kind || '') + '</span>'
-          + ' <span class="tiny">' + esc((x.preview || x.text || '').slice(0, 160)) + '</span>',
+          + ' <span class="tiny">' + esc((x.body || x.preview || x.text || '').slice(0, 160)) + '</span>',
         matched: [],
         rank: 1
       }));
-      r = { ok: true, hits, total: hits.length, ms: null, warnings: [],
+      r = { ok: true, hits, total: raw.total || hits.length,
+            more: !!raw.more, ms: null, warnings: [],
             smart: [], operators: [], groups: {}, group_meta: {} };
     } else if (t === 'maps') {
       const raw = await api('maps/places', { q, limit: 400 });
@@ -1162,7 +1550,9 @@ const Search = {
         host.appendChild(el('div', 'warn', esc(raw.error || 'search failed')));
         return;
       }
-      const hits = (raw.places || []).map(x => ({
+      const mapTypeFilter = ($('#s-map-type') || {}).value || '';
+      const places = (raw.places || []).filter(p => !mapTypeFilter || p.type === mapTypeFilter);
+      const hits = places.map(x => ({
         module_id: 'maps',
         key: x.key || '',
         label: x.label || x.name || '',
@@ -1174,12 +1564,24 @@ const Search = {
       r = { ok: true, hits, total: hits.length, ms: null, warnings: [],
             smart: [], operators: [], groups: {}, group_meta: {} };
     } else {
-      /* 'all' — combined text search via the main search endpoint. */
-      const range = ($('#s-range').value || '');
+      /* 'all' / 'bible' — combined text search via the main endpoint.  A
+       * passage filter is resolved to a canonical ref and added as a search
+       * scope, which the query engine already understands. */
+      let finalQ = q;
+      if (scopedPassage) {
+        const rr = await api('reference', { ref: scopedPassage });
+        if (token !== this.goToken) return;
+        // Use the OSIS key, not the display label: "John 3:16" would tokenise
+        // as "ref:John" plus "3:16" and match nothing.
+        if (rr && rr.ok && rr.key) finalQ = q + ' ref:' + rr.key;
+        else toast('Passage not recognised: ' + scopedPassage, 'warn');
+      }
+      const mods = scopedModules || S.search.mods || [];
+      const range = scopedPassage ? '' : ($('#s-range').value || '');
       if (range) {
-        const raw = await api('search/ranges', { action: 'search', q,
+        const raw = await api('search/ranges', { action: 'search', q: finalQ,
           range, opts: { scope: S.search.opts.scope,
-                         modules: S.search.mods || [],
+                         modules: mods,
                          match_case: S.search.opts.match_case,
                          match_all_forms: S.search.opts.match_all_forms,
                          sort: S.search.opts.sort, limit: 400 } });
@@ -1207,15 +1609,24 @@ const Search = {
             + 'searched, so this may be short of the whole range.'
           : '';
       } else {
+        usedMain = true;
+        this.lastQuery = { q: finalQ, mods };
         r = await api('search', {
-          q: q, scope: S.search.opts.scope, match_case: S.search.opts.match_case,
-          modules: S.search.mods || [],
+          q: finalQ, scope: S.search.opts.scope, match_case: S.search.opts.match_case,
+          modules: mods,
           match_all_forms: S.search.opts.match_all_forms,
-          context: S.search.opts.context, sort: S.search.opts.sort, limit: 400 });
+          include_resolved: S.search.opts.include_resolved ? 1 : 0,
+          context: S.search.opts.context, sort: S.search.opts.sort,
+          limit: this.limit });
       }
     }
+    if (token !== this.goToken) return;
     host.innerHTML = '';
-    if (!r.ok) { host.appendChild(el('div', 'warn', esc(r.error))); return; }
+    if (!r.ok) {
+      this.view = 'results';   // an error must not leave a later search in Analysis
+      host.appendChild(el('div', 'warn', esc(r.error)));
+      return;
+    }
     if (r.rangeNote) host.appendChild(el('div', 'warn', esc(r.rangeNote)));
     (r.warnings || []).forEach(w => host.appendChild(el('div', 'warn', esc(w))));
     (r.smart || []).forEach(s => {
@@ -1229,8 +1640,31 @@ const Search = {
       };
       host.appendChild(d);
     });
+    /* Analysis is a second reading of the same result set, not a second
+     * search the reader has to remember.  It only applies to the main text
+     * endpoint; the specialized modes build their own hit shapes. */
+    // A search type or query with no results has no Analysis tab to switch
+    // back from, so never leave the view stuck in that mode.
+    if (!usedMain || !r.hits || !r.hits.length) this.view = 'results';
+    if (usedMain && r.hits && r.hits.length) {
+      const tabs = el('div', 'sgroups-bar');
+      const list = el('button', 'btn tiny'
+        + (this.view === 'analysis' ? '' : ' primary'), 'Results');
+      list.onclick = () => { this.view = 'results'; this.go(); };
+      const grid = el('button', 'btn tiny'
+        + (this.view === 'analysis' ? ' primary' : ''), 'Analysis');
+      grid.onclick = () => { this.view = 'analysis'; this.go(); };
+      tabs.appendChild(list);
+      tabs.appendChild(grid);
+      host.appendChild(tabs);
+      if (this.view === 'analysis') {
+        this.renderAnalysis(host, q);
+        return;
+      }
+    }
+
     if ((S.search.mods || []).length) {
-      const names = S.search.mods.map(id => (modById(id) || {}).name || id);
+      const names = S.search.mods.map(id => modLabel(id));
       host.appendChild(el('div', 'tiny muted',
         'Searching ' + names.length + ' resource'
         + (names.length === 1 ? '' : 's') + ': ' + names.join(', ')
@@ -1280,10 +1714,18 @@ const Search = {
       || ((gmeta[a] && gmeta[a].name) || '').localeCompare((gmeta[b] && gmeta[b].name) || ''));
     const grouping = order.length > 1 && Search.group !== 'flat';
 
-    if (r.truncated) {
-      host.appendChild(el('div', 'tiny muted',
-        `Showing the first ${r.returned} of ${r.total} matches, grouped by resource. `
-        + 'A resource may show fewer rows than its count.'));
+    if (r.truncated || r.more || (r.total && r.hits.length < r.total)) {
+      const note = el('div', 'tiny muted',
+        `Showing ${r.hits.length} of ${r.total} matches, grouped by resource. `
+        + 'A resource may show fewer rows than its count.');
+      host.appendChild(note);
+      const moreBtn = el('button', 'btn tiny', 'Show ' + this.limit + ' more');
+      moreBtn.style.marginTop = '4px';
+      moreBtn.onclick = () => {
+        this.limit += 400;
+        this.go();
+      };
+      host.appendChild(moreBtn);
     }
 
     if (!r.hits.length) {
@@ -1306,6 +1748,7 @@ const Search = {
           ? '<span class="tiny muted" style="color:var(--accent-2)">'
           + esc(h.matched.filter(m => /^[A-Z0-9/:]+$/.test(m) && m.length > 2)
                   .slice(0, 4).join(' · ')) + '</span>' : '')
+        + '<button class="btn tiny hit-send" title="Send this result to a study tool">send to…</button>'
         + '<span class="rank">' + h.rank + '</span></div>'
         + '<div class="sn">' + h.snippet_html + '</div>'
         + (h.context && h.context.length
@@ -1313,6 +1756,11 @@ const Search = {
           + h.context.map(c => '<span style="margin-right:10px' + (c.current
             ? ';color:var(--accent)' : '') + '">' + esc(c.label) + '</span>').join('')
           + '</div>' : '');
+      const send = n.querySelector('.hit-send');
+      if (send) send.onclick = (ev) => {
+        ev.preventDefault(); ev.stopPropagation();
+        Search.sendTo(h, ev.clientX, ev.clientY);
+      };
       n.onclick = () => {
         const m = modById(h.module_id);
         if (m) {
@@ -1360,7 +1808,7 @@ const Search = {
       'Translate these hits  (sends text off this computer)');
     tr.onclick = () => Translate.open(r.hits);
     acts.appendChild(tr);
-    /* Add Versions -- Logos shows the same search side by side across
+    /* Add Versions -- show the same search side by side across
      * translations.  Offer the other tagged resources and render each
      * selection as its own column of verse hits. */
     if (this.type === 'morph') {
@@ -1451,7 +1899,7 @@ const Search = {
         const head = el('div', 'sgroup-h');
         const shown = hits.length;
         head.innerHTML = '<span class="caret">\u25be</span>'
-          + '<span class="t">' + esc(meta.name || (modById(mid) || {}).name || mid) + '</span>'
+          + '<span class="t">' + esc(meta.name || modLabel(mid)) + '</span>'
           + (meta.type ? '<span class="chip">' + esc(meta.type) + '</span>' : '')
           + '<span class="n">' + (shown < total
             ? `${shown} of ${total.toLocaleString()}`
@@ -1466,7 +1914,7 @@ const Search = {
         wrap.appendChild(body);
         head.onclick = () => {
           const open = wrap.classList.toggle('open');
-          if (open && meta.reader === 'verse') {
+          if (open && meta.reader === 'verse' && !head.querySelector('button.scope')) {
             head.insertAdjacentHTML('beforeend',
               '<button class="btn tiny scope">open only this</button>');
           }
@@ -1505,13 +1953,23 @@ const Search = {
   },
 
   async help() {
-    const r = await api('search/help');
+    const q = ($('#sq') || {}).value || '';
+    const r = await api('search/help', { q });
     const h = $('#search-help');
+    if (!h) return;
     h.innerHTML = '<h4>Query language</h4>';
+    if (!r || r.ok === false) {
+      h.appendChild(el('div', 'note', esc((r && r.error) || 'Could not load the query help.')));
+      return;
+    }
+    (r.warnings || []).forEach(w => h.appendChild(el('div', 'note', esc(w))));
     (r.operators || []).forEach(o => {
       h.appendChild(el('div', 'note', esc(o.note)));
       const c = el('code', '', esc(o.syntax));
-      c.onclick = () => { $('#sq').value = o.syntax; $('#sq').focus(); };
+      c.onclick = () => {
+        if (this.type !== 'all') this.setType('all');
+        $('#sq').value = o.syntax; $('#sq').focus();
+      };
       h.appendChild(c);
     });
   },
@@ -1524,7 +1982,7 @@ const Search = {
    pane, and can forget a repository entirely. */
 
 /* ============================================== Morphology @ helper ===
-   Reusable Logos-style @ popup. When the user types a word followed by @,
+   Reusable @ morphology popup. When the user types a word followed by @,
    look up the word's grammatical forms and show a dropdown. Clicking a form
    replaces the trailing @ with the selected morphology code.
 

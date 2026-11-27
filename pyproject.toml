@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "g-bible"
-version = "1.0.1"
+version = "1.0.2"
 description = "G-Bible desktop Bible study application"
 requires-python = ">=3.10"
 license = { text = "MIT" }
