@@ -16,8 +16,8 @@ app is MIT-licensed; your library and your study data stay on your disk.
 
 ### The quick way (Linux)
 
-Download the AppImage from the [releases page](https://github.com/blackclover5/G-Bible/releases),
-make it executable, and open it. Everything after that happens in the app.
+Download the Flatpack from the [releases page](https://github.com/blackclover5/G-Bible/releases),
+and open it. Everything after that happens in the app.
 
 ### From source (Windows, macOS, Linux)
 
