@@ -2417,7 +2417,7 @@ const Dashboard = {
     'd-tags': 'Tags',
     'd-hl': 'Highlights',
     'd-plan': 'Reading plan',
-    'd-sponsor': 'Sponsor · eStudySource',
+    'd-sponsor': 'More modules · eStudySource',
     'd-community': 'Free modules · BibleSupport',
   },
 

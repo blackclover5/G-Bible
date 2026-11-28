@@ -4,8 +4,10 @@ const Speech = {
   voice: '',
   _watch: null,
   _mode: null,         // null until asked: 'server' or 'browser'
-  _audio: null,        // the <audio> the server voice plays through
+  _audio: null,        // fallback <audio> when Web Audio is not available
   _blob: null,         // its object URL, revoked once the verse is done
+  _ctx: null,          // Web Audio context, unlocked by the click that started reading
+  _sources: new Set(), // live buffer sources, stopped by stop()
   _playing: null,      // resolves the current _play() when stop() cuts in
   _abort: null,
   _seq: 0,             // bumped by stop(), so late replies are thrown away
@@ -260,6 +262,10 @@ const Speech = {
     // about to have its source cleared.
     this._seq++;
     if (this._abort) { try { this._abort.abort(); } catch (e) {} this._abort = null; }
+    // Cut off anything already sounding.  The finish handler ignores the
+    // onended these stops produce, so _playing still resolves exactly once.
+    this._sources.forEach(s => { try { s.onended = null; s.stop(); } catch (e) {} });
+    this._sources.clear();
     if (this._playing) { const done = this._playing; this._playing = null; done(); }
     if (this._audio) { this._audio.pause(); this._audio.removeAttribute('src'); this._audio = null; }
     if (this._blob) { URL.revokeObjectURL(this._blob); this._blob = null; }
@@ -298,6 +304,10 @@ const Speech = {
     // so this._pane cannot be searched as though it were an element.
     this._paneEl = (pane && pane.id) ? $('.pane[data-pane="' + pane.id + '"]') : null;
     this._lines = units;
+    // Unlock Web Audio inside the click, before any await.  WebKitGTK refuses
+    // a media element's play() once the click has been spent on an async fetch;
+    // a context resumed here keeps the permission.
+    if (this._engine !== 'browser') this._unlockAudio();
     if (await this._ask() === 'server') return this._playServer(parts.slice(startIdx), btn, startIdx);
     return this._playBrowser(parts.slice(startIdx), btn, startIdx);
   },
@@ -377,10 +387,65 @@ const Speech = {
     return await r.blob();
   },
 
-  /* Play one WAV, resolving when it ends.  stop() resolves it early, so a
-   * cleared source does not leave the loop waiting for an `ended` that will
-   * never be sent. */
-  _play(blob) {
+  /* WebKitGTK refuses an <audio>.play() once the user gesture has been spent
+   * waiting for the WAV fetch.  The click still armed the button, so it looked
+   * as if the voice had simply gone silent.  Web Audio is not gated that way:
+   * a context resumed inside the click can decode and play the WAV afterwards. */
+  _unlockAudio() {
+    if (this._ctx) {
+      if (this._ctx.state === 'suspended') this._ctx.resume().catch(() => {});
+      return this._ctx;
+    }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    try {
+      this._ctx = new AC();
+      if (this._ctx.state === 'suspended') this._ctx.resume().catch(() => {});
+    } catch (e) { this._ctx = null; }
+    return this._ctx;
+  },
+
+  /* Play one WAV, resolving when it ends.  stop() resolves it early by calling
+   * the finish handler and stopping the source, so no verse waits for an
+   * `ended` that will never arrive. */
+  async _play(blob) {
+    const seq = this._seq;
+    const ctx = this._ctx;
+    if (ctx) {
+      try {
+        if (ctx.state === 'suspended') await ctx.resume();
+        const data = await blob.arrayBuffer();
+        if (seq !== this._seq || !this.on) return;   // stopped while fetching
+        const buffer = await ctx.decodeAudioData(data);
+        if (seq !== this._seq || !this.on) return;   // stopped while decoding
+        return await new Promise((resolve, reject) => {
+          const src = ctx.createBufferSource();
+          src.buffer = buffer;
+          src.connect(ctx.destination);
+          let ended = false;
+          const finish = (err) => {
+            if (ended) return;
+            ended = true;
+            this._sources.delete(src);
+            if (this._playing === finish) this._playing = null;
+            if (err) reject(err); else resolve();
+          };
+          // stop() calls this with no argument: a verse cut short ends here.
+          this._playing = finish;
+          src.onended = () => finish();
+          this._sources.add(src);
+          try { src.start(); } catch (e) { finish(e); }
+        });
+      } catch (e) {
+        if (seq !== this._seq || !this.on) return;
+        // A WAV always decodes; if this engine cannot, use the old path rather
+        // than losing the voice completely.
+      }
+    }
+    return this._playElement(blob);
+  },
+
+  _playElement(blob) {
     return new Promise((resolve, reject) => {
       const a = this._audio || (this._audio = new Audio());
       let ended = false;
@@ -390,8 +455,6 @@ const Speech = {
         if (this._playing === finish) this._playing = null;
         if (err) reject(err); else resolve();
       };
-      // stop() calls this with no argument, which resolves: a verse cut short
-      // ends the verse.
       this._playing = finish;
       if (this._blob) URL.revokeObjectURL(this._blob);
       this._blob = URL.createObjectURL(blob);

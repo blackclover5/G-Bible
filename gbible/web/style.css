@@ -7,6 +7,9 @@
 
 /* ------------------------------------------------------------------ tokens */
 :root {
+  /* Tell WebKit/GTK that native controls (select popups, scrollbars, form
+     fields) should be drawn dark, matching the app's default dark palette. */
+  color-scheme: dark;
   /* Surfaces — layered from background up to raised sheets */
   --bg: #0b0d12;        /* app background (darkest) */
   --bg-1: #11141b;      /* elevated surface */
@@ -57,6 +60,7 @@
 
 /* Theme overrides (user appearance settings) keep their own values */
 html[data-theme="light"] {
+  color-scheme: light;
   --bg: #f6f7fb;
   --bg-1: #eef1f6;
   --bg-2: #ffffff;
@@ -79,6 +83,7 @@ html[data-theme="light"] {
 }
 
 html[data-theme="sepia"] {
+  color-scheme: light;
   --bg: #f4efe4;
   --bg-1: #efe6d9;
   --bg-2: #faf6ec;
@@ -101,6 +106,7 @@ html[data-theme="sepia"] {
 }
 
 html[data-theme="contrast"] {
+  color-scheme: dark;
   --bg: #000000;
   --bg-1: #0a0a0a;
   --bg-2: #111111;
@@ -188,6 +194,7 @@ input:focus, textarea:focus, select:focus {
 .tabs button:hover { background: var(--bg-3); color: var(--fg); }
 .tabs button.on {
   background: var(--bg-2); color: var(--fg); border-color: var(--line-2);
+  box-shadow: inset 0 0 0 1px rgba(91, 124, 255, .15);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
@@ -782,8 +789,8 @@ eu-details, .eu-details { margin: 8px 0; }
   padding: 2px 8px; border-radius: 999px; font-size: 11.5px;
   background: var(--bg-3); color: var(--fg-2); border: 1px solid var(--line);
 }
-.badge.accent { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
-.badge.success { background: color-mix(in srgb, var(--success) 15%, transparent); color: var(--success); border-color: color-mix(in srgb, var(--success) 35%, transparent); }
+.badge.accent { background: rgba(91, 124, 255, .15); background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border-color: rgba(91, 124, 255, .35); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+.badge.success { background: rgba(74, 222, 128, .15); background: color-mix(in srgb, var(--success) 15%, transparent); color: var(--success); border-color: rgba(74, 222, 128, .35); border-color: color-mix(in srgb, var(--success) 35%, transparent); }
 
 /* ------------------------------------------------------------------ modals */
 .modal-bg {
@@ -923,6 +930,7 @@ eu-details, .eu-details { margin: 8px 0; }
 .verse { display: inline; margin: 0 1px; }
 .verse + .verse { margin-left: 0; }
 .verse.selected {
+  background: rgba(91, 124, 255, .18);
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   border-radius: 3px; padding: 0 2px;
   box-shadow: inset 2px 0 0 var(--accent);
@@ -2333,7 +2341,9 @@ mark.hl-yellow:hover { filter: brightness(0.95); }
 .exp-pill { display:inline-block; margin-left:6px; padding:1px 7px;
   font-size:8.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
   line-height:1.6; color:var(--accent); vertical-align:1px;
+  background:rgba(91, 124, 255, .16);
   background:color-mix(in srgb, var(--accent) 16%, transparent);
+  border:1px solid rgba(91, 124, 255, .4);
   border:1px solid color-mix(in srgb, var(--accent) 40%, transparent);
   border-radius:999px; }
 
@@ -2361,7 +2371,9 @@ mark.hl-yellow:hover { filter: brightness(0.95); }
 .logs-src {
   flex: none; font-size: 9.5px; font-weight: 700; letter-spacing: .08em;
   text-transform: uppercase; color: var(--error);
+  background: rgba(248, 113, 113, .14);
   background: color-mix(in srgb, var(--error) 14%, transparent);
+  border: 1px solid rgba(248, 113, 113, .4);
   border: 1px solid color-mix(in srgb, var(--error) 40%, transparent);
   border-radius: 4px; padding: 1px 6px;
 }

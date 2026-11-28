@@ -32,6 +32,7 @@ installed voice fails loudly here rather than as a silent fallback later.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import textwrap
@@ -39,7 +40,26 @@ import venv
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-VENV = ROOT / ".venv"
+
+
+def _venv_path() -> Path:
+    """Where the optional voice environment lives.
+
+    A source install keeps it beside the app, which is what `run.py` looks for.
+    A packaged install has a read-only app tree, so the launcher sets
+    `GBIBLE_HOME` to a writable data folder and the venv goes there instead.
+    `GBIBLE_VENV` overrides both, for support and tests.
+    """
+    override = os.environ.get("GBIBLE_VENV")
+    if override:
+        return Path(override)
+    home = os.environ.get("GBIBLE_HOME")
+    if home:
+        return Path(home) / ".venv"
+    return ROOT / ".venv"
+
+
+VENV = _venv_path()
 PY = VENV / "bin" / "python"
 
 KITTEN_WHEEL = ("https://github.com/KittenML/KittenTTS/releases/download/"
@@ -77,6 +97,17 @@ def main() -> int:
     run([str(PY), "-m", "pip", "install", "--ignore-requires-python",
          "--no-deps", *FROM_URL])
 
+    # Kittentts fetches the model on first use, but gbible.tts deliberately
+    # refuses to start without a local cache so a status poll cannot hang on a
+    # slow download. Fetch it here, while the installer is explicitly allowed
+    # to spend the time and the user is watching progress.
+    print("\nDownloading the voice model (~56 MB) into the local cache...")
+    model_code = textwrap.dedent("""
+        from huggingface_hub import snapshot_download
+        snapshot_download("KittenML/kitten-tts-nano-0.8-fp32")
+    """)
+    run([str(PY), "-c", model_code])
+
     print("\nChecking it can actually speak...")
     # Asked of the venv's own interpreter, not this one: that is the
     # difference the whole installation exists to make.  The project root comes
@@ -103,7 +134,7 @@ def main() -> int:
         return 1
 
     print("\nDone. Start the app with:  python3 run.py")
-    print("The model itself (~56 MB) downloads on first use.")
+    print("The voice model is cached and ready.")
     return 0
 
 

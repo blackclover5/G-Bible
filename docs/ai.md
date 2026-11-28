@@ -14,7 +14,7 @@ ask a question about, **ranking by meaning as well as by words** wherever the
 provider can embed, **conversations kept** and **the library narrowed by a
 scope**, **Sermon research** (outline, illustration and exposition material,
 cited, refusing to draft the sermon), and **usage metering** so a cloud bill
-is never a surprise. Flatpak packaging is the last phase.
+is never a surprise.
 
 The assistant is **opt-in**. With no provider configured the app is exactly what
 it was: fully usable, entirely offline, and it never makes an outbound request.
@@ -957,14 +957,6 @@ The optional arguments are for the cases that are not the common one:
 | Usage record | `ai_usage` table (`gbible/db.py` schema), one row per call |
 | Conversations | `ai_chat` and `ai_chat_turn` tables (`gbible/db.py` schema) |
 | Discovered models | not stored — re-asked per session, so a list can never go stale |
-
----
-
-## Later phase
-
-* **Phase 5** — Flatpak packaging. The assistant needs `--share=network`;
-  settings and the database move under `~/.var/app/<appid>/data`, and local
-  models are never bundled — Ollama runs outside the sandbox.
 
 ## Which words of a source carried the claim
 

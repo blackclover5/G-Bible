@@ -24,6 +24,9 @@ from gbible import __version__ as _GBIBLE_VERSION
 def _use_venv() -> None:
     """Re-exec into .venv if there is one, so the voice can be installed.
 
+    A packaged install has a read-only app tree, so its launcher points
+    GBIBLE_HOME at a writable data folder and the venv lives there.
+
     Everything else in this project is standard library, so it runs on whatever
     `python3` happens to be.  The read-aloud voice is the exception: it needs
     onnxruntime, which is a wheel and a download rather than a line of code, so
@@ -41,7 +44,13 @@ def _use_venv() -> None:
     # A distinct boolean marker so the re-exec cannot loop.
     if os.environ.get("GBIBLE_VENV_REEXEC"):
         return
-    venv = Path(__file__).resolve().parent / ".venv"
+    override = os.environ.get("GBIBLE_VENV")
+    if override:
+        venv = Path(override)
+    else:
+        home = os.environ.get("GBIBLE_HOME")
+        venv = (Path(home) / ".venv") if home else (
+            Path(__file__).resolve().parent / ".venv")
     py = venv / "bin" / "python"
     if not py.is_file():
         return

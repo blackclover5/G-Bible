@@ -143,9 +143,17 @@ def load():
             # that environment's matching site-packages path on demand; the
             # installer creates it with this same Python version.  Core app
             # imports remain independent of the voice packages.
-            root = Path(__file__).resolve().parents[1]
-            venv = root / ".venv"
-            if venv.is_dir():
+            roots: list[Path] = []
+            override = os.environ.get("GBIBLE_VENV")
+            if override:
+                roots.append(Path(override))
+            home = os.environ.get("GBIBLE_HOME")
+            if home:
+                roots.append(Path(home) / ".venv")
+            roots.append(Path(__file__).resolve().parents[1] / ".venv")
+            for venv in roots:
+                if not venv.is_dir():
+                    continue
                 candidates = list((venv / "lib").glob("python*/site-packages"))
                 candidates.extend((venv / "Lib" / "site-packages",))
                 for candidate in candidates:
@@ -162,7 +170,13 @@ def load():
         # fetch has no timeout and can hang the status request for a long time,
         # then poison the status for the rest of the process. Check the local
         # hub cache first and say plainly when it has not been downloaded.
-        hub = Path(os.environ.get("HF_HOME") or (Path.home() / ".cache" / "huggingface"))
+        hf_home = os.environ.get("HF_HOME")
+        if hf_home:
+            hub = Path(hf_home)
+        else:
+            cache_root = (os.environ.get("XDG_CACHE_HOME")
+                          or str(Path.home() / ".cache"))
+            hub = Path(cache_root) / "huggingface"
         cached = hub / "hub" / ("models--" + MODEL.replace("/", "--"))
         if not cached.is_dir():
             _error = ("the voice model is not downloaded yet -- use "
